@@ -14,10 +14,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.DayOfWeek
 import java.time.LocalDate
 import org.openstrap.app.AppContainer
+import org.openstrap.app.R
 import org.openstrap.app.data.HeartZones
 import org.openstrap.app.data.Rewards
 import org.openstrap.app.device.WorkoutState
@@ -49,10 +51,19 @@ internal fun RewardsPage(
     val goals by rootVm.goals.collectAsStateWithLifecycle()
     var editGoal by rememberSaveable { mutableStateOf(false) }
     var celebrations by rememberSaveable { mutableStateOf(false) }
+    val settings by rootVm.celebrations.collectAsStateWithLifecycle()
     when (shown) {
         Page.GoalsAndBests -> GoalsAndBestsPage(
             view, padding, onGoal = { editGoal = true }, onAllBadges = { open(Page.AllBadges) }, onRecap = { open(Page.WeeklyRecap) },
             onCelebrations = { celebrations = true }, onBack = close,
+            celebrations = stringResource(
+                when {
+                    settings.goalMoment && settings.weeklyRecap -> R.string.glow_goals_celebrations_both
+                    settings.goalMoment -> R.string.glow_goals_celebrations_goal
+                    settings.weeklyRecap -> R.string.glow_goals_celebrations_recap
+                    else -> R.string.glow_goals_celebrations_off
+                },
+            ),
         )
         Page.AllBadges -> AllBadgesPage(view, padding, onBack = close)
         else -> {
@@ -69,7 +80,6 @@ internal fun RewardsPage(
         }, onDismiss = { editGoal = false })
     }
     if (celebrations) {
-        val settings by rootVm.celebrations.collectAsStateWithLifecycle()
         CelebrationsSheet(
             settings.goalMoment, settings.weeklyRecap,
             onGoalMoment = rootVm::setGoalMoment,

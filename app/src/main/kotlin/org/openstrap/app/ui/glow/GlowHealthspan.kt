@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.Arrangement
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.i18n.Strings
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.openstrap.app.data.Healthspan
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.presentation.TabCopy
 
@@ -147,20 +150,20 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenP
     var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     val off = habitAgeOffStatus(state)
     val tag = offTag(OffWords.Age, off)
-    val rim = r?.takeIf { tag != null }?.let { ageScaleRim(it.low.toFloat(), it.high.toFloat(), it.age.toFloat(), PictureSize.Wide) }
-    PictureCard(
+    HaloCard(
+        modifier,
         // Without a number it's one line, so it's only as high as that line.
-        Orchid, modifier.fillMaxWidth().let { if (r != null || state.age != null) it.gridSize(CardSize.Wide) else it },
-        rim = rim,
+        size = if (r != null || state.age != null) HaloCardSize.Wide else HaloCardSize.Free,
         onClick = if (needsProfile) onOpenProfile else onClick,
+        verticalArrangement = Arrangement.Top,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            CardTitle(stringResource(R.string.glow_healthspan_title), Modifier.weight(1f))
+            HaloTitle(stringResource(R.string.glow_healthspan_title), Modifier.weight(1f))
             InfoButton(stringResource(R.string.glow_healthspan_about), { info = true })
         }
         r?.let {
             Text(
-                TabCopy.habitAgeUpdated(dateOf(it.asOf)), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                TabCopy.habitAgeUpdated(dateOf(it.asOf)), color = Ink.Secondary,
                 style = GlowType.secondary, maxLines = 1,
             )
         }
@@ -175,22 +178,22 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenP
         val shown = r?.estimate?.roundToInt() ?: state.age
         val status = line?.text ?: if (shown != null) TabCopy.habitAgeForNow(waiting) else waiting
         if (shown != null) {
-            NumberWithTag(tag, Modifier.padding(top = 14.dp)) {
+            NumberWithTag(tag, Modifier.padding(top = Space.S12)) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(shown.toString(), Modifier.cardNumber(shown.toString()), dot = DotSize.Edge)
+                    HaloBigNumber(shown.toString(), cardNumberSize(DotSize.Edge), Modifier.cardNumber(shown.toString()))
                     Text(
-                        stringResource(R.string.glow_healthspan_years), color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
-                        modifier = Modifier.padding(start = 8.dp),
+                        stringResource(R.string.glow_healthspan_years), color = Ink.Secondary, style = GlowType.secondary,
+                        modifier = Modifier.padding(start = Space.S8),
                     )
                 }
             }
         }
         if (status != null) Text(
-            status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-            modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            status, color = Ink.Secondary, style = GlowType.secondary,
+            modifier = Modifier.padding(top = Space.S8), maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
         if (r != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Space.S12))
             AgeScale(r.age, r.low, r.high, r.estimate)
         }
     }
@@ -204,7 +207,7 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenP
 }
 
 /** The dot at the estimate's radius in [AgeScalePicture]: the scale runs this far in from each end. */
-private val AgeScaleInset = 6.dp
+private val AgeScaleInset = Space.S8
 
 /**
  * The age scale (spec 2.7, Age scale): [AgeScalePicture] with "You, 34" over the hairline at your [age] and "27 to 31"
@@ -212,7 +215,7 @@ private val AgeScaleInset = 6.dp
  */
 @Composable
 private fun AgeScale(age: Int, low: Int, high: Int, estimate: Float) {
-    val label = Color.White.copy(alpha = GlowType.CAPTION_ALPHA)
+    val label = GlowType.footnoteColor
     fun at(a: Float) = ageScaleX(a, low.toFloat(), high.toFloat(), age.toFloat())
     Column(Modifier.fillMaxWidth()) {
         LabelAt(TabCopy.yourAge(age), at(age.toFloat()), label)

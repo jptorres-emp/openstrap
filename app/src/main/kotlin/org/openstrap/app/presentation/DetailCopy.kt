@@ -22,6 +22,34 @@ internal object DetailCopy {
         else -> strings.get(R.string.core_detail_status_usual)
     }
 
+    /**
+     * A value already written for [metric] with its unit after it, for a row that shows no label: "45 bpm", "13.3 br/min".
+     * A percent or no unit stays as written.
+     */
+    fun shownWithUnit(metric: Metric, shown: String): String {
+        val unit = metric.unit
+        return if (unit.isEmpty() || shown.endsWith(unit)) shown else "$shown $unit"
+    }
+
+    /**
+     * How far a skin temperature is from your normal, signed and with its unit, on the cards and rows that have room for
+     * no more: "+0.3 °C", "\u22120.2 °C". [change] is the level minus your normal's mean; none reads "+0.0 °C".
+     */
+    fun changeWithUnit(metric: Metric, change: Float): String = "${metric.formatChange(change)} ${metric.unit}"
+
+    /**
+     * The status line under a skin temperature's level on a day's detail: its signed [change] from your normal with the
+     * unit, then which side of it [status] (History.status's 1, -1 or 0) puts it on: "-0.7 °C, below your normal".
+     */
+    fun skinChangeWord(metric: Metric, change: Float, status: Int, strings: Strings = Strings.app): String = strings.format(
+        when (status) {
+            1 -> R.string.core_detail_skin_above
+            -1 -> R.string.core_detail_skin_below
+            else -> R.string.core_detail_skin_within
+        },
+        changeWithUnit(metric, change),
+    )
+
     /** Where a chart's point sits against your normal: inside it stays dim, above or below it gets the full colour. */
     enum class Level { Inside, Above, Below }
 
@@ -87,27 +115,80 @@ internal object DetailCopy {
         strings.plural(if (nightly) R.plurals.core_detail_nights else R.plurals.core_detail_days, n, numberWord(n, strings))
 
     /**
-     * The label under the value: what the number is for the range. "bpm now", "ms, day average", "steps, average of
-     * the last 7 days". [live] is heart rate read live this minute.
+     * The day's latest reading of blood oxygen or stress: the clock time [at] it was taken, for blood oxygen whether it was
+     * taken [asleep] (in the sleep window), for stress its [level].
      */
-    fun valueLabel(metric: Metric, range: Range, live: Boolean = false, today: Boolean = true, strings: Strings = Strings.app): String {
-        val unit = metric.unit
+    data class Latest(val at: String, val asleep: Boolean = false, val level: StressLevel? = null)
+
+    /**
+     * "%, daytime, latest at 14:05" or "%, while asleep, latest at 05:10", or "High, latest at 14:05" for a metric with
+     * no [unit] (stress, whose level leads); null without a [latest], or a level for a metric with no unit.
+     */
+    private fun latestLabel(unit: String, latest: Latest?, strings: Strings): String? = when {
+        latest == null -> null
+        unit.isEmpty() -> latest.level?.let { strings.format(R.string.core_detail_label_stress_latest_at, it.word(strings), latest.at) }
+        else -> strings.format(
+            if (latest.asleep) R.string.core_detail_label_unit_asleep_latest_at else R.string.core_detail_label_unit_daytime_latest_at,
+            unit, latest.at,
+        )
+    }
+
+    /**
+     * The label under the value: what the number is for the range. "bpm now", "ms, day average", "steps, average of
+     * the last 7 days". [live] is heart rate read live this minute, [estimated] a resting heart rate unstrap worked out itself,
+     * [latest] the day's latest reading of blood oxygen or stress, which their day says instead of an average, and [upTo]
+     * the time a heart rate day's data ends at when it ends early (today, or a partial day): "bpm, up to 09:10".
+     */
+    fun valueLabel(
+        metric: Metric, range: Range, live: Boolean = false, today: Boolean = true, estimated: Boolean = false,
+        latest: Latest? = null, upTo: String? = null, strings: Strings = Strings.app,
+    ): String {
+        if (range == Range.Day) return dayLabel(metric, live, today, estimated, latest, upTo, strings)
+        val steps = metric == Metric.Steps
         // One string with the unit and one without, so a translator writes the capital rather than the code adding it.
-        fun with(bare: Int, withUnit: Int) = if (unit.isEmpty()) strings.get(bare) else strings.format(withUnit, unit)
-        return when (range) {
-            Range.Day -> when (metric) {
-                Metric.HeartRate -> strings.get(if (live) R.string.core_detail_label_bpm_now else R.string.core_detail_label_bpm_latest)
-                Metric.RestingHr -> strings.get(R.string.core_detail_label_bpm_resting)
-                Metric.Steps -> strings.get(if (today) R.string.core_detail_label_steps_today else R.string.core_detail_label_steps)
-                Metric.Breathing -> strings.get(R.string.core_detail_label_breathing)
-                else -> with(R.string.core_detail_label_day_average, R.string.core_detail_label_unit_day_average)
+        val (bare, withUnit) = when (range) {
+            Range.Week -> R.string.core_detail_label_average_week to R.string.core_detail_label_unit_average_week
+            Range.Month -> R.string.core_detail_label_average_month to R.string.core_detail_label_unit_average_month
+            else -> R.string.core_detail_label_average_year to R.string.core_detail_label_unit_average_year
+        }
+        val stepsLabel = when (range) {
+            Range.Week -> R.string.core_detail_label_steps_week
+            Range.Month -> R.string.core_detail_label_steps_month
+            else -> R.string.core_detail_label_steps_year
+        }
+        return when {
+            steps -> strings.get(stepsLabel)
+            metric.unit.isEmpty() -> strings.get(bare)
+            else -> strings.format(withUnit, metric.unit)
+        }
+    }
+
+    /** [valueLabel] for a day: what the one number is, by metric. */
+    private fun dayLabel(
+        metric: Metric, live: Boolean, today: Boolean, estimated: Boolean, latest: Latest?, upTo: String?, strings: Strings,
+    ): String {
+        val unit = metric.unit
+        val average = if (unit.isEmpty()) strings.get(R.string.core_detail_label_day_average)
+        else strings.format(R.string.core_detail_label_unit_day_average, unit)
+        return when (metric) {
+            Metric.HeartRate -> when {
+                live -> strings.get(R.string.core_detail_label_bpm_now)
+                upTo != null -> strings.format(R.string.core_detail_label_bpm_up_to, upTo)
+                else -> strings.get(R.string.core_detail_label_bpm_latest)
             }
-            Range.Week -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_week)
-            else with(R.string.core_detail_label_average_week, R.string.core_detail_label_unit_average_week)
-            Range.Month -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_month)
-            else with(R.string.core_detail_label_average_month, R.string.core_detail_label_unit_average_month)
-            Range.Year -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_year)
-            else with(R.string.core_detail_label_average_year, R.string.core_detail_label_unit_average_year)
+            Metric.RestingHr -> strings.get(
+                when {
+                    estimated && today -> R.string.core_detail_label_bpm_resting_estimated
+                    estimated -> R.string.core_detail_label_bpm_resting_estimated_that_night
+                    today -> R.string.core_detail_label_bpm_resting
+                    else -> R.string.core_detail_label_bpm_resting_that_night
+                },
+            )
+            Metric.Steps -> strings.get(if (today) R.string.core_detail_label_steps_today else R.string.core_detail_label_steps)
+            Metric.Breathing -> strings.get(R.string.core_detail_label_breathing)
+            // Blood oxygen's and stress's day is their latest reading, with the time it was taken ([latest]).
+            Metric.Spo2, Metric.Stress -> latestLabel(unit, latest, strings) ?: average
+            else -> average
         }
     }
 
@@ -179,6 +260,10 @@ internal object DetailCopy {
     fun heartDay(low: Int, high: Int, today: Boolean, strings: Strings = Strings.app): String =
         strings.format(if (today) R.string.core_detail_heart_day_today else R.string.core_detail_heart_day_past, low, high)
 
+    /** Blood oxygen's day sentence, as heart rate's is: its lowest and highest reading, in percent. */
+    fun spo2Day(low: Int, high: Int, today: Boolean, strings: Strings = Strings.app): String =
+        strings.format(if (today) R.string.glow_detail_spo2_day_today else R.string.glow_detail_spo2_day_past, low, high)
+
     /**
      * A week's or a month's sentence from the daily [levels] against your normal: a run off it first ("Below your
      * normal for three nights."), otherwise how many days sat inside it. Null with no values at all.
@@ -222,10 +307,28 @@ internal object DetailCopy {
         R.string.core_detail_every_day_with_data_month, R.plurals.core_detail_inside_days, R.plurals.core_detail_inside_days_month,
     )
 
-    /** The year's sentence, from its weekly averages: "Over the last 12 months, weeks averaged from 48 to 61 ms." */
-    fun year(lowest: String, highest: String, unit: String, strings: Strings = Strings.app): String =
-        if (unit.isEmpty()) strings.format(R.string.core_detail_year, lowest, highest)
-        else strings.format(R.string.core_detail_year_unit, lowest, highest, unit)
+    /**
+     * The year's sentence, from its weekly averages: "Over the last 3 weeks, weekly averages ran from 48 to 61 ms." It names the
+     * span the data covers, [weeks] of it, not the year the range could reach back to.
+     */
+    fun year(lowest: String, highest: String, unit: String, weeks: Int = WEEKS_IN_YEAR, strings: Strings = Strings.app): String {
+        val span = yearSpan(weeks, strings)
+        return if (unit.isEmpty()) strings.format(R.string.core_detail_year, lowest, highest, span)
+        else strings.format(R.string.core_detail_year_unit, lowest, highest, unit, span)
+    }
+
+    /** The data's span in words: weeks while it is under two months, then months, up to the year. */
+    private fun yearSpan(weeks: Int, strings: Strings): String {
+        val n = weeks.coerceAtLeast(1)
+        if (weeks <= WEEKS_AS_WEEKS) return strings.plural(R.plurals.core_detail_year_span_weeks, n, n)
+        val months = Math.round(weeks / WEEKS_PER_MONTH).coerceIn(2, MONTHS_IN_YEAR)
+        return strings.plural(R.plurals.core_detail_year_span_months, months, months)
+    }
+
+    private const val WEEKS_IN_YEAR = 52
+    private const val WEEKS_AS_WEEKS = 8
+    private const val WEEKS_PER_MONTH = 4.345f
+    private const val MONTHS_IN_YEAR = 12
 
     /** A score's last 7 days: "Averaged 74 over the last 7 days, from 61 to 84." Null without any. */
     fun scoreWeek(values: List<Int?>, strings: Strings = Strings.app): String? {
@@ -266,6 +369,72 @@ internal object DetailCopy {
         ready.withheld -> strings.get(R.string.core_detail_recovery_no_score) to strings.get(R.string.core_detail_recovery_no_heart_data)
         else -> strings.get(R.string.core_detail_recovery_no_score) to strings.get(R.string.core_detail_recovery_scored_mornings)
     }
+
+    /**
+     * The day's figures as Today and their own details show them, for the recovery drivers that name them: the strap's
+     * daily resting heart rate, [restingBpm], against your normal over 30 days, [restingNormal] (null until there is
+     * one), and the night's time asleep from its stage rows, [asleepSeconds]. So one number is called resting heart rate
+     * and one is called asleep everywhere (decision 2026-11-22), while the score still weighs the night as it does.
+     */
+    data class DriverFigures(val restingBpm: Int?, val restingNormal: Float?, val asleepSeconds: Long?)
+
+    /** [c]'s detail with the time asleep of [figures] in place of the model's, when there is one. */
+    private fun detailOf(c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures?): org.openstrap.app.data.Recovery.Detail {
+        val d = c.detail
+        val asleep = figures?.asleepSeconds
+        return if (d is org.openstrap.app.data.Recovery.Detail.Asleep && asleep != null) {
+            org.openstrap.app.data.Recovery.Detail.Asleep((asleep / SECONDS_PER_MINUTE).toInt())
+        } else d
+    }
+
+    /**
+     * A recovery driver's reading as its row says it: HRV and resting heart rate against your normal ("56 ms, your normal
+     * 53"), the rest as [RecoveryCopy] words them. Resting heart rate and the time asleep read the day's [figures] when
+     * there are some. Null when there is nothing to say.
+     */
+    fun driverReading(
+        c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures? = null, strings: Strings = Strings.app,
+    ): String? {
+        val d = detailOf(c, figures)
+        val bpm = figures?.restingBpm
+        val line = when {
+            d is org.openstrap.app.data.Recovery.Detail.Hrv && d.percentVsUsual > -100 ->
+                strings.format(R.string.glow_recovery_driver_hrv, d.ms, Math.round(d.ms / (1f + d.percentVsUsual / 100f)))
+            d is org.openstrap.app.data.Recovery.Detail.RestingHr && bpm != null -> figures.restingNormal?.let {
+                strings.format(R.string.glow_recovery_driver_resting, bpm, Math.round(it))
+            } ?: strings.format(R.string.glow_recovery_driver_resting_alone, bpm)
+            d is org.openstrap.app.data.Recovery.Detail.RestingHr ->
+                strings.format(R.string.glow_recovery_driver_resting, d.bpm, Math.round(d.bpm - d.vsUsual))
+            else -> RecoveryCopy.detail(d, strings = strings)
+        }
+        return line.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Where a driver's bar ends, 0 to 1, from its reading: halfway at your normal, further for an HRV above it (up to
+     * 50 % more) and a resting heart rate below it (up to 10 bpm lower, since lower is better), and for sleep from its
+     * length against 8 hours. Resting heart rate and sleep read the day's [figures] when there are some. A driver with no
+     * such reading falls back to its score.
+     */
+    fun driverPlace(c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures? = null): Float {
+        val d = detailOf(c, figures)
+        val bpm = figures?.restingBpm
+        val normal = figures?.restingNormal
+        val place = when (d) {
+            is org.openstrap.app.data.Recovery.Detail.Hrv -> 0.5f + d.percentVsUsual / (2f * HRV_SPAN_PERCENT)
+            is org.openstrap.app.data.Recovery.Detail.RestingHr if bpm != null && normal != null ->
+                0.5f - (bpm - normal) / (2f * RESTING_SPAN_BPM)
+            is org.openstrap.app.data.Recovery.Detail.RestingHr -> 0.5f - d.vsUsual / (2f * RESTING_SPAN_BPM)
+            is org.openstrap.app.data.Recovery.Detail.Asleep -> d.minutes / (2f * SLEEP_NEED_MINUTES)
+            else -> c.score / 100f
+        }
+        return place.coerceIn(0f, 1f)
+    }
+
+    private const val SECONDS_PER_MINUTE = 60L
+    private const val HRV_SPAN_PERCENT = 50f
+    private const val RESTING_SPAN_BPM = 10f
+    private const val SLEEP_NEED_MINUTES = 8 * 60f
 
     /** A day of the seven-day strip under the value: its short name, whether it has data, and whether it's shown. */
     data class StripDay(val date: LocalDate, val label: String, val hasData: Boolean, val selected: Boolean)

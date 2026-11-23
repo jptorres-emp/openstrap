@@ -41,6 +41,6 @@ class UpdateStringsTest {
         assertEquals("App updates", manager.getNotificationChannel("app_updates").name)
         val posted = shadowOf(manager).allNotifications.single()
         assertEquals("unstrap 2.2.0 is out", posted.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("See what's new and install it from the Updates page.", posted.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("Open Updates to see what's new", posted.extras.getString(Notification.EXTRA_TEXT))
     }
 }

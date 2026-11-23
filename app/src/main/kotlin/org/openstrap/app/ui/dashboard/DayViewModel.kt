@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.dashboard
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -16,10 +17,12 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,9 +32,11 @@ import org.openstrap.app.data.DayValue
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.SleepEdits
 import org.openstrap.app.data.SleepHistory
+import org.openstrap.app.data.HeartReadings
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.data.Today
 import org.openstrap.app.data.catching
+import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.OsaEventRow
 import org.openstrap.app.data.db.OsaResultRow
@@ -65,6 +70,11 @@ data class DayUiState(
     val hourlySteps: List<Float> = List(24) { 0f },
     val activeHours: Int = 0,
     val heartRate: List<ChartPoint> = emptyList(),
+    /**
+     * The day's stored heart rate readings, one a minute (time, bpm): what its lowest and
+     * highest come from, not [heartRate]'s averages.
+     */
+    val heartMinutes: List<Pair<Long, Int>> = emptyList(),
     val latestHeartRate: Int? = null,
     val restingHeartRate: Int? = null,
     /** True when [restingHeartRate] is our own estimate rather than the strap's value. */
@@ -119,6 +129,8 @@ data class DayUiState(
     val nights: List<SleepNight> = emptyList(),
     /** Heart rate across the night window (5-minute averages), so sleep before midnight is included. */
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    /** The night window's stored heart rate readings, one a minute (time, bpm), for the night's lowest. */
+    val sleepHeartMinutes: List<Pair<Long, Int>> = emptyList(),
     /** HRV and skin temperature read during the night's main sleep, before midnight too, for the night-scoped details. */
     val sleepHrv: List<ChartPoint> = emptyList(),
     val sleepSkinTemperature: List<ChartPoint> = emptyList(),
@@ -133,17 +145,63 @@ data class DayUiState(
     /** The day's stress hour by hour, 0..1, null for hours without a reading or to come ([stressStrip]). */
     val stressStrip: List<Float?> = emptyList(),
 ) {
-    /** From the stages, else the session's own count: a night without stages ([SleepSession.fromMinutes]) has its awake minutes out. */
+    /** From the stages, else the session's own count: a night without stages has its awake minutes out. */
     val asleepSeconds: Long? get() = sleepBreakdown?.asleepSeconds ?: sleep?.let(org.openstrap.app.data.SleepHistory::asleepSeconds)
+
+    /**
+     * True when the Sleep score shown isn't the strap's own: the user moved the sleep's times 15 minutes or more, so
+     * unstrap adjusted the strap's score ([SleepEdits.anchored]).
+     */
+    val sleepScoreAdjusted: Boolean
+        get() = sleep != null && sleepAsDetected != null && sleep.score != null &&
+            !SleepEdits.keepsScore(sleepAsDetected, sleep.start, sleep.end)
+
+    /**
+     * The day's lowest and highest heart rate from the stored readings, the high the strap's own maximum when higher
+     * ([HeartReadings.heartRange]).
+     */
+    val heartRateRange: Pair<Int, Int>? get() = HeartReadings.heartRange(heartMinutes, dailyMaxHeartRate)
 }
 
 /** The day's Recovery couldn't be worked out. [yesterday] is yesterday's score, shown dimmed in its place, when known. */
 data class RecoveryFailure(val date: LocalDate, val yesterday: Int?)
 
-/** Recovery worked out, or why not. */
-private sealed interface RecoveryOutcome {
-    data class Ready(val result: RecoveryResult) : RecoveryOutcome
-    data class Failed(val failure: RecoveryFailure) : RecoveryOutcome
+/** The day's Recovery: being worked out, worked out, or why not. */
+sealed interface RecoveryState {
+    /** The first read for the day, or a retry after a failure. */
+    data object Loading : RecoveryState
+    data class Ready(val result: RecoveryResult) : RecoveryState
+    data class Failed(val failure: RecoveryFailure) : RecoveryState
+}
+
+/**
+ * Everything the screens show of one [date], emitted together so a number never sits under another day's date (audit
+ * S7). On a day switch it starts as [loading] for the new date: the day's rows, Recovery, Healthspan, usual steps and
+ * activity are all empty or loading until they arrive, and never the old day's.
+ */
+data class DayScreenState(
+    val date: LocalDate,
+    val day: DayUiState = DayUiState(date = date),
+    val recoveryState: RecoveryState = RecoveryState.Loading,
+    /** The weekly Healthspan estimate for [date], or why it's withheld; null while loading or on failure. */
+    val healthspan: org.openstrap.app.data.Healthspan.Outcome? = null,
+    /** Your usual steps by the end of each hour, null until there are enough worn days. */
+    val usualSteps: List<Float>? = null,
+    val activity: ActivityHistory = ActivityHistory(),
+) {
+    /** The day's rows have arrived. */
+    val loaded: Boolean get() = day.loaded
+
+    /** Readiness and charge for [date]; null while loading or when it failed. */
+    val recovery: RecoveryResult? get() = (recoveryState as? RecoveryState.Ready)?.result
+
+    /** The day's Recovery failed to work out (spec 4.3), so the cards can say so instead of waiting forever. */
+    val recoveryFailure: RecoveryFailure? get() = (recoveryState as? RecoveryState.Failed)?.failure
+
+    companion object {
+        /** [date] before anything of it has arrived. */
+        fun loading(date: LocalDate) = DayScreenState(date)
+    }
 }
 
 /** One day's Heart points: those earned that day and the 7-day total. */
@@ -170,6 +228,11 @@ data class ActivityHistory(
     val steps: Map<LocalDate, Int> = emptyMap(),
     /** The most steps of any day before [date]: the stored personal best when it's older, else read from the history. */
     val stepsBest: Int? = null,
+    /**
+     * The days with Heart points earned, from [STRIP_DAYS_BEFORE] days before [date] to the later of [date] and today: the
+     * days of a detail's strip, whichever of them is shown, so a day's dot is the same whichever day is open.
+     */
+    val heartPointsDays: Set<LocalDate> = emptySet(),
 ) {
     /** [heartPoints] when they're [day]'s, else none yet. */
     fun heartPointsOn(day: LocalDate): Map<LocalDate, HeartPointsDay> = if (date == day) heartPoints else emptyMap()
@@ -197,15 +260,30 @@ data class ActivityHistory(
         /** Heart points' month. */
         const val HEART_POINTS_DAYS = 30
 
+        /** A detail's strip starts this many days before its last day. */
+        const val STRIP_DAYS_BEFORE = 6L
+
         /** Calories' year and the year before it, for the change against it. */
         val CALORIES_DAYS = 2 * Range.Year.days
     }
 }
 
+/**
+ * What the week view shows of the days after the one shown: each day's active minutes, and the time asleep of each
+ * night by the morning it ended on. The day shown has neither for the days after it.
+ */
+data class WeekLater(val active: Map<LocalDate, Int> = emptyMap(), val asleepByMorning: Map<LocalDate, Long> = emptyMap())
+
+/** How long synced data must settle before the day's scores are worked out again. */
+private const val CHANGES_SETTLE_MS = 800L
+
 @OptIn(ExperimentalCoroutinesApi::class)
+// One flow per part of the day's screen state, plus the day picking.
+@Suppress("TooManyFunctions")
+@android.annotation.SuppressLint("VisibleForTests")
 class DayViewModel(
     private val repo: DayRepository,
-    profile: Flow<UserProfile> = flowOf(UserProfile()),
+    private val profile: Flow<UserProfile> = flowOf(UserProfile()),
     /** A sleep or nap (by the strap's start) was moved, deleted or restored: Health Connect is written again. */
     private val onSleepEdited: (Long) -> Unit = {},
     /** The clock today is read from, asked afresh each time. Tests pass one they move by hand. */
@@ -214,13 +292,20 @@ class DayViewModel(
     dateChanges: Flow<Unit> = emptyFlow(),
     /** Where the day's rows are worked into its state, off the main thread (audit C7). */
     private val work: CoroutineDispatcher = Dispatchers.Default,
+    /** Keeps the day picked, so a restore reopens the same day. */
+    private val saved: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
     /** Today as it moves, so a screen left open past midnight moves on to the new day (audit C10). */
     private val today: StateFlow<LocalDate> = Today.dates(clock, dateChanges)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Today.on(clock()))
 
     /** The day picked, or null while the screen follows today. */
-    private val picked = MutableStateFlow<LocalDate?>(null)
+    private val picked = MutableStateFlow<LocalDate?>(saved.get<Long>(PICKED_KEY)?.let(LocalDate::ofEpochDay))
+
+    private fun pick(date: LocalDate?) {
+        picked.value = date
+        saved[PICKED_KEY] = date?.toEpochDay()
+    }
 
     /** The day shown: the one picked while it's before today, else today. */
     private val shown: Flow<ShownDay> = combine(picked, today) { p, t ->
@@ -228,22 +313,29 @@ class DayViewModel(
         ShownDay(date, date == t)
     }.distinctUntilChanged()
 
-    private val selected: Flow<LocalDate> = shown.map { it.date }.distinctUntilChanged()
-
     private fun shownNow(): LocalDate = Today.on(clock()).let { t -> picked.value?.takeIf { it < t } ?: t }
 
-    fun previousDay() { picked.value = shownNow().minusDays(1) }
-    fun nextDay() { picked.value = shownNow().plusDays(1).takeIf { it < Today.on(clock()) } }
-    fun select(date: LocalDate) { picked.value = date.takeIf { it < Today.on(clock()) } }
+    fun previousDay() { pick(shownNow().minusDays(1)) }
+    fun nextDay() { pick(shownNow().plusDays(1).takeIf { it < Today.on(clock()) }) }
+    fun select(date: LocalDate) { pick(date.takeIf { it < Today.on(clock()) }) }
 
     /** Days the calendar lets you pick. */
     val daysWithData: StateFlow<Set<LocalDate>> = repo.daysWithData()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
-    val state: StateFlow<DayUiState> = shown.flatMapLatest { (date, isToday) -> repo.day(date, isToday) }
-        .map(::toUiState)
+    /** The day shown with all it needs, from one flow on the day shown, so it moves to a new day in one step. */
+    val screen: StateFlow<DayScreenState> = shown.flatMapLatest { (date, isToday) ->
+        combine(
+            repo.day(date, isToday).map(::toUiState),
+            recoveryState(date),
+            healthspanOf(date),
+            usualStepsOf(date),
+            activityOf(date),
+        ) { day, recovery, healthspan, usual, activity -> DayScreenState(date, day, recovery, healthspan, usual, activity) }
+            .onStart { emit(DayScreenState.loading(date)) }
+    }
         .flowOn(work)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState(date = Today.on(clock())))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayScreenState.loading(shownNow()))
 
     /** Bumped by [retryRecovery], so the same day and data are worked out again. */
     private val recoveryRetries = MutableStateFlow(0)
@@ -274,33 +366,50 @@ class DayViewModel(
     @Volatile private var lastRecovery: RecoveryResult? = null
 
     /**
-     * Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change: the result,
-     * or why there's none. Null while the first is worked out.
+     * [date]'s Readiness and charge, recomputed (off the main thread) when the profile or synced data change: Loading
+     * first, and again on a retry, then the result or why there's none.
      */
     @OptIn(FlowPreview::class)
-    private val recoveryOutcome: StateFlow<RecoveryOutcome?> =
-        combine(selected, profile, repo.changes().debounce(800), recoveryRetries) { d, p, _, _ -> d to p }
-            .mapLatest { (d, p) ->
+    private fun recoveryState(date: LocalDate): Flow<RecoveryState> = recoveryRetries.flatMapLatest {
+        combine(profile, repo.changes().debounce(CHANGES_SETTLE_MS)) { p, _ -> p }
+            .mapLatest { p ->
                 withContext(work) {
                     // mapLatest cancels this when newer data arrives. That's not a failure, and catching lets it through.
-                    catching { repo.recovery(d, p) }.fold(
-                        onSuccess = { RecoveryOutcome.Ready(it.also { r -> lastRecovery = r }) },
+                    catching { repo.recovery(date, p) }.fold(
+                        onSuccess = { RecoveryState.Ready(it.also { r -> lastRecovery = r }) },
                         onFailure = { e ->
                             Log.w("unstrap", "recovery failed", e)
-                            RecoveryOutcome.Failed(RecoveryFailure(d, yesterdayScore(d, p)))
+                            RecoveryState.Failed(RecoveryFailure(date, yesterdayScore(date, p)))
                         },
                     )
                 }
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+            .onStart<RecoveryState> { emit(RecoveryState.Loading) }
+    }
 
-    /** Readiness and charge for the day shown; null while loading or when it failed ([recoveryFailure] tells which). */
-    val recovery: StateFlow<RecoveryResult?> = recoveryOutcome.map { (it as? RecoveryOutcome.Ready)?.result }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    /** The day's Recovery failed to work out (spec 4.3), so the cards can say so instead of waiting forever. */
-    val recoveryFailure: StateFlow<RecoveryFailure?> = recoveryOutcome.map { (it as? RecoveryOutcome.Failed)?.failure }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    /**
+     * The week ending on [end] as its last day has it, for the week view of an earlier day: active minutes are worked
+     * out for the days ending on the day asked, and nights load up to it, so the day shown has nothing for the days
+     * after it. The night after [end] belongs to the next morning, so nights are read as of that day, or today.
+     * Empty until read, and where the active minutes can't be worked out.
+     */
+    @OptIn(FlowPreview::class)
+    fun weekThrough(end: LocalDate): Flow<WeekLater> {
+        val now = Today.on(clock())
+        val morning = minOf(end.plusDays(1), now)
+        val active = combine(profile, repo.changes().debounce(CHANGES_SETTLE_MS)) { p, _ -> p }
+            .mapLatest { p ->
+                withContext(work) {
+                    catching { repo.recovery(end, p).activity?.byDay.orEmpty().mapValues { it.value.equivalent } }
+                        .onFailure { Log.w("unstrap", "the week's active minutes failed", it) }
+                        .getOrDefault(emptyMap())
+                }
+            }
+        val asleep = repo.day(morning, morning == now)
+            .map { d -> d.nights.mapNotNull { n -> n.asleepSeconds?.let { n.date to it } }.toMap() }
+        return combine(active.onStart { emit(emptyMap()) }, asleep.onStart { emit(emptyMap()) }, ::WeekLater)
+            .distinctUntilChanged().flowOn(work)
+    }
 
     /**
      * Yesterday's score for a failed [date]: from the last Recovery worked out when its week covers yesterday, else
@@ -318,50 +427,57 @@ class DayViewModel(
     }
 
     /**
-     * Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]), from the 28 days before the day
-     * shown; null until there are enough worn days. Past days don't change through the day, so it's read once per day
-     * shown, off the main thread, not on every sync.
+     * Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]), from the 28 days before [d]; null
+     * until there are enough worn days. Past days don't change through the day, so it's read once, off the main thread,
+     * not on every sync.
      */
-    val usualSteps: StateFlow<List<Float>?> = selected
-        .mapLatest { d ->
+    private fun usualStepsOf(d: LocalDate): Flow<List<Float>?> = flow {
+        emit(null)
+        emit(
             withContext(work) {
                 catching {
                     val from = d.minusDays(org.openstrap.app.data.UsualSteps.DAYS.toLong())
                     org.openstrap.app.data.UsualSteps.byHour(repo.hourlySteps(from, d.minusDays(1)), d)
                 }.onFailure { Log.w("unstrap", "usual steps failed", it) }.getOrNull()
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+            },
+        )
+    }
 
-    /** The weekly Healthspan estimate for the selected day, or why it's withheld; null while loading or on failure. */
+    /** The weekly Healthspan estimate for [d], or why it's withheld; null while loading or on failure. */
     @OptIn(FlowPreview::class)
-    val healthspan: StateFlow<org.openstrap.app.data.Healthspan.Outcome?> =
-        combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
-            .mapLatest { (d, p) ->
+    private fun healthspanOf(d: LocalDate): Flow<org.openstrap.app.data.Healthspan.Outcome?> =
+        combine(profile, repo.changes().debounce(CHANGES_SETTLE_MS)) { p, _ -> p }
+            .mapLatest { p ->
                 withContext(work) {
                     catching { repo.healthspan(d, p) }.onFailure { Log.w("unstrap", "healthspan failed", it) }.getOrNull()
                 }
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+            .onStart<org.openstrap.app.data.Healthspan.Outcome?> { emit(null) }
 
-    /** Each day's Heart points and stored calories up to the day shown, for the Activity tab and its details. */
-    val activityHistory: StateFlow<ActivityHistory> = selected.flatMapLatest { d ->
-        combine(
-            repo.dailyPai(d.minusDays(ActivityHistory.HEART_POINTS_DAYS - 1L), d),
-            repo.dailyCalories(d.minusDays(ActivityHistory.CALORIES_DAYS - 1L), d),
-            stepsAndBest(d),
-        ) { pai, calories, (steps, best) ->
-            ActivityHistory(
-                date = d,
-                heartPoints = pai.mapValues { (_, p) -> HeartPointsDay(p.daily, p.total) },
-                calories = calories.mapValues { (_, e) -> CaloriesDay(e.activeKcal, e.totalKcal, e.workoutKcal, e.partial) },
-                steps = steps,
-                stepsBest = best,
-            )
-        }
+    /** Each day's Heart points and stored calories up to [d], for the Activity tab and its details. */
+    private fun activityOf(d: LocalDate): Flow<ActivityHistory> = combine(
+        // The days after [d] up to today, for the strip's dots; nothing is read for today.
+        stripLater(d),
+        repo.dailyCalories(d.minusDays(ActivityHistory.CALORIES_DAYS - 1L), d),
+        stepsAndBest(d),
+        repo.dailyPai(d.minusDays(ActivityHistory.HEART_POINTS_DAYS - 1L), d),
+    ) { later, calories, (steps, best), pai ->
+        ActivityHistory(
+            date = d,
+            heartPoints = pai.mapValues { (_, p) -> HeartPointsDay(p.daily, p.total) },
+            calories = calories.mapValues { (_, e) -> CaloriesDay(e.activeKcal, e.totalKcal, e.workoutKcal, e.partial) },
+            steps = steps,
+            stepsBest = best,
+            heartPointsDays = (pai.filterKeys { it >= d.minusDays(ActivityHistory.STRIP_DAYS_BEFORE) } + later)
+                .filterValues { it.daily > 0 }.keys,
+        )
+    }.onStart { emit(ActivityHistory()) }
+
+    /** The Heart points of the days after [d] up to today, for the strip's later days; none when [d] is today. */
+    private fun stripLater(d: LocalDate): Flow<Map<LocalDate, DailyPai>> {
+        val today = Today.on(clock())
+        return if (d < today) repo.dailyPai(d.plusDays(1), today) else flowOf(emptyMap())
     }
-        .flowOn(work)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ActivityHistory())
 
     /**
      * [d]'s steps from [ActivityHistory.STEPS_DAYS] days before it to its week's end, and the most steps of a day
@@ -384,6 +500,8 @@ class DayViewModel(
         }
 
     companion object {
+        private const val PICKED_KEY = "pickedDay"
+
         /**
          * [data] as the screens show it: the heart rate as a chart, the steps by hour, the trends with their weekday
          * labels and the stages as spans.
@@ -395,6 +513,7 @@ class DayViewModel(
             val sleep = data.sleep
             val series = Summaries.heartRateSeries(data.heartRate, data.minutes)
             val hourly = Summaries.hourlySteps(data.minutes, data.day.from)
+            val nightSeries = Summaries.heartRateSeries(data.nightHeartRate, emptyList())
             return DayUiState(
                 loaded = true,
                 date = data.date,
@@ -403,6 +522,7 @@ class DayViewModel(
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },
+                heartMinutes = series,
                 latestHeartRate = series.lastOrNull()?.second,
                 restingHeartRate = data.restingTrend.lastOrNull()?.value?.toInt(),
                 restingEstimated = data.restingEstimated.lastOrNull() ?: false,
@@ -436,9 +556,10 @@ class DayViewModel(
                 activeCalories = data.activeCalories,
                 alerts = data.alerts,
                 nights = data.nights,
-                sleepHeartRate = Summaries.bucketAverage(Summaries.heartRateSeries(data.nightHeartRate, emptyList())).map {
+                sleepHeartRate = Summaries.bucketAverage(nightSeries).map {
                     ChartPoint(it.first, it.second.toFloat())
                 },
+                sleepHeartMinutes = nightSeries,
                 sleepHrv = data.sleepHrv.map { ChartPoint(it.timestamp, it.milliseconds.toFloat()) },
                 sleepSkinTemperature = data.sleepSkin.map { ChartPoint(it.timestamp, it.celsius) },
                 dayStart = data.day.from,

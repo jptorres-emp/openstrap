@@ -6,9 +6,9 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Recovery score detail, under HRV: last night's value in milliseconds and the change from your usual, signed. One line. -->
-    <string name="core_data_recovery_hrv"><xliff:g id="ms" example="52">%1$s</xliff:g> ms, <xliff:g id="change" example="+4">%2$s</xliff:g>%% vs usual</string>
+    <string name="core_data_recovery_hrv"><xliff:g id="ms" example="52">%1$s</xliff:g> ms, <xliff:g id="change" example="+4">%2$s</xliff:g>%% vs normal</string>
     <!-- Recovery score detail, under resting heart rate: beats a minute and the change from your usual, signed. -->
-    <string name="core_data_recovery_resting_hr"><xliff:g id="bpm" example="54">%1$s</xliff:g> bpm, <xliff:g id="change" example="−3">%2$s</xliff:g> vs usual</string>
+    <string name="core_data_recovery_resting_hr"><xliff:g id="bpm" example="54">%1$s</xliff:g> bpm, <xliff:g id="change" example="−3">%2$s</xliff:g> vs normal</string>
     <!-- Recovery score detail, under sleep: the time asleep, like "7 h 40". -->
     <string name="core_data_recovery_asleep"><xliff:g id="duration" example="7 h 40">%1$s</xliff:g> asleep</string>
     <!-- Recovery score detail, under sleep debt, when there is none. -->
@@ -18,11 +18,11 @@
     <!-- Recovery score detail: how long before waking the night's lowest heart rate came, like "40 min". -->
     <string name="core_data_recovery_lowest_hr">Lowest heart rate <xliff:g id="duration" example="40 min">%1$s</xliff:g> before waking</string>
     <!-- Recovery score detail, under skin temperature: the change from your usual in degrees Celsius, signed. -->
-    <string name="core_data_recovery_temperature"><xliff:g id="change" example="+0.3">%1$s</xliff:g> °C vs usual</string>
+    <string name="core_data_recovery_temperature"><xliff:g id="change" example="+0.3">%1$s</xliff:g> °C vs normal</string>
     <!-- Recovery score detail, under breathing rate: the change from your usual in breaths a minute, signed. -->
-    <string name="core_data_recovery_breathing"><xliff:g id="change" example="−0.4">%1$s</xliff:g>/min vs usual</string>
+    <string name="core_data_recovery_breathing"><xliff:g id="change" example="−0.4">%1$s</xliff:g>/min vs normal</string>
     <!-- Recovery score detail, under blood oxygen: the night's average percent, then the change from your usual, signed. -->
-    <string name="core_data_recovery_blood_oxygen"><xliff:g id="percent" example="96.3">%1$s</xliff:g>%%, <xliff:g id="change" example="−1.2">%2$s</xliff:g> vs usual</string>
+    <string name="core_data_recovery_blood_oxygen"><xliff:g id="percent" example="96">%1$s</xliff:g>%%, <xliff:g id="change" example="−1.2">%2$s</xliff:g> vs normal</string>
     <!-- Recovery score detail, under Load: yesterday's Load and your usual. -->
     <string name="core_data_recovery_load">Load <xliff:g id="yesterday" example="62">%1$s</xliff:g>, usual <xliff:g id="usual" example="45">%2$s</xliff:g></string>
 
@@ -48,13 +48,13 @@
     <!-- VO2 max, why there is no estimate: the age is outside the equation's range. -->
     <string name="core_data_vo2_needs_age">Needs an age between 20 and 79.</string>
     <!-- VO2 max, why there is no estimate: the profile has no sex. -->
-    <string name="core_data_vo2_needs_sex">Needs your sex: the equation differs for women and men.</string>
+    <string name="core_data_vo2_needs_sex">Needs your sex, as the equation differs for women and men.</string>
     <!-- VO2 max, why there is no estimate: no recent weight and height. -->
     <string name="core_data_vo2_needs_body">Needs a weight and height entered in the last 90 days.</string>
     <!-- VO2 max, why there is no estimate: the activity question is unanswered or too old. -->
-    <string name="core_data_vo2_needs_activity">Answer the activity question (asked every 6 months).</string>
+    <string name="core_data_vo2_needs_activity">Answer the activity question, asked every 6 months.</string>
     <!-- VO2 max, why there is no estimate: medication or pregnancy set in the profile. -->
-    <string name="core_data_vo2_medication">Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn\'t reflect fitness then.</string>
+    <string name="core_data_vo2_medication">Not shown while taking beta-blockers or during pregnancy, as resting heart rate doesn\'t reflect fitness then.</string>
     <!-- VO2 max, why there is no estimate: too few nights of resting heart rate. -->
     <string name="core_data_vo2_needs_resting_hr">Needs at least 5 nights of resting heart rate in the last 2 weeks.</string>
     <!-- VO2 max, where the estimate falls among people of your age and sex (FRIEND). Short, one line. -->

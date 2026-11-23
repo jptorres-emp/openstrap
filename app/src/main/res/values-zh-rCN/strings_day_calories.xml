@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="day_calories_row_line">活动目标 %1$s。总计 %2$s</string>
-    <string name="day_calories_row_line_met">活动已达标。总计 %1$s</string>
+    <string name="day_calories_row_line">活跃 %1$s 目标，共 %2$s</string>
+    <string name="day_calories_row_line_met">活跃目标已达成，共 %1$s</string>
     <string name="day_calories_day_label_today">今日截至目前的活动千卡</string>
     <string name="day_calories_day_label">活动千卡</string>
     <string name="day_calories_to_goal">距离 %2$s 目标还差 %1$s</string>

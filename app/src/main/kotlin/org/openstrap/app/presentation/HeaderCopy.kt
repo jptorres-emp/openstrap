@@ -86,6 +86,19 @@ internal fun sportNoun(sportType: Int, strings: Strings = Strings.app): String? 
 internal fun sportUsually(sportType: Int?, strings: Strings = Strings.app): String =
     strings.get(sportType?.let(::shortSport)?.usually ?: R.string.core_today_window_usually_workout)
 
+/** The verb of [sportType] for "You usually ___ around now": "run", "work out" for any other sport or none. */
+internal fun sportVerb(sportType: Int?, strings: Strings = Strings.app): String = strings.get(
+    when (sportType?.let(::shortSport)) {
+        ShortSport.Run -> R.string.core_today_window_verb_run
+        ShortSport.Walk -> R.string.core_today_window_verb_walk
+        ShortSport.Ride -> R.string.core_today_window_verb_ride
+        ShortSport.Swim -> R.string.core_today_window_verb_swim
+        ShortSport.Hike -> R.string.core_today_window_verb_hike
+        ShortSport.Row -> R.string.core_today_window_verb_row
+        null -> R.string.core_today_window_verb_workout
+    },
+)
+
 /** One workout of [sportType] as an item of the evening list: "a run", or "a workout" for any other sport. */
 internal fun sportOne(sportType: Int, strings: Strings = Strings.app): String =
     strings.get(shortSport(sportType)?.one ?: R.string.core_today_evening_one_workout)

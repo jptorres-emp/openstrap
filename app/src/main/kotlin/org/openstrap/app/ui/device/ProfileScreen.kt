@@ -1,50 +1,34 @@
+@file:Suppress("MagicNumber") // the ranges and steps of the pickers are the page's own limits
+
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.ime
-import androidx.compose.ui.platform.LocalDensity
-import org.openstrap.app.ui.glow.LocalPageColumn
-import org.openstrap.app.ui.components.PinnedFade
-import org.openstrap.app.ui.components.pinnedFade
-import org.openstrap.app.ui.dashboard.ScreenList
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
-import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.settings.Units
 import org.openstrap.app.data.settings.UserProfile
-import androidx.compose.foundation.layout.height
+import org.openstrap.app.i18n.Strings
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageConfirm
-import org.openstrap.app.ui.glow.PageNumberField
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PagePanel
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSwitchRow
+import org.openstrap.app.ui.glow.HaloConfirmSheet
+import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.SwitchRow
 import java.time.LocalDate
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
@@ -118,7 +102,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     val back: () -> Unit = { if (dirty) confirmDiscard = true else onBack() }
     BackHandler(onBack = back)
     if (confirmDiscard) {
-        PageConfirm(
+        HaloConfirmSheet(
             stringResource(R.string.you_profile_discard_title), stringResource(R.string.you_profile_discard_text),
             confirm = stringResource(R.string.you_profile_discard), onConfirm = { confirmDiscard = false; onBack() },
             onDismiss = { confirmDiscard = false },
@@ -136,7 +120,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 imperial = imperial,
                 sleepNeedMinutes = sleepNeedValue,
                 activityLevel = activity.takeIf { it in 0..4 },
-                // Saving confirms the answers, so the fitness estimate's freshness checks restart.
+                // Saving confirms the answers, so the VO2 max estimate's freshness checks restart.
                 activityAnsweredAt = if (activity in 0..4) System.currentTimeMillis() / 1000 else null,
                 bodyMeasuredAt = if (weightValue != null && heightValue != null) System.currentTimeMillis() / 1000 else null,
                 betaBlocker = betaBlocker,
@@ -145,108 +129,174 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         )
     }
 
-    // The keyboard shrinks the page rather than covering it, so a focused field scrolls into view above it;
-    // while it's up the nav bar is hidden behind it and needs no room. Save is pinned at the bottom, over the
-    // keyboard when it's up, like Start and Done on the workout pages (spec 6.3), and as wide as the fields: on a
-    // wide screen both keep to the page's centred column (spec 2.4 Unfolded). Whether the keyboard takes room is
-    // read from its inset, so a keyboard that floats (as it can on an unfolded screen) leaves Save above the tab bar.
-    BoxWithConstraints(Modifier.fillMaxSize().imePadding()) {
-        val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-        val bottom = if (keyboard) 0.dp else contentPadding.calculateBottomPadding()
-        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
-        // The list ends clear of Save and the fade behind it (ScreenList adds its own 24 dp).
-        ScreenList(PaddingValues(bottom = PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)), gutter = GlowLayout.Gutter) {
-            item { PageHeader(stringResource(R.string.you_profile_title), back) }
-            item {
-                PagePanel {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PageNote(stringResource(R.string.you_profile_note))
-                        PageNumberField(
-                            age, { age = it }, stringResource(R.string.you_profile_age), stringResource(R.string.you_profile_age_unit),
-                            age.isNotBlank() && ageValue == null,
-                        )
-                        // Sex as labelled segments like Units, not two bare symbols beside Age. Tapping the chosen one
-                        // again clears it.
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PageNote(stringResource(R.string.you_profile_sex_note))
-                            org.openstrap.app.ui.glow.GlowSegments(
-                                listOf(stringResource(R.string.you_profile_sex_female), stringResource(R.string.you_profile_sex_male)),
-                                if (sex in 0..1) sex else -1, { i -> sex = if (sex == i) 2 else i },
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PageNote(stringResource(R.string.you_profile_units))
-                            org.openstrap.app.ui.glow.GlowSegments(
-                                listOf(
-                                    stringResource(R.string.you_profile_units_metric), stringResource(R.string.you_profile_units_imperial),
-                                ),
-                                if (imperial) 1 else 0, { switchUnits(it == 1) },
-                            )
-                        }
-                        PageNumberField(
-                            weight, { weight = it }, stringResource(R.string.you_profile_weight),
-                            stringResource(if (imperial) R.string.you_profile_unit_lb else R.string.you_profile_unit_kg),
-                            weight.isNotBlank() && weightValue == null, decimal = true,
-                        )
-                        if (imperial) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                val wrong = !heightBlank && heightValue == null
-                                PageNumberField(
-                                    feet, { feet = it.take(1) }, stringResource(R.string.you_profile_feet),
-                                    stringResource(R.string.you_profile_unit_ft), wrong,
-                                    Modifier.weight(1f),
-                                )
-                                PageNumberField(
-                                    inches, { inches = it.take(2) }, stringResource(R.string.you_profile_inches),
-                                    stringResource(R.string.you_profile_unit_in), wrong,
-                                    Modifier.weight(1f),
-                                )
-                            }
-                        } else {
-                            PageNumberField(
-                                heightCm, { heightCm = it }, stringResource(R.string.you_profile_height),
-                                stringResource(R.string.you_profile_unit_cm),
-                                !heightBlank && heightValue == null,
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PageNote(stringResource(R.string.you_profile_activity_note))
-                            // Tapping the chosen level again clears it.
-                            org.openstrap.app.ui.glow.GlowSegments((1..5).map { "$it" }, activity, { i -> activity = if (activity == i) -1 else i })
-                            PageNote(
-                                if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity]
-                                else stringResource(R.string.you_profile_activity_pick),
-                            )
-                        }
-                        PageSwitchRow(
-                            stringResource(R.string.you_profile_beta_blockers), null, betaBlocker, { betaBlocker = it }, divider = false,
-                        )
-                        PageSwitchRow(stringResource(R.string.you_profile_pregnant), null, pregnant, { pregnant = it }, divider = false)
-                        // Your max is set on the Heart rate zones page, with the zones that follow it.
-                        PageRow(
-                            org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW, org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
-                            onClick = onHeartZones, below = true, divider = false,
-                        )
-                        PageNumberField(
-                            sleepNeed, { sleepNeed = it }, stringResource(R.string.you_profile_sleep_need),
-                            stringResource(R.string.you_unit_h),
-                            sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true,
-                        )
-                    }
-                }
+    // Each value opens a picker sheet with Cancel and Save (HaloProfile and HaloProfileAgeSheet boards). A sheet's Save
+    // only changes the page's draft; the header's Save pill, shown while there are edits, is what keeps them.
+    var sheet by rememberSaveable { mutableStateOf<String?>(null) }
+    val notSet = stringResource(R.string.you_profile_not_set)
+    val unitKg = stringResource(R.string.you_profile_unit_kg)
+    val unitLb = stringResource(R.string.you_profile_unit_lb)
+    val levels = remember { org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS }
+    // The row says a word for the level, the picker the whole description.
+    val shortLevels = listOf(
+        R.string.you_profile_activity_short_inactive, R.string.you_profile_activity_short_light,
+        R.string.you_profile_activity_short_low, R.string.you_profile_activity_short_mid, R.string.you_profile_activity_short_high,
+    ).map { stringResource(it) }
+
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item {
+            HaloPageHeader(stringResource(R.string.you_profile_title), back, trailing = if (dirty) ({ HaloButton(
+                        stringResource(R.string.you_action_save), save, Modifier,
+                        if (valid) HaloButtonVariant.Primary else HaloButtonVariant.Secondary, HaloButtonSize.Small, enabled = valid,
+                    ) }) else null)
+        }
+        item {
+            PageGroup(
+                heading = stringResource(R.string.you_profile_group_about),
+                footnote = stringResource(R.string.you_profile_foot_about),
+            ) {
+                NavRow(
+                    stringResource(R.string.you_profile_age),
+                    ageValue?.let { pluralStringResource(R.plurals.you_profile_age, it, it) } ?: notSet,
+                    onClick = { sheet = "age" }, divider = false,
+                )
+                NavRow(
+                    stringResource(R.string.you_profile_row_sex),
+                    when (sex) {
+                        0 -> stringResource(R.string.you_profile_sex_female)
+                        1 -> stringResource(R.string.you_profile_sex_male)
+                        else -> notSet
+                    },
+                    onClick = { sheet = "sex" },
+                )
             }
         }
-        // Black from the bottom of the screen up to Save, fading out above it, so the page scrolls away under it.
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade().padding(start = side, end = side, bottom = bottom + 12.dp)) {
-            PageButton(
-                stringResource(R.string.you_action_save), save, Modifier.fillMaxWidth().height(SaveHeight), enabled = valid, primary = true,
-            )
+        item {
+            PageGroup(
+                heading = stringResource(R.string.you_profile_group_body), footnote = stringResource(R.string.you_profile_units_covers),
+            ) {
+                NavRow(
+                    stringResource(R.string.you_profile_units),
+                    stringResource(if (imperial) R.string.you_profile_units_imperial else R.string.you_profile_units_metric),
+                    onClick = { sheet = "units" }, divider = false,
+                )
+                NavRow(
+                    stringResource(R.string.you_profile_weight), weightValue?.let { Units.formatWeight(it, imperial) } ?: notSet,
+                    onClick = { sheet = "weight" },
+                )
+                NavRow(
+                    stringResource(R.string.you_profile_height), heightValue?.let { Units.formatHeight(it, imperial) } ?: notSet,
+                    onClick = { sheet = "height" },
+                )
+            }
         }
+        item {
+            PageGroup(
+                heading = stringResource(R.string.you_profile_group_estimates),
+                footnote = stringResource(R.string.you_profile_foot_all),
+            ) {
+                NavRow(
+                    stringResource(R.string.you_profile_row_activity), shortLevels.getOrNull(activity) ?: notSet,
+                    onClick = { sheet = "activity" }, divider = false,
+                )
+                NavRow(
+                    stringResource(R.string.you_profile_row_sleep_need),
+                    sleepNeedValue?.let { org.openstrap.app.presentation.Units.duration(it * 60L) }
+                        ?: stringResource(R.string.you_profile_sleep_default),
+                    onClick = { sheet = "sleep" },
+                )
+                SwitchRow(
+                    stringResource(R.string.you_profile_beta_blockers), stringResource(R.string.you_profile_beta_note),
+                    betaBlocker, { betaBlocker = it },
+                )
+                SwitchRow(
+                    stringResource(R.string.you_profile_pregnant), stringResource(R.string.you_profile_pregnant_note),
+                    pregnant, { pregnant = it },
+                )
+                // Your max is set on the Heart rate zones page, with the zones that follow it.
+                NavRow(
+                    org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW,
+                    if (profile.maxHeartRate == null && ageValue == null) stringResource(R.string.you_profile_max_no_age)
+                    else org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
+                    onClick = onHeartZones, below = true,
+                )
+            }
+        }
+    }
+
+    when (sheet) {
+        "age" -> StepperSheet(
+            stringResource(R.string.you_profile_age), ageValue ?: DEFAULT_AGE, AGE_RANGE,
+            onSave = { age = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (age.isNotBlank()) stringResource(R.string.you_profile_clear) else null, onClear = { age = ""; sheet = null },
+            note = stringResource(R.string.you_profile_age_note), unit = stringResource(R.string.you_profile_age_unit),
+        )
+        "sex" -> SegmentSheet(
+            stringResource(R.string.you_profile_row_sex),
+            listOf(stringResource(R.string.you_profile_sex_female), stringResource(R.string.you_profile_sex_male)),
+            if (sex in 0..1) sex else -1,
+            onSave = { sex = it; sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (sex in 0..1) stringResource(R.string.you_profile_clear) else null,
+            onClear = { sex = 2; sheet = null }, note = stringResource(R.string.you_profile_sex_sheet_note),
+        )
+        "units" -> SegmentSheet(
+            stringResource(R.string.you_profile_units),
+            listOf(stringResource(R.string.you_profile_units_metric), stringResource(R.string.you_profile_units_imperial)),
+            if (imperial) 1 else 0,
+            onSave = { switchUnits(it == 1); sheet = null }, onDismiss = { sheet = null },
+            note = stringResource(R.string.you_profile_units_covers),
+        )
+        "weight" -> StepperSheet(
+            stringResource(R.string.you_profile_weight),
+            weightNumber?.let { Math.round(it) } ?: if (imperial) DEFAULT_WEIGHT_LB else DEFAULT_WEIGHT_KG,
+            if (imperial) 55..660 else 25..300,
+            onSave = { weight = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (weight.isNotBlank()) stringResource(R.string.you_profile_clear) else null,
+            onClear = { weight = ""; sheet = null }, unit = if (imperial) unitLb else unitKg,
+        )
+        "height" -> if (imperial) StepperSheet(
+            stringResource(R.string.you_profile_height),
+            heightValue?.let { Units.cmToFeetInches(it).let { (f, i) -> f * 12 + i } } ?: DEFAULT_HEIGHT_IN, 40..98,
+            onSave = { total ->
+                feet = (total / 12).toString(); inches = (total % 12).toString()
+                heightCm = Units.feetInchesToCm(total / 12, total % 12).toString(); sheet = null
+            },
+            onDismiss = { sheet = null }, format = { "${it / 12}′${it % 12}″" },
+            clearLabel = if (!heightBlank) stringResource(R.string.you_profile_clear) else null,
+            onClear = { heightCm = ""; feet = ""; inches = ""; sheet = null },
+        ) else StepperSheet(
+            stringResource(R.string.you_profile_height), heightValue ?: DEFAULT_HEIGHT_CM, 100..250,
+            onSave = { heightCm = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (!heightBlank) stringResource(R.string.you_profile_clear) else null,
+            onClear = { heightCm = ""; feet = ""; inches = ""; sheet = null },
+            unit = stringResource(R.string.you_profile_unit_cm),
+        )
+        "activity" -> RadioSheet(
+            stringResource(R.string.you_profile_row_activity), levels, activity,
+            onSave = { activity = it; sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (activity in 0..4) stringResource(R.string.you_profile_clear) else null,
+            onClear = { activity = -1; sheet = null },
+            note = stringResource(R.string.you_profile_activity_note),
+        )
+        "sleep" -> StepperSheet(
+            stringResource(R.string.you_profile_row_sleep_need),
+            sleepNeedValue?.let { Math.round(it / 30f) } ?: DEFAULT_SLEEP_HALF_HOURS, 14..18,
+            onSave = { sleepNeed = formatNumber(it / 2f); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (sleepNeed.isNotBlank()) stringResource(R.string.you_profile_sleep_use_usual) else null,
+            onClear = { sleepNeed = ""; sheet = null },
+            note = stringResource(R.string.you_profile_sleep_note), unit = stringResource(R.string.you_unit_h),
+            format = { formatNumber(it / 2f) },
+        )
     }
 }
 
-/** The pinned Save button's height, as Start on Ready. */
-private val SaveHeight = 56.dp
+// Where a stepper starts when the field is empty.
+private const val DEFAULT_AGE = 30
+private val AGE_RANGE = 10..100
+private const val DEFAULT_WEIGHT_KG = 70
+private const val DEFAULT_WEIGHT_LB = 155
+private const val DEFAULT_HEIGHT_CM = 170
+private const val DEFAULT_HEIGHT_IN = 67
+private const val DEFAULT_SLEEP_HALF_HOURS = 16
 
 /** 72.0 -> "72", 158.7 -> "158.7". */
 private fun formatNumber(v: Float): String = "%.1f".format(java.util.Locale.ROOT, v).removeSuffix(".0")

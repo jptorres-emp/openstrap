@@ -74,7 +74,7 @@ class ShareCardsTest {
         val s = summary(1925, 2, 141)
         val indoor = storyCard(Workouts.Family.IndoorCardio, s, summaryHero(Workouts.Family.IndoorCardio, s, null), earned.take(1)) as StoryCard.Indoor
         assertEquals(listOf("Weekly goal, 3 of 4"), indoor.chips.map { it.text })
-        assertEquals("32:05", indoor.value)
+        assertEquals("32 min 05", indoor.value)
         assertEquals("141" to "Avg bpm", indoor.stats.first().let { it.value to it.label })
         val run = storyCard(Workouts.Family.Distance, s, summaryHero(Workouts.Family.Distance, s, null), earned) as StoryCard.Run
         assertEquals(listOf("Fastest 5 km"), run.chips.map { it.text })

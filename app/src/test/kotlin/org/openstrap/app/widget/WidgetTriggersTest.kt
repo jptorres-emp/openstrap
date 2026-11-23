@@ -39,10 +39,15 @@ class WidgetTriggersTest {
         assertEquals(both, workoutKinds(recording, WorkoutState.Idle))
     }
 
-    @Test fun `a pause or a resume refreshes Start alone`() {
+    @Test fun `a pause or a resume refreshes the recording card, Start's and Moment's`() {
         val paused = recording.copy(workout = recording.workout.copy(pausedAt = NOW))
-        assertEquals(setOf(WidgetKind.Start), workoutKinds(recording, paused))
-        assertEquals(setOf(WidgetKind.Start), workoutKinds(paused, recording))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, paused))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(paused, recording))
+    }
+
+    @Test fun `a rest or the stop question refreshes the recording card`() {
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, recording.copy(restUntil = NOW + 60)))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, recording.copy(endPrompt = NOW)))
     }
 
     @Test fun `the same state, or a new reading while recording, refreshes nothing`() {
@@ -107,6 +112,41 @@ class WidgetTriggersTest {
         snapshot.value = snapshot.value.copy(charging = true)
         scope.runCurrent()
         assertEquals(listOf(all), changed)
+    }
+
+    @Test fun `a sync failing or working again refreshes all`() {
+        watch()
+        snapshot.value = snapshot.value.copy(failingSince = NOW - 30)
+        scope.runCurrent()
+        assertEquals(listOf(all), changed)
+        // A second failure keeps the first time: the line is the same.
+        snapshot.value = snapshot.value.copy(lastSyncDone = NOW - 10)
+        scope.runCurrent()
+        assertEquals(listOf(all), changed)
+        snapshot.value = snapshot.value.copy(failingSince = null)
+        scope.runCurrent()
+        assertEquals(listOf(all, all), changed)
+    }
+
+    @Test fun `a sync starting while failing refreshes all, so the line reads Syncing`() {
+        snapshot.value = snapshot.value.copy(failingSince = NOW - 30)
+        watch()
+        sync.value = SyncState.Running("x")
+        scope.runCurrent()
+        assertEquals(listOf(all), changed)
+    }
+
+    @Test fun `Bluetooth going off or on refreshes all`() {
+        val bluetooth = MutableStateFlow(false)
+        val t = WidgetTriggers(goals, sides, snapshot, sync, steps, ended, workout, sleepEdits, profiles, clock, bluetooth) { NOW }
+        scope.watchWidgetTriggers(t, { changed += it }, { stepPushes++ })
+        scope.runCurrent()
+        assertEquals(emptyList<Set<WidgetKind>>(), changed)
+        bluetooth.value = true
+        scope.runCurrent()
+        bluetooth.value = false
+        scope.runCurrent()
+        assertEquals(listOf(all, all), changed)
     }
 
     @Test fun `a sync ending, live steps and a workout reach the widgets`() {

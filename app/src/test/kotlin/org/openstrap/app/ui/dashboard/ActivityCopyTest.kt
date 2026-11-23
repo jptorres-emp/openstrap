@@ -53,7 +53,7 @@ class ActivityCopyTest {
         assertNull(ActivityCopy.paceOf(4600, null, true, 10, 30))
         assertEquals("About usual by now", ActivityCopy.pace(UsualSteps.Pace.About, true))
         assertEquals("Fewer than your usual day", ActivityCopy.pace(UsualSteps.Pace.Fewer, false))
-        assertEquals("62% of your goal, about usual by now", ActivityCopy.activityLine(5000, 8000, UsualSteps.Pace.About, true))
+        assertEquals("62% of your goal, about your usual", ActivityCopy.activityLine(5000, 8000, UsualSteps.Pace.About, true))
         assertEquals("62% of your goal", ActivityCopy.activityLine(5000, 8000, null, true))
         assertEquals("steps, 23:00 to 00:00", ActivityCopy.hourLabel(23))
     }

@@ -19,7 +19,10 @@ data class SportSettings(
      * on wherever it's offered ([WorkoutSetup.plan]). Kept so older lines still read.
      */
     val gps: Boolean = true,
-    /** Saving the GPS route for the map: on unless turned off. */
+    /**
+     * Saving the GPS route for the map. Ready no longer turns it off: the route is always kept where GPS is used
+     * ([WorkoutSetup.plan]). Kept so older lines still read.
+     */
     val keepRoute: Boolean = true,
     /** Strength: how rest ends ([Strength.Rest.code]) and the sets planned, null for open. */
     val rest: String? = null,
@@ -130,7 +133,7 @@ object WorkoutSetup {
     /**
      * Choose's Start on your usual (workouts spec 2.1): a plan from last time's [settings] for [type], skipping Ready.
      * Its side is the one you last chose ([sides]); GPS is on where it's offered and the phone's location can be used
-     * ([location]).
+     * ([location]), and the route is kept wherever GPS is used.
      */
     fun plan(type: Int, settings: SportSettings, sides: Map<Int, Boolean>, location: Boolean): WorkoutPlan {
         val indoor = Workouts.indoorSide(type, sides)
@@ -141,16 +144,13 @@ object WorkoutSetup {
         val hasDistance = gps || sport in SportTypes.ON_FOOT
         val goal = WorkoutTarget.parse(settings.goal)?.takeIf { offered(it, hasDistance = hasDistance, kcal = false) }
         return WorkoutPlan(
-            sportType = sport, askToEnd = settings.askToEnd, target = goal, useGps = gps, keepRoute = gps && settings.keepRoute,
+            sportType = sport, askToEnd = settings.askToEnd, target = goal, useGps = gps, keepRoute = gps,
             rest = (Strength.Rest.parse(settings.rest) ?: Strength.Rest.DEFAULT).takeIf { strength },
             setsTarget = settings.sets.takeIf { strength }, logSets = strength && settings.log,
             // HIIT's rounds, or a run's reps.
             structure = Structure.parse(settings.structure)?.takeIf { Structure.fits(it, sport) }?.code,
         )
     }
-
-    /** Mind and body: the length chips after Open. */
-    val LENGTHS = listOf(15, 30, 45, 60).map { WorkoutTarget.Time(it * 60L) }
 
     /**
      * Whether [goal] can be aimed for now: a distance only where the workout has one, from GPS or steps
@@ -162,7 +162,7 @@ object WorkoutSetup {
         else -> true
     }
 
-    /** The kinds of goal Ready's goal card offers a distance or cardio sport (board ReadyFinal): its chips. */
+    /** The kinds of goal Ready offers a distance or cardio sport (board HaloReadyEveryKind): its tabs, or its Goal menu. */
     enum class GoalKind { None, Distance, Time, Zone, Intervals }
 
     /**

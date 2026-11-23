@@ -21,7 +21,7 @@ class AllMetricsTest {
 
     private val empty = DayUiState()
 
-    /** A metric's detail as the index opens it: a night signal's scoped to the night. */
+    /** A metric's detail as the index opens it: a night signal's scoped to the night, blood oxygen's to the day. */
     private fun open(m: Metric) = IndexTarget.Open(Detail.OfMetric(m, m in SleepCopy.NIGHT_SIGNALS))
 
     @Test fun `every metric detail appears exactly once`() {
@@ -36,7 +36,7 @@ class AllMetricsTest {
 
     @Test fun `grouped by section`() {
         assertEquals(
-            listOf("Recovery", "Sleep", "Heart", "Body signals", "Activity"),
+            listOf("Recovery", "Sleep", "Heart", "Body signals", "Activity", "Workouts"),
             metricIndex(empty, null, null, emptyList()).map { it.title },
         )
     }
@@ -47,21 +47,67 @@ class AllMetricsTest {
         assertEquals(NO_VALUE, hrv.status)
     }
 
-    @Test fun `values are the day's, night signals last night's, in the metric's format`() {
+    @Test fun `values are the day's, night signals last night's, blood oxygen's latest reading, in the metric's format`() {
         val sleep = SleepSession(start = 0, end = 8 * 3600)
         val day = empty.copy(
             steps = 13860, latestHeartRate = 58,
-            // The calendar day's readings differ from the night's: the index shows the night's, as every tab does.
+            // Blood oxygen is the day's latest reading, the other signals the night's, as every tab does.
             spo2 = listOf(ChartPoint(0, 90f), ChartPoint(60, 92f)),
             skinTemperature = listOf(ChartPoint(0, 31.4f), ChartPoint(60, 31.6f)),
             sleep = sleep,
             nights = listOf(SleepNight(empty.date, sleep, spo2 = 97f, skinTemperature = 36.5f)),
         )
-        val rows = metricIndex(day, null, null, emptyList()).flatMap { it.rows }.associateBy { it.target }
+        val rows = metricIndex(day, null, null, emptyList(), now = 120).flatMap { it.rows }.associateBy { it.target }
         assertEquals("13,860", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.Steps))).value)
         assertEquals("58", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.HeartRate))).value)
-        assertEquals("97%", rows.getValue(open(Metric.Spo2)).value)
+        assertEquals("92%", rows.getValue(open(Metric.Spo2)).value)
+        // Taken inside the night's sleep window a minute ago: no time yet.
+        assertEquals("While asleep", rows.getValue(open(Metric.Spo2)).status)
+        assertEquals(IndexTarget.Open(Detail.OfMetric(Metric.Spo2, night = false)), rows.getValue(open(Metric.Spo2)).target)
         assertEquals("36.5", rows.getValue(open(Metric.SkinTemperature)).value)
+    }
+
+    @Test fun `blood oxygen's row says daytime without a sleep window, and the time once the reading is old`() {
+        val day = empty.copy(spo2 = listOf(ChartPoint(60, 92f)))
+        fun status(now: Long) = metricIndex(day, null, null, emptyList(), now = now).flatMap { it.rows }.first { it.name == "Blood oxygen" }.status
+        assertEquals("Daytime", status(120))
+        assertTrue(status(120 + 2 * 3600), status(120 + 2 * 3600).startsWith("Daytime, "))
+    }
+
+    @Test fun `a resting heart rate unstrap estimated says so`() {
+        fun status(estimated: Boolean) = metricIndex(empty.copy(restingHeartRate = 54, restingEstimated = estimated), null, null, emptyList())
+            .flatMap { it.rows }.first { it.target == open(Metric.RestingHr) }.status
+        assertEquals("For the day", status(false))
+        assertEquals("For the day, estimated", status(true))
+    }
+
+    @Test fun `stress is the day's latest reading, not its average`() {
+        val day = empty.copy(stress = listOf(ChartPoint(0, 80f), ChartPoint(60, 30f), ChartPoint(120, 40f)))
+        val row = metricIndex(day, null, null, emptyList(), now = 180).flatMap { it.rows }.first { it.name == "Stress" }
+        assertEquals("40", row.value)
+        // The row has no tag, so its line says the level of the reading.
+        assertEquals("Normal", row.status)
+        // An hour on, the row says when.
+        val old = metricIndex(day, null, null, emptyList(), now = 120 + 2 * 3600).flatMap { it.rows }.first { it.name == "Stress" }
+        assertTrue(old.status, old.status.startsWith("Normal, "))
+        val high = metricIndex(day.copy(stress = listOf(ChartPoint(0, 85f))), null, null, emptyList(), now = 60).flatMap { it.rows }.first { it.name == "Stress" }
+        assertEquals("High", high.status)
+        assertEquals(IndexTarget.Open(Detail.OfMetric(Metric.Stress)), row.target)
+    }
+
+    @Test fun `skin temperature leads with its level, its change from your normal under it once there is one`() {
+        val sleep = SleepSession(start = 0, end = 8 * 3600)
+        // Eight nights at 35.9 and 36.1 by turns: a normal of 36.0.
+        val before = (1L..8L).map { SleepNight(empty.date.minusDays(it), SleepSession(0, 1), skinTemperature = if (it % 2 == 0L) 35.9f else 36.1f) }
+        fun row(nights: List<SleepNight>) = metricIndex(
+            empty.copy(sleep = sleep, nights = nights + SleepNight(empty.date, sleep, skinTemperature = 36.5f)), null, null, emptyList(),
+        ).flatMap { it.rows }.first { it.target == open(Metric.SkinTemperature) }
+        // Before there's a normal, the night's average says so.
+        assertEquals("36.5", row(emptyList()).value)
+        assertEquals("Average asleep", row(emptyList()).status)
+        val led = row(before)
+        assertEquals("36.5", led.value)
+        assertEquals("+0.5 °C", led.status)
     }
 
     private fun readiness(score: Int?, nights: Int, withheld: Boolean = false) =
@@ -118,5 +164,44 @@ class AllMetricsTest {
         metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.forEach { r ->
             for (s in listOf(r.name, r.status)) assertTrue(s, s.none { it == '·' || it == ';' || it == '—' })
         }
+    }
+}
+
+/** The search over the All metrics index (board HaloAllMetrics). */
+class AllMetricsSearchTest {
+    private fun r(name: String) = IndexRow(name, androidx.compose.ui.graphics.Color.White, null, "", IndexTarget.Home(HomeTab.Sleep))
+    private val groups = listOf(
+        IndexGroup("Recovery", listOf(r("Recovery"), r("Energy"))),
+        IndexGroup("Heart", listOf(r("Heart rate"), r("Resting heart rate"), r("HRV"))),
+        IndexGroup("Body signals", listOf(r("Blood oxygen"), r("Breathing rate"), r("Skin temperature"))),
+    )
+    private fun names(q: String) = filterIndex(groups, q).flatMap { it.rows }.map { it.name }
+
+    @Test fun `blank query keeps everything`() {
+        assertEquals(groups, filterIndex(groups, ""))
+        assertEquals(groups, filterIndex(groups, "   "))
+    }
+
+    @Test fun `case insensitive`() = assertEquals(names("heart"), names("HEART"))
+
+    @Test fun `accent insensitive both ways`() {
+        assertEquals(listOf("Energy"), names("énergy"))
+        val accented = listOf(IndexGroup("Sommeil", listOf(r("Fréquence cardiaque"))))
+        assertEquals(1, filterIndex(accented, "frequence").size)
+    }
+
+    @Test fun `matches inside any word`() = assertEquals(listOf("Heart rate", "Resting heart rate", "Breathing rate"), names("rate"))
+
+    @Test fun `every query word must match`() = assertEquals(listOf("Resting heart rate"), names("rest rate"))
+
+    @Test fun `group title keeps the whole group`() = assertEquals(listOf("Blood oxygen", "Breathing rate", "Skin temperature"), names("body"))
+
+    @Test fun `empty groups are hidden`() = assertEquals(listOf("Heart", "Body signals"), filterIndex(groups, "rate").map { it.title })
+
+    @Test fun `nothing matches gives an empty list`() = assertTrue(filterIndex(groups, "zzz").isEmpty())
+
+    @Test fun `chinese names match by substring`() {
+        val zh = listOf(IndexGroup("心脏", listOf(r("静息心率"), r("心率变异性"))))
+        assertEquals(1, filterIndex(zh, "变异").single().rows.size)
     }
 }

@@ -37,7 +37,9 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.openstrap.app.AppContainer
+import org.openstrap.app.BuildConfig
 import org.openstrap.app.PendingAction
+import org.openstrap.app.R
 import org.openstrap.app.data.HeartZones
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.SampleData
@@ -49,6 +51,7 @@ import org.openstrap.app.ui.alarms.AlarmsScreen
 import org.openstrap.app.ui.alarms.AlarmsViewModel
 import org.openstrap.app.ui.alarms.HealthAlertsScreen
 import org.openstrap.app.ui.alarms.PhoneAlertsScreen
+import org.openstrap.app.ui.device.WorkoutSettingsScreen
 import org.openstrap.app.ui.components.GrowFromButton
 import org.openstrap.app.ui.components.GrowProgress
 import org.openstrap.app.ui.components.ListDetail
@@ -59,6 +62,7 @@ import org.openstrap.app.ui.components.SidePaneWidth
 import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.device.BackupPage
 import org.openstrap.app.ui.device.DeletedSleepPage
+import org.openstrap.app.ui.device.SleepGoalSheet
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DiagnosticsScreen
 import org.openstrap.app.ui.device.HC_STORE_FAILED
@@ -238,6 +242,14 @@ private fun DataPage(
             onHeartZones = { open(Page.HeartZones) },
         )
         Page.HeartZones -> HeartZonesPage(container, padding, hooks.rootVm::setMaxHeartRate, hooks.rootVm::setHeartZones, close)
+        Page.WorkoutSettings -> {
+            val askToEnd by hooks.rootVm.askToEnd.collectAsStateWithLifecycle()
+            val maxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+            WorkoutSettingsScreen(
+                askToEnd, maxHr, padding, onAskToEnd = hooks.rootVm::setAskToEnd, onHeartZones = { open(Page.HeartZones) },
+                onBack = close,
+            )
+        }
         Page.Diagnostics -> {
             val log by container.strap.log.collectAsStateWithLifecycle()
             DiagnosticsScreen(log, padding, onBack = close)
@@ -280,6 +292,9 @@ private fun YouPageHost(
     val updateWaiting by hooks.rootVm.updateWaiting.collectAsStateWithLifecycle()
     val deletedSleep by hooks.dayVm.deletedSleep.collectAsStateWithLifecycle()
     val youMaxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    val askToEnd by hooks.rootVm.askToEnd.collectAsStateWithLifecycle()
+    // The Sleep goal row's own sheet, a small picker in place of the five goals.
+    var sleepGoalOpen by rememberSaveable { mutableStateOf(false) }
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
         deviceVm.checkAutoHealthConnect()
@@ -291,7 +306,10 @@ private fun YouPageHost(
         maxHeartRate = youMaxHr,
         onHeartZones = { open(Page.HeartZones) },
         onGoals = onGoals,
+        onSleepGoal = { sleepGoalOpen = true },
         onGoalsAndBests = { open(Page.GoalsAndBests) },
+        askToEnd = askToEnd,
+        onWorkouts = { open(Page.WorkoutSettings) },
         healthConnectAuto = hcAuto,
         healthConnectAvailability = hcAvailability,
         onHealthConnect = { open(Page.HealthConnect) },
@@ -304,10 +322,21 @@ private fun YouPageHost(
         updateWaiting = updateWaiting,
         onUpdates = { open(Page.Updates) },
         onDiagnostics = { open(Page.Diagnostics) },
-        onSampleData = if (SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
+        onSampleData = if (SampleData.AVAILABLE && isTestApp) ({ deviceVm.loadSampleData() }) else null,
         onBack = onBack,
         selected = selected?.row,
     )
+    if (sleepGoalOpen) {
+        SleepGoalSheet(
+            goals.sleepMinutes, Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), profile.sleepNeedMinutes != null,
+            onSave = { minutes ->
+                hooks.rootVm.saveGoals(goals.copy(sleepMinutes = minutes))
+                sleepGoalOpen = false
+            },
+            onDismiss = { sleepGoalOpen = false },
+            ageKnown = profile.age() != null,
+        )
+    }
 }
 
 /** The Strap page, with what the strap holds read once it's connected. */
@@ -367,6 +396,8 @@ private fun HealthConnectPageHost(hooks: PageHooks, padding: PaddingValues, onBa
             if (!installHealthConnect(context)) Toast.makeText(context, HC_STORE_FAILED, Toast.LENGTH_LONG).show()
         },
         onBack = onBack,
+        caloriesMissing = hooks.healthConnect.caloriesMissing,
+        onOfferCalories = hooks.healthConnect.offerCalories,
     )
 }
 
@@ -403,11 +434,24 @@ private fun UpdatesPageHost(container: AppContainer, rootVm: AppRootViewModel, p
     val allowLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         (waiting as? PendingAction.Install)?.let { install -> waiting = install.copy(answered = true) }
     }
+    val context = LocalContext.current
+    // Whatever way the wait ends, it is cleared: the install goes ahead, "install unknown apps" stayed off (a toast says
+    // so), or the release is gone from the list (the list is only empty before the saved one is read, so that waits).
     LaunchedEffect(waiting, updates.releases) {
         val install = (waiting as? PendingAction.Install)?.takeIf { it.answered } ?: return@LaunchedEffect
-        val release = updates.releases.firstOrNull { it.tag == install.tag } ?: return@LaunchedEffect
+        val release = updates.releases.firstOrNull { it.tag == install.tag }
+        if (release == null && updates.releases.isEmpty()) return@LaunchedEffect
         waiting = null
-        if (updater.canInstall()) updater.install(release)
+        when {
+            release == null -> Unit
+            updater.canInstall() -> updater.install(release)
+            else -> Toast.makeText(context, R.string.update_install_not_allowed, Toast.LENGTH_LONG).show()
+        }
+    }
+    // Back from Android's confirm screen with nothing installing, the page doesn't stay on Installing.
+    LifecycleResumeEffect(updater) {
+        updater.reconcile()
+        onPauseOrDispose { }
     }
     val uri = LocalUriHandler.current
     UpdatesPage(
@@ -431,3 +475,6 @@ private fun UpdatesPageHost(container: AppContainer, rootVm: AppRootViewModel, p
         },
     )
 }
+
+/** The .dev and .demo apps install beside the real one with their own data, so made-up days can't reach a real history. */
+private val isTestApp = BuildConfig.APPLICATION_ID.endsWith(".dev") || BuildConfig.APPLICATION_ID.endsWith(".demo")

@@ -63,10 +63,17 @@ internal val NIGHTLY: Set<Metric> = Metric.entries.filter { daySource(it) == Day
 internal val RELATED = mapOf(
     Metric.HeartRate to listOf(Metric.RestingHr, Metric.Hrv, Metric.Stress),
     Metric.RestingHr to listOf(Metric.Hrv, Metric.HeartRate, Metric.SkinTemperature),
-    Metric.Hrv to listOf(Metric.RestingHr, Metric.Stress, Metric.Breathing),
+    Metric.Hrv to listOf(Metric.RestingHr),
     Metric.Spo2 to listOf(Metric.Breathing, Metric.RestingHr),
     Metric.Stress to listOf(Metric.Hrv, Metric.HeartRate),
     Metric.SkinTemperature to listOf(Metric.RestingHr, Metric.Breathing),
     Metric.Breathing to listOf(Metric.Spo2, Metric.SkinTemperature, Metric.Hrv),
-    Metric.Steps to listOf(Metric.HeartRate),
+)
+
+/** Scores a metric's detail lists after its [RELATED] metrics (boards HaloDetailHeart and HaloDetailHrv). */
+internal val RELATED_SCORES = mapOf(
+    Metric.HeartRate to listOf(Score.Recovery),
+    Metric.Hrv to listOf(Score.Recovery, Score.Sleep),
+    // Steps' related are its Activity neighbours (board HaloDetailSteps).
+    Metric.Steps to listOf(Score.HeartPoints, Score.ActiveMinutes, Score.Calories, Score.Distance),
 )

@@ -72,6 +72,10 @@ data class UserProfile(
     val usesImperial: Boolean
         get() = imperial ?: (java.util.Locale.getDefault().country in IMPERIAL_REGIONS)
 
+    /** What distances, paces and speeds are written in: the same choice as weight and height. */
+    val unitSystem: UnitSystem
+        get() = if (usesImperial) UnitSystem.Imperial else UnitSystem.Metric
+
     companion object {
         /** Regions that use pounds and feet day to day. */
         val IMPERIAL_REGIONS = setOf("US", "LR", "MM")
@@ -102,7 +106,14 @@ data class BackupState(
     val on get() = folder != null
 }
 
-data class StrapSnapshot(val paired: Boolean, val battery: Int?, val charging: Boolean, val lastSyncDone: Long?)
+data class StrapSnapshot(
+    val paired: Boolean,
+    val battery: Int?,
+    val charging: Boolean,
+    val lastSyncDone: Long?,
+    /** When the syncs began to fail since [lastSyncDone] (epoch seconds), null while they work. */
+    val failingSince: Long? = null,
+)
 
 /**
  * Auto sync to Health Connect: [on] or off (off by default), when OpenStrap last wrote there ([lastSynced], epoch
@@ -220,15 +231,6 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     }
 
 
-    private val autoStartKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.AUTO_START_WORKOUTS)
-
-    /** Notice a workout as it starts and offer to record it from where it began ([org.openstrap.app.data.AutoStart]). On by default. */
-    val autoStartWorkouts: Flow<Boolean> = read { it[autoStartKey] ?: true }
-
-    suspend fun setAutoStartWorkouts(enabled: Boolean) {
-        store.edit { it[autoStartKey] = enabled }
-    }
-
     private val wearReminderKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.WEAR_REMINDER)
 
     /**
@@ -252,6 +254,45 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
 
     suspend fun setStrapSessions(enabled: Boolean) {
         store.edit { it[strapSessionsKey] = enabled }
+    }
+
+    private val askEndOnKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ASK_END_ON)
+    private val askEndMostKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MOST_MINUTES)
+    private val askEndGamesKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_GAMES_MINUTES)
+    private val askEndMindBodyKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MIND_BODY_MINUTES)
+
+    /**
+     * "Ask to end when I stop" (the Workouts settings page): on, and each group's time, out of the box as [AskToEnd]'s
+     * defaults. A time is stored as minutes, [AskToEnd.OFF] for Off; nothing stored is the group's default.
+     */
+    val askToEnd: Flow<AskToEnd> = read { p ->
+        AskToEnd(
+            on = p[askEndOnKey] ?: true,
+            most = AskToEnd.read(p[askEndMostKey], AskToEndGroup.Most.defaultMinutes),
+            games = AskToEnd.read(p[askEndGamesKey], AskToEndGroup.Games.defaultMinutes),
+            mindBody = AskToEnd.read(p[askEndMindBodyKey], AskToEndGroup.MindBody.defaultMinutes),
+        )
+    }
+
+    suspend fun setAskToEnd(a: AskToEnd) {
+        store.edit {
+            it[askEndOnKey] = a.on
+            it[askEndMostKey] = a.most ?: AskToEnd.OFF
+            it[askEndGamesKey] = a.games ?: AskToEnd.OFF
+            it[askEndMindBodyKey] = a.mindBody ?: AskToEnd.OFF
+        }
+    }
+
+    private val routeRoadsKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ROUTE_ROADS)
+
+    /**
+     * The route card draws a GPS workout's route along the roads it took ([org.openstrap.app.maps.RouteSnapper]), the
+     * default, or as GPS recorded it. With GPS chosen no road tiles are fetched for it.
+     */
+    val routeRoads: Flow<Boolean> = read { it[routeRoadsKey] ?: true }
+
+    suspend fun setRouteRoads(on: Boolean) {
+        store.edit { it[routeRoadsKey] = on }
     }
 
     private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.WORKOUT_LIVE_VIEW)
@@ -308,6 +349,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     private val betaBlocker = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_BETA_BLOCKER)
     private val pregnant = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_PREGNANT)
 
+    /** The profile; the distance system follows it as each value is read, before any collector sees it. */
     val profile: Flow<UserProfile> = read { prefs ->
         UserProfile(
             prefs[birthYear],
@@ -322,7 +364,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
             prefs[bodyAt],
             prefs[betaBlocker] == true,
             prefs[pregnant] == true,
-        )
+        ).also { UnitSetting.system = it.unitSystem }
     }
 
     suspend fun saveProfile(p: UserProfile) {
@@ -516,7 +558,9 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     suspend fun forgetDevice() {
         store.edit { prefs ->
             prefs.asMap().keys
-                .filter { it.name in STRAP_KEYS || it.name.startsWith(SettingsKeys.HISTORY_CURSOR_PREFIX) }
+                .filter {
+                    it.name in STRAP_KEYS || it.name.startsWith(SettingsKeys.HISTORY_CURSOR_PREFIX) || it.name.startsWith(SENT_TO_STRAP)
+                }
                 .forEach { prefs.remove(it) }
         }
     }
@@ -628,13 +672,17 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     private val strapBattery = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.STRAP_BATTERY)
     private val strapCharging = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.STRAP_CHARGING)
     private val syncDone = longPreferencesKey(SettingsKeys.STRAP_LAST_SYNC_DONE)
+    private val syncFailingSince = longPreferencesKey(SettingsKeys.STRAP_SYNC_FAILING_SINCE)
 
     /**
      * What a widget's strap status line reads with the strap away (widgets spec 5): pairing, the battery and charging
      * as last connected, and when a sync last finished.
      */
     val strapSnapshot: Flow<StrapSnapshot> = read { prefs ->
-        StrapSnapshot(prefs[address] != null && prefs[authKey] != null, prefs[strapBattery], prefs[strapCharging] == true, prefs[syncDone])
+        StrapSnapshot(
+            prefs[address] != null && prefs[authKey] != null, prefs[strapBattery], prefs[strapCharging] == true, prefs[syncDone],
+            prefs[syncFailingSince],
+        )
     }
 
     /** The connected strap's battery and charging, written when either changes. */
@@ -645,9 +693,38 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
         }
     }
 
-    /** When a history sync last finished (epoch seconds). Per type cursors are [lastSync]. */
+    /**
+     * When a full history sync last finished (epoch seconds). The failure [setSyncFailing] kept ends with it. Per type
+     * cursors are [lastSync].
+     */
     suspend fun setLastSyncDone(epochSeconds: Long) {
-        store.edit { it[syncDone] = epochSeconds }
+        store.edit {
+            it[syncDone] = epochSeconds
+            it.remove(syncFailingSince)
+        }
+    }
+
+    /** A sync failed at [epochSeconds]: kept as the start of the failing run unless one is already kept. */
+    suspend fun setSyncFailing(epochSeconds: Long) {
+        store.edit { if (it[syncFailingSince] == null) it[syncFailingSince] = epochSeconds }
+    }
+
+    private val workoutLive = stringPreferencesKey(SettingsKeys.WORKOUT_LIVE)
+
+    /** What the workout recording since [start] kept of its live-only figures, null when none or another workout's. */
+    suspend fun workoutLive(start: Long): WorkoutLive? =
+        WorkoutLive.decode(store.data.first()[workoutLive])?.takeIf { it.start == start }
+
+    /** Kept for the one workout recording now: a process death brings them back ([workoutLive]). */
+    suspend fun setWorkoutLive(live: WorkoutLive) {
+        store.edit { it[workoutLive] = live.encode() }
+    }
+
+    /** What the strap last took for [what] (a profile checksum, a goal), so a connect alone doesn't send it again. */
+    suspend fun sentToStrap(what: String): Long? = store.data.first()[longPreferencesKey(SENT_TO_STRAP + what)]
+
+    suspend fun setSentToStrap(what: String, value: Long) {
+        store.edit { it[longPreferencesKey(SENT_TO_STRAP + what)] = value }
     }
 
     /** Last synced timestamp (epoch seconds) for a history data type. */
@@ -774,6 +851,9 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     }
 
     companion object {
+        /** Prefix of [sentToStrap]'s keys, removed with the strap: a new strap hasn't taken anything yet. */
+        private const val SENT_TO_STRAP = "sent_to_strap_"
+
         /**
          * What [forgetDevice] removes: the paired strap (address, auth key, name), its companion association and the
          * answer to Android's association prompt, the Disconnect hold, the battery and sync time widgets show, and the
@@ -783,7 +863,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
             setOf(
                 DEVICE_ADDRESS, DEVICE_AUTH_KEY, DEVICE_NAME,
                 COMPANION_ASSOCIATION_ID, COMPANION_DECLINED, HELD_DISCONNECTED,
-                STRAP_BATTERY, STRAP_CHARGING, STRAP_LAST_SYNC_DONE,
+                STRAP_BATTERY, STRAP_CHARGING, STRAP_LAST_SYNC_DONE, STRAP_SYNC_FAILING_SINCE,
                 ZEPP_APP_TOKEN, ZEPP_USER_ID, ZEPP_API_BASE, ZEPP_CHINA, ZEPP_LOGIN_TOKEN, ZEPP_APP_TOKEN_AT, ZEPP_APP_TTL,
             )
         }
@@ -809,11 +889,17 @@ object SettingsKeys {
     const val ZEPP_LOGIN_TOKEN = "zepp_login_token"
     const val ZEPP_APP_TOKEN_AT = "zepp_app_token_at"
     const val ZEPP_APP_TTL = "zepp_app_ttl"
+    /** Workout auto-start's old switch: no longer read, the key stays for backups made before. */
     const val AUTO_START_WORKOUTS = "auto_start_workouts"
     const val WEAR_REMINDER = "wear_reminder"
     const val STRAP_SESSIONS = "strap_sessions"
+    const val ROUTE_ROADS = "route_roads"
     const val WORKOUT_LIVE_VIEW = "workout_live_view"
     const val WORKOUT_SIDES = "workout_sides"
+    const val ASK_END_ON = "ask_end_on"
+    const val ASK_END_MOST_MINUTES = "ask_end_most_minutes"
+    const val ASK_END_GAMES_MINUTES = "ask_end_games_minutes"
+    const val ASK_END_MIND_BODY_MINUTES = "ask_end_mind_body_minutes"
     const val PROFILE_BIRTH_YEAR = "profile_birth_year"
     const val PROFILE_SEX = "profile_sex"
     const val PROFILE_WEIGHT_KG = "profile_weight_kg"
@@ -862,6 +948,8 @@ object SettingsKeys {
     const val STRAP_BATTERY = "strap_battery"
     const val STRAP_CHARGING = "strap_charging"
     const val STRAP_LAST_SYNC_DONE = "strap_last_sync_done"
+    const val STRAP_SYNC_FAILING_SINCE = "strap_sync_failing_since"
+    const val WORKOUT_LIVE = "workout_live"
     const val BACKUP_FOLDER = "backup_folder"
     const val BACKUP_FOLDER_NAME = "backup_folder_name"
     const val BACKUP_LAST_DONE = "backup_last_done"
@@ -881,4 +969,21 @@ object SettingsKeys {
 
     /** The key each sport's [SportSettings][org.openstrap.app.data.SportSettings] is stored under, before the sport's id. */
     const val SPORT_SETTINGS_PREFIX = "sport_settings_"
+}
+
+/**
+ * A recording workout's figures that live only in memory and aren't in its rows: the seconds added to the rest under
+ * way, and the live kcal, which never goes down. Without them a restart would cut the rest short and drop the kcal.
+ */
+data class WorkoutLive(val start: Long, val restExtra: Long, val kcalActive: Float?, val kcalTotal: Float?) {
+    fun encode(): String = listOf(start, restExtra, kcalActive ?: "", kcalTotal ?: "").joinToString(",")
+
+    companion object {
+        private const val FIELDS = 4
+
+        fun decode(text: String?): WorkoutLive? {
+            val p = text?.split(",")?.takeIf { it.size == FIELDS } ?: return null
+            return p[0].toLongOrNull()?.let { WorkoutLive(it, p[1].toLongOrNull() ?: 0, p[2].toFloatOrNull(), p.last().toFloatOrNull()) }
+        }
+    }
 }

@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
@@ -8,8 +12,6 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,11 +28,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -38,6 +40,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -70,14 +72,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
 import org.openstrap.app.data.RecentChip
+import org.openstrap.app.data.SportGroup
+import org.openstrap.app.data.SportGroups
+import org.openstrap.app.data.SportSection
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.ui.components.Motion
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.SportIcons
 import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.sportFamilyColor
 
 /* ---------------------------------------------- Choose ----------------------------------------------- */
 
@@ -88,8 +94,8 @@ data class ChooseSport(val type: Int, val line: String)
  * Choose (workouts spec 2.1), the first screen of a workout and every sport on it, so one tap from Activity's All
  * sports reaches them all: "Start a workout" and the strap in one line; your usual as a slim unlit row with Start, which starts with last time's settings and skips Ready ([onStartUsual]),
  * while the row elsewhere opens Ready ([onReady]); the search over every sport; Recent as chips, saved workouts among
- * them ([onSaved]); then all sports as tiles and More sports, as the picker has them. A new user has no usual, and
- * Run, Walk and Strength as recent.
+ * them ([onSaved]); then every sport as tiles in its family's section (board HaloChooseSport). A new user has no usual,
+ * and Run, Walk and Strength as recent.
  */
 @Composable
 fun GlowChooseScreen(
@@ -106,7 +112,7 @@ fun GlowChooseScreen(
     var page by rememberSaveable { mutableStateOf(ChoosePage.Choose) }
     BackHandler { if (page != ChoosePage.Choose) page = ChoosePage.Choose else onBack() }
     SharedTransitionLayout {
-        AnimatedContent(page, transitionSpec = { choosePageMotion(initialState, targetState) }, label = "choose") { shown ->
+        AnimatedContent(page, transitionSpec = { choosePageMotion() }, label = "choose") { shown ->
             // The search box glides from its place on Choose to the top of its page, and back, as the rest crossfades.
             val searchBox = Modifier.sharedBounds(
                 rememberSharedContentState(SEARCH_BOX), this@AnimatedContent, boundsTransform = { _, _ -> SearchBounds },
@@ -114,42 +120,24 @@ fun GlowChooseScreen(
             )
             when (shown) {
                 ChoosePage.Search -> SearchPage(contentPadding, onReady, { page = ChoosePage.Choose }, searchBox)
-                ChoosePage.More -> MoreSports(contentPadding, onReady) { page = ChoosePage.Choose }
                 ChoosePage.Choose -> ChooseBody(
                     usual, recent, connection, liveHeartRate, contentPadding, onStartUsual, onReady, onBack, onSaved,
-                    onSearch = { page = ChoosePage.Search }, onMore = { page = ChoosePage.More }, modifier = searchBox,
+                    onSearch = { page = ChoosePage.Search }, modifier = searchBox,
                 )
             }
         }
     }
 }
 
-/** Choose and the two pages it opens in place. */
-private enum class ChoosePage { Choose, Search, More }
+/** Choose and the search page it opens in place. */
+private enum class ChoosePage { Choose, Search }
 
 private const val SEARCH_BOX = "choose_search"
 private val SearchBounds = tween<Rect>(Motion.SWIFT, easing = Motion.easing)
 
-/** A page slides a quarter of the width; the one it covers drifts an eighth behind it. */
-private const val SLIDE_PART = 4
-private const val SLIDE_BEHIND = 8
-
-/**
- * To and from the search, a crossfade the search box glides through. More sports pushes in from the right as a
- * deeper page does (as PushContent moves screens), and slides back out to it.
- */
-private fun choosePageMotion(from: ChoosePage, to: ChoosePage): ContentTransform {
-    if (from == ChoosePage.Search || to == ChoosePage.Search) {
-        return ContentTransform(fadeIn(tween(Motion.SWIFT, easing = Motion.easing)), fadeOut(tween(Motion.QUICK)), sizeTransform = null)
-    }
-    val forward = to == ChoosePage.More
-    val slide = tween<IntOffset>(Motion.SWIFT, easing = Motion.easing)
-    return ContentTransform(
-        slideInHorizontally(slide) { if (forward) it / SLIDE_PART else -it / SLIDE_PART } + fadeIn(tween(Motion.SWIFT)),
-        slideOutHorizontally(slide) { if (forward) -it / SLIDE_BEHIND else it / SLIDE_PART } + fadeOut(tween(Motion.QUICK)),
-        sizeTransform = null,
-    )
-}
+/** To and from the search, a crossfade the search box glides through. */
+private fun choosePageMotion(): ContentTransform =
+    ContentTransform(fadeIn(tween(Motion.SWIFT, easing = Motion.easing)), fadeOut(tween(Motion.QUICK)), sizeTransform = null)
 
 /** Choose itself. [modifier] goes on its search box, which glides into the search page. */
 @Suppress("LongParameterList", "ModifierNotUsedAtRoot", "UnstableCollections", "ComposeUnstableCollections")
@@ -165,104 +153,123 @@ private fun ChooseBody(
     onBack: () -> Unit,
     onPickPreset: (RecentChip.Saved) -> Unit,
     onSearch: () -> Unit,
-    onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val header: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RoundIcon(AppIcons.X, stringResource(R.string.glow_close), onBack)
-            Spacer(Modifier.width(12.dp))
+            HaloIconButton(AppIcons.X, stringResource(R.string.glow_close), onBack)
+            Spacer(Modifier.width(Space.S12))
             Text(stringResource(R.string.glow_choose_title), color = Color.White, style = GlowType.pageTitle, maxLines = 1)
         }
     }
-    val choose: @Composable ColumnScope.() -> Unit = {
+    val top: @Composable ColumnScope.() -> Unit = {
         StrapLine(connection, liveHeartRate)
         if (usual != null) UsualRow(usual, { onStartUsual(usual.type) }, { onReady(usual.type) })
         // The search opens a page of its own (board ActivitySearchTyping).
         SearchEntry(stringResource(R.string.glow_choose_search_all), onSearch, modifier)
         if (recent.isNotEmpty()) {
-            SectionLabel(stringResource(R.string.glow_choose_recent))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HaloTitle(stringResource(R.string.glow_choose_recent), variant = TitleVariant.Group)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 recent.forEach { chip ->
                     when (chip) {
-                        is RecentChip.Sport -> RecentPill(chip.type, Workouts.shortName(chip.type)) { onReady(chip.type) }
-                        is RecentChip.Saved -> RecentPill(chip.sport, chip.name) { onPickPreset(chip) }
+                        is RecentChip.Sport -> SportChip(chip.type, Workouts.shortName(chip.type)) { onReady(chip.type) }
+                        is RecentChip.Saved -> SportChip(chip.sport, chip.name) { onPickPreset(chip) }
                     }
                 }
             }
         }
-        SportTiles(stringResource(R.string.glow_choose_all_sports), Workouts.EVERYDAY, Workouts::shortName, { false }, onReady)
     }
+    val sections: @Composable ColumnScope.() -> Unit = { SportSections(SportGroups.chooseSections(), { false }, onReady) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Unfolded (spec 2.4): the rest of the sports, A to Z, in a column of their own beside the tiles, each side
-        // scrolling by itself, so none is a tap away behind More sports.
+        // Unfolded (spec 2.4): the sections in a column of their own beside the strap, usual, search and Recent, each
+        // side scrolling by itself.
         if (maxWidth >= GlowLayout.TwoColumnWidth) CompositionLocalProvider(LocalPageColumn provides GlowLayout.MaxContentWidth) {
-            WorkoutPage(Color.Transparent, contentPadding, scroll = false) {
+            HaloPageColumn(contentPadding, scroll = false) {
                 header()
                 Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap * 2)) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp), content = choose)
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SectionLabel(stringResource(R.string.glow_choose_more_sports))
-                        MoreSportsList(onReady)
-                    }
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(Space.S12), content = top)
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(Space.S12), content = sections)
                 }
             }
-        } else WorkoutPage(Color.Transparent, contentPadding) {
+        } else HaloPageColumn(contentPadding) {
             header()
-            choose()
-            MoreSportsRow(onMore)
+            top()
+            sections()
         }
     }
 }
 
 /**
- * Your usual: a slim unlit card with its name, what you did last time, and Start at its end. The row itself opens
- * Ready.
+ * Your usual: a card of one row, the sport's tile, its name, "Your usual" and what you did last time under it, and Start
+ * at its end. The card itself opens Ready.
  */
 @Composable
 private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
-    val color = familyColor(Workouts.family(s.type))
+    val color = sportFamilyColor(s.type)
     val haptics = org.openstrap.app.ui.components.rememberHaptics()
-    PictureCard(color, Modifier.fillMaxWidth(), onClick = onOpen, contentPadding = PaddingValues(start = 18.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.glow_choose_your_usual), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                    style = GlowType.secondary,
+    HaloCard(fill = CardFill.Rows, onClick = onOpen) {
+        HaloRow(
+            Workouts.sportName(s.type), lead = RowLead.sport(SportIcons.of(s.type), color), divider = false,
+            line = {
+                Column {
+                    RowLine(stringResource(R.string.glow_choose_your_usual))
+                    if (s.line.isNotEmpty()) RowLine(s.line)
+                }
+            },
+            trail = {
+                HaloButton(
+                    stringResource(R.string.glow_choose_start),
+                    { haptics.perform(org.openstrap.app.ui.components.HapticEvent.WorkoutStart); onStart() },
+                    variant = HaloButtonVariant.Primary, icon = AppIcons.PlayFill,
                 )
-                Text(
-                    Workouts.sportName(s.type), color = Color.White, style = GlowType.headerDate, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-                if (s.line.isNotEmpty()) Text(
-                    s.line, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            PageButton(
-                stringResource(R.string.glow_choose_start),
-                { haptics.perform(org.openstrap.app.ui.components.HapticEvent.WorkoutStart); onStart() },
-                primary = true, icon = AppIcons.PlayFill,
-            )
-        }
+            },
+        )
     }
 }
 
-/** Choose's quiet chips, a step off black. */
-private val QuietCard = ListSurface
-
-/** A Recent chip: the sport's icon in its colour and a name, a sport's or a saved workout's, on a quiet pill. */
+/** Change sport's "Now" card (board HaloSwitchSport): a card of one row, the sport you're on, with what carries over. */
 @Composable
-private fun RecentPill(sport: Int, name: String, onClick: () -> Unit) =
-    IconPill(name, onClick, icon = SportIcons.of(sport), tint = familyColor(Workouts.family(sport)), surface = QuietCard, hairline = true)
+private fun NowCard(type: Int) {
+    HaloCard(fill = CardFill.Rows) {
+        HaloRow(
+            Workouts.sportName(type), lead = RowLead.sport(SportIcons.of(type), sportFamilyColor(type)), divider = false,
+            line = {
+                Column {
+                    RowLine(stringResource(R.string.glow_choose_now))
+                    RowLine(stringResource(R.string.glow_choose_now_note))
+                }
+            },
+        )
+    }
+}
+
+/** A Recent sport as a [HaloChip]: its icon in its family's colour and a name, a sport's or a saved workout's. */
+@Composable
+private fun SportChip(sport: Int, name: String, onClick: () -> Unit) =
+    HaloChip(name, onClick, icon = SportIcons.of(sport), tint = sportFamilyColor(sport), size = ChipSize.Main)
 
 /* --------------------------------------------- Sport picker -------------------------------------------- */
 
 /**
- * A sport's tile (spec 6.3), in the picker and on Activity's Start a workout: a 64 dp Control tile with 16 dp corners,
- * the [icon] at 24 dp, the [name] in Secondary under it. The chosen sport's tile is white with a black icon; an
- * [outdoor] sport carries the 12 dp location mark in its corner.
+ * The mark of a sport done outdoors (boards HaloChooseSport, HaloSwitchSport): a white pin in a 22 dp circle on the
+ * tile's top right edge, ringed in the page's black so the round tile never crops it.
+ */
+@Composable
+private fun OutdoorBadge(modifier: Modifier = Modifier) {
+    Box(
+        modifier.offset(x = 5.dp, y = (-5).dp).size(26.dp).clip(CircleShape).background(Color.Black).padding(Space.S2)
+            .clip(CircleShape).background(Greys.Raised),
+        contentAlignment = Alignment.Center,
+    ) { Icon(SportIcons.Location, stringResource(R.string.glow_choose_outdoors), tint = Color.White, modifier = Modifier.size(12.dp)) }
+}
+
+
+/**
+ * A sport's tile (spec 6.3), in the picker and on Activity's Start a workout: a 64 [HaloTile], the [icon] at 24, the
+ * [name] in Secondary under it. The chosen sport's tile is white with a black icon; an
+ * [outdoor] sport carries the [OutdoorBadge].
  */
 @Composable
 internal fun SportTile(
@@ -271,37 +278,36 @@ internal fun SportTile(
     modifier: Modifier,
     outdoor: Boolean,
     selected: Boolean = false,
+    /** Tints the tile in this colour at 14% with the icon in it (board HaloActivity); null keeps it grey. */
+    color: Color? = null,
     onClick: () -> Unit,
 ) {
     // Tight corners and room underneath, so the press area never clips a label that fills the width.
     Column(
-        modifier.pressClickable(onClick, RoundedCornerShape(8.dp)).semantics(mergeDescendants = true) { role = Role.Button }
-            .padding(vertical = 4.dp),
+        modifier.pressClickable(onClick, Corner.Chip).semantics(mergeDescendants = true) { role = Role.Button }
+            .padding(vertical = Space.S4),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            Modifier.size(SportTileSize).clip(GlowLayout.TileShape).background(if (selected) Color.White else Raised),
-            contentAlignment = Alignment.Center,
-        ) {
-            val ink = if (selected) Color.Black else Color.White
-            Icon(icon, null, tint = ink, modifier = Modifier.size(24.dp))
-            if (outdoor) Icon(
-                SportIcons.Location, stringResource(R.string.glow_choose_outdoors), tint = ink.copy(alpha = 0.7f),
-                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(12.dp),
-            )
-        }
-        Spacer(Modifier.height(6.dp))
+        HaloTile(
+            icon, size = TileSize.Large,
+            tone = when {
+                selected -> TileTone.Selected
+                color != null -> TileTone.Ink(color)
+                else -> TileTone.Neutral
+            },
+            glyph = if (selected || color != null) null else Color.White,
+            badge = if (outdoor) ({ OutdoorBadge(Modifier.align(Alignment.TopEnd)) }) else null,
+        )
+        Spacer(Modifier.height(Space.S8))
         // Two lines, so a long name in More sports' search isn't cut short. A name wider than the tile breaks after its
         // hyphen ("Cross-" over "training"), else at a hyphenation point, never between any two letters.
         Text(
-            name.replace("-", "-\u200B"), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+            name.replace("-", "-\u200B"), color = Ink.Secondary,
             style = GlowType.secondary.copy(hyphens = Hyphens.Auto), maxLines = 2,
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis,
         )
     }
 }
-
-private val SportTileSize = 64.dp
 
 /** The sport list on its own, for saving a stretch nobody started. */
 @Composable
@@ -314,94 +320,193 @@ fun GlowSportPickerScreen(
 
 /**
  * Choose a sport (spec 6.3), for Ready's sport and for saving a stretch nobody started: a page with the search field,
- * your Recent sports, the twelve everyday ones as tiles and a More sports row for the rest, A to Z. Search looks
- * through every sport, both kinds of a two-kind sport included. A tile picks its sport's key ([Workouts.tileType]);
- * Ready's switch then picks the kind. [selected] is the sport chosen now, -1 for none. Choose has the same parts.
+ * your Recent sports as chips, then every sport as tiles in its family's section (board HaloSwitchSport). Search looks
+ * through every sport, both kinds of a two-kind sport included, and lists them as rows with their family. A tile picks
+ * its sport's key ([Workouts.tileType]); Ready's switch then picks the kind. [selected] is the sport chosen now, -1
+ * for none, drawn as a stronger tile with a white ring. Choose has the same parts.
  */
 @Composable
 internal fun SportPicker(selected: Int, recent: List<Int>, contentPadding: PaddingValues, onPick: (Int) -> Unit, onBack: () -> Unit) {
-    var more by rememberSaveable { mutableStateOf(false) }
-    BackHandler { if (more) more = false else onBack() }
-    if (more) {
-        MoreSports(contentPadding, onPick) { more = false }
-        return
-    }
     var query by rememberSaveable { mutableStateOf("") }
     val chosen = Workouts.tileType(selected)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.glow_choose_pick_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Workout) {
+        item { HaloPageHeader(stringResource(if (selected >= 0) R.string.glow_choose_change_title else
+            R.string.glow_choose_pick_title), onBack) }
+        if (selected >= 0) item(key = "now") { NowCard(selected) }
         item { SearchField(query, stringResource(R.string.glow_choose_search)) { query = it } }
         if (query.isNotBlank()) {
-            item(key = "found") { SearchResults(query, selected, onPick) }
-            return@ScreenList
+            item(key = "found") { SearchResults(query, onPick) }
+            return@HaloPageList
         }
         if (recent.isNotEmpty()) item(key = "recent") {
-            SportTiles(stringResource(R.string.glow_choose_recent), recent, Workouts::shortName, { it == chosen }, onPick)
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                HaloTitle(stringResource(R.string.glow_choose_recent), variant = TitleVariant.Group)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
+                    recent.forEach { SportChip(it, Workouts.shortName(it)) { onPick(it) } }
+                }
+            }
         }
-        item(key = "sports") {
-            SportTiles(stringResource(R.string.glow_choose_sports), Workouts.EVERYDAY, Workouts::shortName, { it == chosen }, onPick)
+        item(key = "sections") {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+                SportSections(SportGroups.chooseSections(), { it == chosen }, onPick)
+            }
         }
-        item(key = "more") { MoreSportsRow { more = true } }
     }
 }
 
-/** The rest of the sports, A to Z, as a list page of their own. */
+/** What the search finds in the picker, as rows with their family, or that nothing matches [query]. Picking one puts the keyboard away. */
 @Composable
-private fun MoreSports(contentPadding: PaddingValues, onPick: (Int) -> Unit, onBack: () -> Unit) {
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.glow_choose_more_sports), onBack) }
-        item { MoreSportsList(onPick) }
-    }
-}
-
-/** Every sport behind the tiles, A to Z, in one panel. */
-@Composable
-private fun MoreSportsList(onPick: (Int) -> Unit) = ListPanel {
-    Workouts.MORE.forEachIndexed { i, type ->
-        PageRow(Workouts.sportName(type), icon = SportIcons.of(type), divider = i > 0, onClick = { onPick(type) })
-    }
-}
-
-/** The row that opens [MoreSports]. */
-@Composable
-private fun MoreSportsRow(onClick: () -> Unit) = ListPanel {
-    PageRow(
-        stringResource(R.string.glow_choose_more_sports), stringResource(R.string.glow_choose_more_sports_detail),
-        below = true, divider = false, onClick = onClick,
-    )
-}
-
-/** What the search finds, as tiles, or that nothing matches [query]. Picking one puts the keyboard away. */
-@Composable
-private fun SearchResults(query: String, selected: Int, onPick: (Int) -> Unit) {
+private fun SearchResults(query: String, onPick: (Int) -> Unit) {
     val found = remember(query) { Workouts.search(query) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
-    val pick: (Int) -> Unit = { keyboard?.hide(); focus.clearFocus(); onPick(it) }
     if (found.isEmpty()) Text(
-        stringResource(R.string.glow_choose_no_match, query.trim()), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-        style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+        stringResource(R.string.glow_choose_no_match, query.trim()), color = Ink.Secondary,
+        style = GlowType.secondary, modifier = Modifier.padding(start = Space.S4, top = Space.S8),
     )
-    else SportTiles(null, found, { if (it in Workouts.EVERYDAY) Workouts.shortName(it) else Workouts.sportName(it) }, { it == selected }, pick)
+    else FoundRows(found) { keyboard?.hide(); focus.clearFocus(); onPick(it) }
+}
+
+/* -------------------------------------------- Family sections ---------------------------------------- */
+
+/** A section's title (board HaloChooseSport): the family, as the boards name it. */
+@Composable
+@ReadOnlyComposable
+private fun groupTitle(group: SportGroup): String = stringResource(when (group) {
+    SportGroup.Distance -> R.string.glow_choose_group_distance
+    SportGroup.IndoorCardio -> R.string.glow_choose_group_indoor
+    SportGroup.StrengthIntervals -> R.string.glow_choose_group_strength
+    SportGroup.MindBody -> R.string.glow_choose_group_mind
+    SportGroup.Games -> R.string.glow_choose_group_games
+    SportGroup.Other -> R.string.glow_choose_group_other
+})
+
+/** The line under a section's title: what its sports record. */
+@Composable
+@ReadOnlyComposable
+private fun groupNote(group: SportGroup): String = stringResource(when (group) {
+    SportGroup.Distance -> R.string.glow_choose_group_distance_note
+    SportGroup.IndoorCardio -> R.string.glow_choose_group_indoor_note
+    SportGroup.StrengthIntervals -> R.string.glow_choose_group_strength_note
+    SportGroup.MindBody -> R.string.glow_choose_group_mind_note
+    SportGroup.Games -> R.string.glow_choose_group_games_note
+    SportGroup.Other -> R.string.glow_choose_group_other_note
+})
+
+/** A section's colour: its family's, and the board's grey for Other, which has no family of its own. */
+private fun groupColor(group: SportGroup): Color = when (group) {
+    SportGroup.Distance -> familyColor(Workouts.Family.Distance)
+    SportGroup.IndoorCardio -> familyColor(Workouts.Family.IndoorCardio)
+    SportGroup.StrengthIntervals -> familyColor(Workouts.Family.Strength)
+    SportGroup.MindBody -> familyColor(Workouts.Family.MindBody)
+    SportGroup.Games -> familyColor(Workouts.Family.Games)
+    SportGroup.Other -> GlowType.footnoteColor
+}
+
+/** A sport's own colour: its family's, or Other's grey. */
+internal fun sportColor(type: Int): Color {
+    val group = SportGroups.of(Workouts.tileType(type))
+    return if (group == SportGroup.Other) groupColor(group) else sportFamilyColor(type)
+}
+
+/** The sections of sport tiles, four to a row, each under its family's title (board HaloChooseSport). */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
+@Composable
+private fun SportSections(sections: List<SportSection>, isSelected: (Int) -> Boolean, onPick: (Int) -> Unit) {
+    sections.forEach { section ->
+        Column(Modifier.padding(top = Space.S4), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+            SectionHeader(section.group, section.types.size)
+            section.types.chunked(4).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8), verticalAlignment = Alignment.Top) {
+                    row.forEach { type ->
+                        FamilyTile(type, isSelected(type), Modifier.weight(1f)) { onPick(type) }
+                    }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+/** A section's heading: a 4 by 28 bar in its colour, the title over what it records, and the sport count at the end. */
+@Composable
+private fun SectionHeader(group: SportGroup, count: Int) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Space.S4), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(width = 4.dp, height = 28.dp).clip(Corner.Pill).background(groupColor(group)))
+        Spacer(Modifier.width(Space.S8))
+        Column(Modifier.weight(1f)) {
+            Text(groupTitle(group), color = Color.White, style = GlowType.pageTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(groupNote(group), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(Space.S8))
+        Text(
+            pluralStringResource(R.plurals.glow_choose_sports_count, count, count), color = GlowType.footnoteColor,
+            style = GlowType.noteSmall,
+        )
+    }
+}
+
+/**
+ * A sport's tile in a section (board HaloChooseSport): a 64 [HaloTile] in its family's colour, the short name under it.
+ * The sport you are on is tinted 30 percent and ringed white (board HaloSwitchSport). A sport done only outdoors carries the location mark.
+ */
+@Composable
+private fun FamilyTile(type: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val color = sportColor(type)
+    Column(
+        modifier.pressClickable(onClick, Corner.Chip).semantics(mergeDescendants = true) {
+            role = Role.Button
+            this.selected = selected
+        }.padding(vertical = Space.S4),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        HaloTile(
+            SportIcons.of(type), size = TileSize.Large, tone = TileTone.Ink(color, picked = selected),
+            badge = if (type in Workouts.OUTDOOR_ONLY) ({ OutdoorBadge(Modifier.align(Alignment.TopEnd)) }) else null,
+        )
+        Spacer(Modifier.height(Space.S8))
+        // A name wider than the tile breaks after its hyphen ("Cross-" over "training"), never between two letters.
+        Text(
+            Workouts.shortName(type).replace("-", "-\u200B"), color = Ink.Secondary,
+            style = GlowType.secondary.copy(hyphens = Hyphens.Auto), maxLines = 2,
+            textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** One search row (board HaloSearchSports): the icon on a tile in its family's colour, the name over its family, a chevron. */
+@Composable
+private fun FoundRow(type: Int, divider: Boolean, onClick: () -> Unit) = HaloRow(
+    Workouts.sportName(type), lead = RowLead.tile(SportIcons.of(type), sportColor(type)), titleSuffix = workoutTags(type),
+    line = { RowLine(groupTitle(SportGroups.of(Workouts.tileType(type)))) }, trail = { RowTrail.Chevron() },
+    onClick = onClick, divider = divider,
+)
+
+/** [types] as rows in one panel, each with its family, in the order given. */
+@Composable
+private fun FoundRows(types: List<Int>, onPick: (Int) -> Unit) = ListPanel {
+    types.forEachIndexed { i, type -> FoundRow(type, i > 0) { onPick(type) } }
 }
 
 /** Choose's search field before it's typed in: it looks like the field and opens [SearchPage]. */
 @Composable
 private fun SearchEntry(hint: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Raised)
-            .pressClickable(onClick, GlowLayout.TileShape).semantics { role = Role.Button }.padding(horizontal = 16.dp),
+        modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Greys.Control)
+            .pressClickable(onClick, GlowLayout.TileShape).semantics { role = Role.Button }.padding(horizontal = Space.S16),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(SportIcons.Search, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.body, maxLines = 1)
+        Icon(SportIcons.Search, null, tint = Ink.Secondary, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(Space.S8))
+        Text(hint, color = Ink.Secondary, style = GlowType.body, maxLines = 1)
     }
 }
 
 /**
- * The search over every sport (board ActivitySearchTyping): back and the field, with the keyboard up, then how many
- * sports match and a row for each, its icon and full name. Before anything is typed, every sport A to Z.
+ * The search over every sport (boards ActivitySearchTyping, HaloSearchSports): back and the field, with the keyboard
+ * up, then how many sports match and a row for each, its icon, full name and family. Before anything is typed, every
+ * sport in its family's section.
  */
 // [modifier] goes on the search box, the one part that glides in from Choose.
 @Suppress("ModifierNotUsedAtRoot")
@@ -409,10 +514,10 @@ private fun SearchEntry(hint: String, onClick: () -> Unit, modifier: Modifier = 
 private fun SearchPage(contentPadding: PaddingValues, onPick: (Int) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var query by rememberSaveable { mutableStateOf("") }
     val found = remember(query) {
-        if (query.isBlank()) (Workouts.EVERYDAY + Workouts.MORE).distinct().sortedBy { Workouts.sportName(it) }
+        if (query.isBlank()) SportGroups.OFFERED.sortedBy { Workouts.sportName(it) }
         // Names starting with what's typed first, then a word in them starting with it, then the rest.
         else Workouts.search(query).sortedBy { type ->
-            val name = Workouts.sportName(type).lowercase()
+            val name = Workouts.exactName(type).lowercase()
             val q = query.trim().lowercase()
             when {
                 name.startsWith(q) -> 0
@@ -424,11 +529,11 @@ private fun SearchPage(contentPadding: PaddingValues, onPick: (Int) -> Unit, onB
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+    HaloPageList(contentPadding, variant = PageVariant.Workout) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BackButton(onBack)
-                Spacer(Modifier.width(12.dp))
+                HaloIconButton(AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack)
+                Spacer(Modifier.width(Space.S12))
                 Box(Modifier.weight(1f).then(modifier)) {
                     SearchField(query, stringResource(R.string.glow_choose_search_all), Modifier.focusRequester(focus)) { query = it }
                 }
@@ -441,32 +546,22 @@ private fun SearchPage(contentPadding: PaddingValues, onPick: (Int) -> Unit, onB
                     found.isEmpty() -> stringResource(R.string.glow_choose_no_match, query.trim())
                     else -> pluralStringResource(R.plurals.glow_choose_sports_count, found.size, found.size)
                 },
-                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp),
+                color = Ink.Secondary, style = GlowType.secondary,
+                    modifier = Modifier.padding(start = Space.S4),
             )
         }
-        if (found.isNotEmpty()) item {
-            ListPanel {
-                found.forEachIndexed { i, type ->
-                    PageRow(Workouts.sportName(type), icon = SportIcons.of(type), divider = i > 0, onClick = { keyboard?.hide(); onPick(type) })
+        val pick: (Int) -> Unit = { keyboard?.hide(); onPick(it) }
+        // Before anything is typed, every sport under its family, A to Z in each; a search lists what it finds by
+        // relevance with each one's family (board HaloSearchSports).
+        if (found.isNotEmpty()) {
+            if (query.isBlank()) SportGroups.sections(found).forEach { section ->
+                item(key = section.group) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                        SectionHeader(section.group, section.types.size)
+                        FoundRows(section.types, pick)
+                    }
                 }
-            }
-        }
-    }
-}
-
-/** A section of sport tiles, four to a row, under its Caption [title]. */
-@Composable
-private fun SportTiles(title: String?, types: List<Int>, name: (Int) -> String, isSelected: (Int) -> Boolean, onPick: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (title != null) SectionLabel(title)
-        types.chunked(4).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                row.forEach { type ->
-                    val outdoor = type in Workouts.OUTDOOR_ONLY
-                    SportTile(SportIcons.of(type), name(type), Modifier.weight(1f), outdoor, isSelected(type)) { onPick(type) }
-                }
-                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
+            } else item { FoundRows(found, pick) }
         }
     }
 }
@@ -483,18 +578,20 @@ private fun SearchField(query: String, hint: String, modifier: Modifier = Modifi
         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
         decorationBox = { field ->
             Row(
-                Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Raised).padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Greys.Control).padding(horizontal = Space.S16),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(SportIcons.Search, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
+                Icon(SportIcons.Search, null, tint = Ink.Secondary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(Space.S8))
                 Box(Modifier.weight(1f)) {
-                    if (query.isEmpty()) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.body, maxLines = 1)
+                    if (query.isEmpty()) Text(hint, color = Ink.Secondary,
+                        style = GlowType.body, maxLines = 1)
                     field()
                 }
                 if (query.isNotEmpty()) Icon(
-                    AppIcons.X, stringResource(R.string.glow_choose_clear), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                    modifier = Modifier.size(28.dp).clip(CircleShape).clickable { onChange("") }.padding(6.dp),
+                    AppIcons.X, stringResource(R.string.glow_choose_clear), tint = Ink.Secondary,
+                    // 48 dp to tap, the mark drawn 16 dp as before, and moved out so it stays where it was.
+                    modifier = Modifier.offset(x = 10.dp).size(48.dp).clip(CircleShape).clickable { onChange("") }.padding(Space.S16),
                 )
             }
         },

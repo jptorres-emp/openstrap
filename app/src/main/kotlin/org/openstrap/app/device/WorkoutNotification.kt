@@ -39,7 +39,7 @@ object WorkoutNotification {
     private const val STRIP_EMPTY = 0x26FFFFFF
 
     /** The launcher icon's background black, the card's colour; colorized, the whole notification takes it. */
-    const val CARD_DARK = 0xFF0B0D10.toInt()
+    const val CARD_DARK = 0xFF0D0D0D.toInt()
 
     /** Below this the bpm slot holds a word ("Paused") and not a reading, drawn smaller to fit by the time. */
     private const val WORD_SP = 20f

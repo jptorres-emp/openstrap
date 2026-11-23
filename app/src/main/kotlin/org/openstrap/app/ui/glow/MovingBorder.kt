@@ -13,12 +13,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -27,17 +28,19 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlinx.coroutines.flow.first
+import org.openstrap.app.ui.theme.Greys
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /**
- * A chroma ring round a card's border: a faint ring always there, with three lights sliding round it at their own
+ * A chroma ring round a card's border, or round any [shape]: a faint ring always there, with three lights sliding round it at their own
  * speeds, each taking the cards' own colours ([Rainbow]) as it goes, and a fine shimmer along the ring. The one moving
  * light on a screen, kept for the action it offers (Start a workout, spec 2.5). It holds still while the list scrolls,
  * the page is off screen or the workout covers it ([LocalGlowPaused], [LocalGlowPagePaused]), as the glows do, and with
  * the system's animations off the ring rests where it starts.
  */
 @Composable
-fun Modifier.movingBorder(): Modifier {
+fun Modifier.movingBorder(shape: androidx.compose.ui.graphics.Shape = GlowLayout.CardShape): Modifier {
     val context = LocalContext.current
     val animate = remember(context) { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
     // Read through state, so the running loop follows a newly provided lambda rather than the first one it saw.
@@ -61,7 +64,6 @@ fun Modifier.movingBorder(): Modifier {
         }
     }
     return drawWithCache {
-        val corner = GlowLayout.CardCorner.toPx()
         val ring = RingWidth.toPx()
         val halo = HaloWidth.toPx()
         val cx = size.width / 2f
@@ -78,8 +80,12 @@ fun Modifier.movingBorder(): Modifier {
             val ringShader = SweepGradient(cx, cy, colors, stops).apply { setLocalMatrix(matrix) }
             val glowShader = SweepGradient(cx, cy, glows, stops).apply { setLocalMatrix(matrix) }
             val box = Size(size.width - ring, size.height - ring)
-            drawRoundRect(ShaderBrush(glowShader), Offset(inset, inset), box, CornerRadius(corner), style = Stroke(halo))
-            drawRoundRect(ShaderBrush(ringShader), Offset(inset, inset), box, CornerRadius(corner - inset), style = Stroke(ring))
+            // Along the [shape] (a card's squircle by default), inset by half the ring.
+            val outline = shape.createOutline(box, layoutDirection, this)
+            translate(inset, inset) {
+                drawOutline(outline, ShaderBrush(glowShader), style = Stroke(halo))
+                drawOutline(outline, ShaderBrush(ringShader), style = Stroke(ring))
+            }
         }
     }
 }
@@ -141,8 +147,8 @@ private fun noise(x: Float, y: Float): Float {
 private val Rainbow = with(MetricColors) { listOf(heart, charge, calories, steps, readiness, sleepDeep, evening) }
 
 /** The ring's dim base, and the white the lights are mixed with so they glow rather than shout. */
-private val RingBase = Color(0xFF333340)
-private val RingGlow = Color(0xFFC0C8E0)
+private val RingBase = Greys.RingBase
+private val RingGlow = Ink.Silver
 
 /** Each light's speed in turns a second: a turn every 2 to 3 s, so they pass and gather. */
 private val LightSpeeds = floatArrayOf(0.47f, 0.38f, 0.31f)

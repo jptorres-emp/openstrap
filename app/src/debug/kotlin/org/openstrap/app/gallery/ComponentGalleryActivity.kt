@@ -1,5 +1,7 @@
 package org.openstrap.app.gallery
 
+import org.openstrap.app.ui.glow.CardTone
+import org.openstrap.app.ui.glow.HaloCard
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -31,9 +33,7 @@ import org.openstrap.app.ui.glow.CardSize
 import org.openstrap.app.ui.glow.draw.CoreShape
 import org.openstrap.app.ui.glow.DotMatrixText
 import org.openstrap.app.ui.glow.draw.DotSize
-import org.openstrap.app.ui.glow.PictureCard
 import org.openstrap.app.ui.glow.Rim
-import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.GlowGrid
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowGridRow
@@ -45,8 +45,9 @@ import org.openstrap.app.ui.glow.GridCard
 import org.openstrap.app.ui.glow.packGrid
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.ListPanel
-import org.openstrap.app.ui.glow.ListRow
+import org.openstrap.app.ui.glow.MetricRow
 import org.openstrap.app.ui.glow.LocalGlowMood
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.OpenStrapTheme
 import androidx.compose.foundation.layout.Box
@@ -61,9 +62,6 @@ import org.openstrap.app.ui.glow.StatusDot
 import org.openstrap.app.ui.glow.TrendBad
 import org.openstrap.app.ui.glow.TrendGood
 import org.openstrap.app.ui.glow.live.EffortBar
-import org.openstrap.app.ui.glow.live.MindRing
-import org.openstrap.app.ui.glow.live.MovingTime
-import org.openstrap.app.ui.glow.live.RestRing
 import org.openstrap.app.ui.glow.live.RoundBar
 import org.openstrap.app.ui.glow.live.WorkoutHeartCard
 import org.openstrap.app.ui.glow.live.ZoneTimeBar
@@ -108,7 +106,6 @@ private fun glow(color: Color, angle: Float? = null) = GlowStyle(
 )
 
 private val Charge = GlowStyle.Ember
-private val SmallPadding = GlowLayout.CardPadding
 
 @Composable
 private fun Gallery(liveOnly: Boolean, picturesOnly: Boolean = false) {
@@ -141,10 +138,9 @@ private fun Gallery(liveOnly: Boolean, picturesOnly: Boolean = false) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
             AngleCard("After your run", "Below", MetricColors.load, LightAngle.Below, Modifier.weight(1f))
-            GlowCard(
-                glow(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(64)),
+            HaloCard(
                 Modifier.weight(1f).height(GlowGrid.UnitHeight),
-                contentPadding = SmallPadding,
+                tone = CardTone.lit(glow(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(64))),
             ) { GlowText("Heart rate", "64", "Live, beating") }
         }
 
@@ -153,20 +149,22 @@ private fun Gallery(liveOnly: Boolean, picturesOnly: Boolean = false) {
         listOf(listOf(0f, 0.3f), listOf(0.7f, 1f)).forEach { pair ->
             Row(horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
                 pair.forEach { level ->
-                    GlowCard(
-                        Charge.copy(lightLevel = level),
+                    HaloCard(
                         Modifier.weight(1f).height(GlowGrid.height(CardSize.Tall)!!),
-                        contentPadding = SmallPadding,
+                        tone = CardTone.lit(Charge.copy(lightLevel = level)),
                     ) { GlowText("Charge", "${(level * 100).toInt()}", "Light level") }
                 }
             }
         }
 
         Heading("Hero and second glow card")
-        GlowCard(glow(MetricColors.readiness, LightAngle.LowerLeft), Modifier.fillMaxWidth().height(GlowGrid.UnitHeight)) {
+        HaloCard(
+            Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+            tone = CardTone.lit(glow(MetricColors.readiness, LightAngle.LowerLeft)),
+        ) {
             GlowText("Recovery", "78", "A good day for effort")
         }
-        GlowCard(Charge.copy(lightLevel = 0.62f, second = true), Modifier.fillMaxWidth().height(GlowGrid.UnitHeight)) {
+        HaloCard(Modifier.fillMaxWidth().height(GlowGrid.UnitHeight), tone = CardTone.lit(Charge.copy(lightLevel = 0.62f, second = true))) {
             GlowText("Charge", "62", "Second card, softer light")
         }
 
@@ -190,28 +188,35 @@ private fun Gallery(liveOnly: Boolean, picturesOnly: Boolean = false) {
 
         Heading("Grouped list")
         ListPanel(title = "Your body this morning", note = "Against your normal") {
-            ListRow("Resting heart rate", MetricColors.heart, "52", "Usual", onClick = {})
-            ListRow("HRV", MetricColors.hrv, "41", "Below your normal", tag = org.openstrap.app.ui.dashboard.NewsTag("Below normal", goal = false), onClick = {})
-            ListRow("Blood oxygen", MetricColors.spo2, "97%", "Usual", onClick = {})
-            ListRow("Breathing rate", MetricColors.sleepLight, null, "After your first night")
+            MetricRow("Resting heart rate", MetricColors.heart, "52", "Usual", onClick = {})
+            MetricRow(
+                "HRV", MetricColors.hrv, "41", "Below your normal",
+                tag = org.openstrap.app.ui.dashboard.NewsTag("Below normal", goal = false), onClick = {},
+            )
+            MetricRow("Blood oxygen", MetricColors.spo2, "97%", "Usual", onClick = {})
+            MetricRow("Breathing rate", MetricColors.sleepLight, null, "After your first night")
         }
 
         Heading("Grid rows")
         GlowGridColumn(
             listOf(
-                GridCard(CardSize.Large) { m -> GlowCard(glow(MetricColors.readiness, LightAngle.LowerLeft), m) { GlowText("Large", "78", "The hero of the moment") } },
-                GridCard(CardSize.Small) { m -> PictureCard(MetricColors.heart, m, contentPadding = SmallPadding) { CardText("Small", "52", "Usual") } },
-                GridCard(CardSize.Small) { m -> PictureCard(MetricColors.hrv, m, rim = Rim.End, contentPadding = SmallPadding) { CardText("Small", "41", "Below your normal") } },
-                GridCard(CardSize.Tall) { m -> GlowCard(Charge.copy(lightLevel = 0.55f, second = true), m, contentPadding = SmallPadding) { GlowText("Tall", "55", "Charge") } },
-                GridCard(CardSize.Small) { m -> PictureCard(MetricColors.spo2, m, contentPadding = SmallPadding) { CardText("Small", "97%", "Usual") } },
-                GridCard(CardSize.Small) { m -> PictureCard(MetricColors.stress, m, contentPadding = SmallPadding) { CardText("Small", "28", "Usual") } },
-                GridCard(CardSize.Wide) { m -> PictureCard(MetricColors.sleepDeep, m) { CardText("Wide", "7:40", "Last night") } },
-                GridCard(CardSize.Strip) { m -> PictureCard(Color.White, m, contentPadding = PaddingValues(horizontal = 20.dp)) { StripText("Strip", "Start a workout") } },
-                GridCard(CardSize.Small) { m -> PictureCard(MetricColors.habitAge, m) { CardText("A lone small, now wide", "38", "Habit Age") } },
+                GridCard(CardSize.Large) { m -> HaloCard(
+                    m, tone = CardTone.lit(glow(MetricColors.readiness, LightAngle.LowerLeft)),
+                ) { GlowText("Large", "78", "The hero of the moment") } },
+                GridCard(CardSize.Small) { m -> HaloCard(m) { CardText("Small", "52", "Usual") } },
+                GridCard(CardSize.Small) { m -> HaloCard(m) { CardText("Small", "41", "Below your normal") } },
+                GridCard(CardSize.Tall) { m -> HaloCard(
+                    m, tone = CardTone.lit(Charge.copy(lightLevel = 0.55f, second = true)),
+                ) { GlowText("Tall", "55", "Charge") } },
+                GridCard(CardSize.Small) { m -> HaloCard(m) { CardText("Small", "97%", "Usual") } },
+                GridCard(CardSize.Small) { m -> HaloCard(m) { CardText("Small", "28", "Usual") } },
+                GridCard(CardSize.Wide) { m -> HaloCard(m) { CardText("Wide", "7:40", "Last night") } },
+                GridCard(CardSize.Strip) { m -> HaloCard(m) { StripText("Strip", "Start a workout") } },
+                GridCard(CardSize.Small) { m -> HaloCard(m) { CardText("A lone small, now wide", "38", "Habit Age") } },
                 GridCard(CardSize.List) { m ->
                     ListPanel(m, title = "List") {
-                        ListRow("Time to recover", MetricColors.load, "14", "Hours")
-                        ListRow("Energy", MetricColors.temperature, "2,140", "Calories so far")
+                        MetricRow("Time to recover", MetricColors.load, "14", "Hours")
+                        MetricRow("Energy", MetricColors.temperature, "2,140", "Calories so far")
                     }
                 },
             ),
@@ -221,13 +226,16 @@ private fun Gallery(liveOnly: Boolean, picturesOnly: Boolean = false) {
             Heading("Mood: ${mood.name}")
             CompositionLocalProvider(LocalGlowMood provides mood) {
                 Row(horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-                    GlowCard(glow(MetricColors.readiness, LightAngle.LowerLeft), Modifier.weight(1f).height(GlowGrid.UnitHeight), contentPadding = SmallPadding) {
+                    HaloCard(
+                        Modifier.weight(1f).height(GlowGrid.UnitHeight),
+                        tone = CardTone.lit(glow(MetricColors.readiness, LightAngle.LowerLeft)),
+                    ) {
                         GlowText("Recovery", "78", "Lower left")
                     }
                     Edge("Last night", "7:40", "Asleep", MetricColors.sleepDeep, null, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-                    GlowCard(Charge.copy(lightLevel = 0.4f), Modifier.weight(1f).height(GlowGrid.UnitHeight), contentPadding = SmallPadding) {
+                    HaloCard(Modifier.weight(1f).height(GlowGrid.UnitHeight), tone = CardTone.lit(Charge.copy(lightLevel = 0.4f))) {
                         GlowText("Charge", "40", "Level")
                     }
                     Edge("HRV", "41", "Below your normal", MetricColors.hrv, Rim.End, Modifier.weight(1f))
@@ -245,12 +253,6 @@ private val LiveRun = WorkoutState.Recording(AppWorkout(start = LIVE_START, end 
 private const val LIVE_START = 1_792_000_000L
 private const val LIVE_ACTIVE = 1534L
 
-/** The last ten minutes of [LiveRun] every five seconds, climbing into zone 3 with a little wave. */
-private val LiveRecent = (0 until 120).map { i ->
-    val t = LIVE_START + LIVE_ACTIVE - 600 + i * 5L
-    t to (128 + i / 6 + (i % 9) - 4)
-}
-
 private val LiveZones = ZoneSeconds(listOf(120, 420, 780, 180, 34))
 
 /** A calm session's heart rate settling from the high 80s, as the mind screen draws it. */
@@ -266,27 +268,36 @@ internal val MindLine: List<Float?> = List(120) { i -> 88f - i / 8f + (i % 7) * 
 private fun LiveParts(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
         Heading("Live parts")
+        // A walk 24 min in at 112 bpm, zone 1: one sport colour everywhere, the zone as a chip (workout-rules.md, Colour).
+        val walk = org.openstrap.app.ui.workout.Glance.of(
+            org.openstrap.app.ui.workout.GlanceInput(
+                org.openstrap.app.data.SportTypes.WALK, LIVE_START + 1452, 1452, null, 112, true, 190,
+                org.openstrap.app.data.HeartZones.STANDARD, true, 2310f, pace = 624.0, averagePace = 624.0, activeKcal = 96f,
+            ),
+        )
+        Label("Today, during a walk")
+        org.openstrap.app.ui.glow.LiveHero(walk, org.openstrap.app.data.SportTypes.WALK, walk.clock, {}, {}, Modifier.fillMaxWidth())
+        Label("Heart line")
+        org.openstrap.app.ui.glow.live.LiveCard { org.openstrap.app.ui.glow.live.HeartLine(112, 190, false) }
+        Label("Floating bar")
+        org.openstrap.app.ui.glow.WorkoutCapsule(walk.copy(line1 = "Walk, 24:12", line2 = "2.31 km", bpm = 112), {}, {})
         Label("Live heart card, with the zone time bar")
         WorkoutHeartCard(
-            LiveRun, 148, LiveRecent, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth(), zoneBar = true,
+            LiveRun, 148, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth(), zoneBar = true,
         )
         Label("Live heart card, paused")
         val paused = LiveRun.copy(workout = LiveRun.workout.copy(pausedAt = LIVE_START + LIVE_ACTIVE))
-        WorkoutHeartCard(paused, 148, LiveRecent, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth())
+        WorkoutHeartCard(paused, 148, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth())
         Label("Zone time bar, in zone 3")
         ZoneTimeBar(LiveZones, current = 2)
         Label("Effort bar, a game at 3 of 5")
         EffortBar(3)
         Label("Round bar, round 3 of 8 under way")
-        RoundBar(IntervalMoment(Phase.Work(round = 3, start = 0, endsAt = 20), round = 3, rounds = 8, left = 8), workLength = 20)
+        RoundBar(IntervalMoment(Phase.Work(round = 3, start = 0, endsAt = 20), round = 3, rounds = 8, left = 8))
         Label("Peak bars, five rounds of eight")
         PeakBars(
             listOf(158, 166, 171, null, 169), { MetricColors.heart }, Modifier.fillMaxWidth(), height = 56.dp, rounds = 8, corner = 3.dp,
         )
-        Label("Rest ring, 45 s of 90 left")
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { RestRing({ 45L }, 90L) }
-        Label("Mind ring, 10 min of 30")
-        MindRing({ 600L }, 1800L)
         Label("Mind heart line")
         PlainLine(MindLine, MetricColors.evening.copy(alpha = 0.7f), 64.dp, smooth = false, dots = LineDots.Last, stroke = 2.dp)
         Label("Status dots")
@@ -295,8 +306,6 @@ private fun LiveParts(modifier: Modifier = Modifier) {
             StatusDot("Strap 82%", TrendGood, dotAfter = true)
             StatusDot(WorkoutWords.STRAP_GONE, TrendBad, dotAfter = true)
         }
-        Label("Moving time")
-        MovingTime { LIVE_ACTIVE }
     }
 }
 
@@ -304,7 +313,7 @@ private fun LiveParts(modifier: Modifier = Modifier) {
 @Composable
 private fun Label(text: String) {
     Text(
-        text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+        text, color = Ink.Secondary, style = GlowType.secondary,
         modifier = Modifier.padding(top = 8.dp),
     )
 }
@@ -326,11 +335,13 @@ private fun Heading(text: String) {
 
 @Composable
 private fun AngleCard(title: String, note: String, color: Color, angle: Float, modifier: Modifier) {
-    GlowCard(glow(color, angle), modifier.height(GlowGrid.UnitHeight), contentPadding = SmallPadding) {
+    HaloCard(modifier.height(GlowGrid.UnitHeight), tone = CardTone.lit(glow(color, angle))) {
         GlowText(title, "${angle.toInt()}", note)
     }
 }
 
+// The colour and rim stay for the gallery's calls: a Halo grey card has no rim.
+@Suppress("UnusedParameter")
 @Composable
 private fun Edge(
     title: String,
@@ -340,7 +351,7 @@ private fun Edge(
     rim: Rim?,
     modifier: Modifier,
 ) {
-    PictureCard(color, modifier.height(GlowGrid.UnitHeight), rim = rim, contentPadding = SmallPadding) {
+    HaloCard(modifier.height(GlowGrid.UnitHeight)) {
         CardText(title, value, status)
     }
 }
@@ -351,7 +362,7 @@ private fun ColumnScope.CardText(title: String, value: String, status: String, v
     Text(title, color = Color.White, style = GlowType.cardTitle)
     Spacer(Modifier.weight(1f))
     DotMatrixText(value, dot = DotSize.Edge, color = valueColor)
-    Text(status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp))
+    Text(status, color = Ink.Secondary, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp))
 }
 
 /** [CardText] for a glow card, whose content is a box. */
@@ -364,6 +375,6 @@ private fun GlowText(title: String, value: String, status: String) {
 private fun ColumnScope.StripText(title: String, action: String) {
     Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
-        Text(action, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+        Text(action, color = Ink.Secondary, style = GlowType.secondary)
     }
 }

@@ -4,14 +4,17 @@ import android.content.Context
 import android.os.PowerManager
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onSubscription
@@ -22,7 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import org.openstrap.app.data.AutoStart
 import org.openstrap.app.data.HeartZones
 import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutRecorder
@@ -59,11 +61,24 @@ sealed interface WorkoutState {
         val rounds: List<org.openstrap.app.data.db.AppWorkoutRound> = emptyList(),
         val restExtra: Long = 0,
         /**
-         * The last save to the database failed. It records on in memory and the next change saves again, but a
-         * process death now would lose what is unsaved, so the notification says so.
+         * The parts whose last save to the database failed, each tracked on its own so one success can't hide another
+         * failure. It records on in memory and the next change saves again, but a process death now would lose what is
+         * unsaved.
          */
-        val saveFailed: Boolean = false,
+        val failing: Set<SavePart> = emptySet(),
+        /**
+         * End was tried and its save failed: the workout is still recording, and the live screen says "Not saved yet"
+         * with Try again, which runs End again.
+         */
+        val endFailed: Boolean = false,
     ) : WorkoutState {
+        /** Something isn't saved: the notification and the live screen say so. */
+        val saveFailed: Boolean get() = endFailed || failing.isNotEmpty()
+
+        /** This state with [part]'s last save [failed] or not, and the other parts as they were. */
+        fun withSave(part: SavePart, failed: Boolean): Recording =
+            if ((part in failing) == failed) this else copy(failing = if (failed) failing + part else failing - part)
+
         /** Parsed once per state, not on every read: the rounds' clock reads it each second. */
         val structure: org.openstrap.app.data.Structure? by lazy { org.openstrap.app.data.Structure.parse(workout.structure) }
 
@@ -76,6 +91,12 @@ sealed interface WorkoutState {
         /** A set under way. */
         val inSet: Boolean get() = sets.lastOrNull()?.let { it.end == null } == true
         val resting: Boolean get() = restUntil != null
+
+        /** The sets as the screens count them: the one under way counts, so set 1 reads 1 while it is being done. */
+        val setsCounted: Int get() = sets.size
+
+        /** The rounds (or reps) as the screens count them: the one under way counts, so round 1 reads 1 from its start. */
+        val roundsCounted: Int get() = rounds.size
     }
     /**
      * Saved; its summary shows until it is dismissed. [preview] is a debug build opening the summary for a stored
@@ -83,6 +104,18 @@ sealed interface WorkoutState {
      */
     data class Ended(val start: Long, val preview: Boolean = false) : WorkoutState
 }
+
+/** The parts of a recording workout that are saved separately, each with its own failure flag. */
+enum class SavePart { Workout, Sets, Rounds, HeartRate }
+
+/** A workout is in progress: recording, or ended with its summary still showing. */
+val WorkoutState.inProgress: Boolean get() = this is WorkoutState.Recording || this is WorkoutState.Ended
+
+/** What [WorkoutSession.start] came to. */
+enum class StartResult { Started, AlreadyRecording, Failed }
+
+/** What the phone knows of its GPS for the workout: not wanted, waiting for a first fix, fixes coming, or not available. */
+enum class GpsState { Off, Searching, Fixed, Unavailable }
 
 /**
  * The heart rate after a workout [start] ended at [end], for the summary's heart rate drop: what the strap sent, a
@@ -109,19 +142,23 @@ class WorkoutSession(
     private val callRinging: () -> Boolean = { false },
     /** A finished workout was saved or changed, by its start: auto sync writes it to Health Connect. Returns at once. */
     private val onSaved: (start: Long) -> Unit = {},
+    /** A saved workout was deleted, by its start and the range it was recorded over: auto sync takes it out of Health Connect. */
+    onRemoved: (start: Long, from: Long, to: Long) -> Unit = { _, _, _ -> },
     /** Epoch seconds now. Tests pass a clock they move by hand. */
     private val clock: () -> Long = { System.currentTimeMillis() / 1000 },
     /** Where the workout's long-lived work runs: the app's scope, `AppContainer.appScope`. */
     private val scope: CoroutineScope = fallbackScope(),
     /** How long a workout left recording waits for the strap's history ([LeftRecording]). Tests shorten it. */
     private val leftWaitMs: Long = LEFT_WAIT_MS,
+    /** How long a failed [restore] waits before trying again. Tests shorten it. */
+    private val restoreRetryMs: Long = RESTORE_RETRY_MS,
 ) {
     private val lock = LOCK
 
     /** Discard, trim and save from history: changes to workouts already saved, under the same [lock]. */
     private val editor = SavedWorkoutEditor(
         dao, settings, lock, onSaved, onDiscarded = ::closeDiscarded, log = { log(it) }, clock = clock, scope = scope,
-        track = { start -> if (start == trackStart) track() else null },
+        track = { start -> if (start == trackStart) track() else null }, onRemoved = onRemoved,
     )
 
     /**
@@ -130,8 +167,26 @@ class WorkoutSession(
      */
     val heartZones: StateFlow<HeartZones> = settings.heartZones.stateIn(scope, SharingStarted.Eagerly, HeartZones.STANDARD)
 
+    /**
+     * "Ask to end when I stop" as stored (the Workouts settings page), read live so a change applies to the workout under
+     * way. It decides whether and when a workout asks, by the sport's group; the workout's own `askToEnd` no longer does.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal val askToEndSetting: StateFlow<org.openstrap.app.data.settings.AskToEnd> =
+        settings.askToEnd.stateIn(scope, SharingStarted.Eagerly, org.openstrap.app.data.settings.AskToEnd())
+
+    /** How long [r] waits still before it asks, in seconds, or null when it doesn't ask (Off, or the switch off). */
+    private fun stillFor(r: WorkoutState.Recording): Long? = askToEndSetting.value.stillSecondsFor(r.workout.sportType)
+
     private val _state = MutableStateFlow<WorkoutState>(WorkoutState.Idle)
     val state: StateFlow<WorkoutState> = _state
+
+    /** A workout is recording, or ended with its summary showing: what every "in progress" check asks. */
+    val inProgress: Boolean get() = _state.value.inProgress
+
+    /** The GPS of the workout under way: [GpsState.Off] unless it uses GPS. */
+    private val _gps = MutableStateFlow(GpsState.Off)
+    val gps: StateFlow<GpsState> = _gps
 
     /** Live readings of the last [RECENT_S] seconds, oldest first, for the live chart: (epoch seconds, bpm). */
     private val _recent = MutableStateFlow<List<Pair<Long, Int>>>(emptyList())
@@ -182,93 +237,140 @@ class WorkoutSession(
     private var recordJob: Job? = null
     private val buffer = mutableListOf<AppWorkoutHeartRate>()
     private var lastSecond = -1L
+
+    /** The workout is being ended: its last flush is made, and a reading now would be written under no workout. */
+    @Volatile private var ending = false
     private var wake: PowerManager.WakeLock? = null
 
     /**
-     * Picks up a workout left recording when the process died, then starts watching for auto-start. Called once at app
+     * Picks up a workout left recording when the process died. Called once at app
      * start. One with no reading for [LEFT_RECORDING_S] records on too, while it waits for the strap's history of the
      * time the phone missed ([awaitStrap]). One paused that long is ended at its last reading, and its summary shows.
      */
     fun restore() {
         scope.launch {
+            var failed = false
             try {
-                val waiting = lock.withLock {
-                    if (_state.value is WorkoutState.Recording) return@withLock null
-                    val w = dao.activeAppWorkout() ?: return@withLock null
-                    val now = now()
-                    val stored = dao.appWorkoutHeartRateOnce(w.start)
-                    val last = maxOf(w.start, stored.maxOfOrNull { it.timestamp } ?: w.start)
-                    val waits = now - last > LEFT_RECORDING_S
-                    // Paused, nothing the strap measured since is part of it.
-                    if (waits && w.pausedAt != null) {
-                        endLeftRecording(w, last)
-                        return@withLock null
+                catching { restoreLocked() }
+                    .onSuccess { waiting -> waiting?.let { scope.launch { awaitStrap(it) } } }
+                    .onFailure {
+                        // The active row is still stored, so it is tried again below rather than ended: ending would
+                        // cost a workout that only hit a bad moment (a locked database, say).
+                        log("workout not restored, trying again: ${it.message}")
+                        failed = true
                     }
-                    // Set before it shows as recording, so an End tapped at once already waits for the strap.
-                    left = if (waits) LeftRecording.Left(w.start, last, now) else null
-                    _recent.value = stored.filter { !it.fromHistory && it.timestamp >= now - RECENT_S }.map { it.timestamp to it.bpm }
-                    sum = stored.sumOf { it.bpm.toLong() }
-                    count = stored.size.toLong()
-                    _stats.value = WorkoutRecorder.stats(stored)
-                    val live = stored.filter { !it.fromHistory }.map { it.timestamp to it.bpm }
-                    val maxHr = maxHeartRate()
-                    _zoneSeconds.value = WorkoutRecorder.liveZoneSeconds(live, maxHr, heartZones.value).toList()
-                    lastReading = live.lastOrNull()
-                    _kcal.value = null
-                    stepTotals = emptyList()
-                    synchronized(allReadings) { allReadings.clear(); allReadings.addAll(live) }
-                    _history.value = live
-                    window = live.filter { it.first >= now - STOP_WINDOW_S }
-                    // A kept route comes back. One that wasn't kept was only ever in memory, and so were the step
-                    // totals. What was stored then stands for the time before now, and the distance adds to it.
-                    _route.value = if (w.keepRoute) dao.routeOnce(w.start).map { it.point } else emptyList()
-                    savedPoints = _route.value.size
-                    trackFrom(w, routeSince = if (w.keepRoute) w.start else now, stepsSince = now, before = w)
-                    // A restart mustn't ask at once about a stop it can't see the start of.
-                    askSince = now
-                    val sets = dao.setsOnce(w.start)
-                    val restUntil = sets.lastOrNull()?.takeIf { it.end != null && it.restEnd == null }?.let { it.end!! + restRule(w).seconds }
-                    // Logging is the sport's setting at its start, which Ready saved then.
-                    val log = catching { settings.sportSettings.first()[org.openstrap.app.data.Workouts.tileType(w.sportType)]?.log }
-                        .onFailure { log("workout: sport settings not read: $it") }.getOrNull() == true
-                    val rounds = if (w.structure != null) dao.roundsOnce(w.start) else emptyList()
-                    begin(w, maxHr) {
-                        it.copy(sets = sets, restUntil = restUntil, exercise = sets.lastOrNull()?.exercise, logSets = log, rounds = rounds)
-                    }
-                    left
-                }
-                waiting?.let { scope.launch { awaitStrap(it) } }
             } finally {
+                // Marked either way: the service and the backups wait on it, and an unrestored workout mustn't hold them.
                 _restored.value = true
-                // After the restore, so a workout left recording isn't offered as a new one.
-                autoStart.watch()
             }
+            if (failed) retryRestore()
         }
     }
 
+    /** A failed [restore] tried again, up to [RESTORE_TRIES] times, [restoreRetryMs] apart; then the row stays for the next start. */
+    private suspend fun retryRestore() {
+        repeat(RESTORE_TRIES) {
+            delay(restoreRetryMs)
+            val done = catching { restoreLocked()?.let { l -> scope.launch { awaitStrap(l) } } }
+                .onFailure { e -> log("workout not restored, ${e.message}") }.isSuccess
+            if (done) return
+        }
+        log("workout not restored: left as stored for the next start")
+    }
+
+    /** The picking up of [restore], under [lock]: the workout waiting for the strap's history ([LeftRecording]), if any. */
+    private suspend fun restoreLocked(): LeftRecording.Left? =
+        lock.withLock {
+            if (_state.value is WorkoutState.Recording) return@withLock null
+            val w = dao.activeAppWorkout() ?: return@withLock null
+            val now = now()
+            val stored = dao.appWorkoutHeartRateOnce(w.start)
+            // A kept route comes back. One that wasn't kept was only ever in memory, and so were the step totals.
+            val restored = if (w.keepRoute) dao.routeOnce(w.start).map { it.point } else emptyList()
+            val sets = dao.setsOnce(w.start)
+            val rounds = if (w.structure != null) dao.roundsOnce(w.start) else emptyList()
+            val last = lastKnown(w, stored, restored, sets, rounds)
+            val waits = now - last > LEFT_RECORDING_S
+            // Paused, nothing the strap measured since is part of it. Ending it then would leave under a minute only
+            // when nothing of it was stored: it comes back paused instead, for the wearer to end or delete.
+            if (waits && w.pausedAt != null && keptEndingAt(w, last)) {
+                endLeftRecording(w, last)
+                return@withLock null
+            }
+            // Set before it shows as recording, so an End tapped at once already waits for the strap. One left paused
+            // only gets here when ending it would delete it: it doesn't wait.
+            left = if (waits && w.pausedAt == null) LeftRecording.Left(w.start, last, now) else null
+            _recent.value = stored.filter { !it.fromHistory && it.timestamp >= now - RECENT_S }.map { it.timestamp to it.bpm }
+            sum = stored.sumOf { it.bpm.toLong() }
+            count = stored.size.toLong()
+            _stats.value = WorkoutRecorder.stats(stored)
+            val live = stored.filter { !it.fromHistory }.map { it.timestamp to it.bpm }
+            val maxHr = maxHeartRate()
+            _zoneSeconds.value = WorkoutRecorder.liveZoneSeconds(live, maxHr, heartZones.value).toList()
+            lastReading = live.lastOrNull()
+            // Never down: kept when this very workout's figure is still in memory (a second try after a failure),
+            // else it comes back from what was kept ([keepLive]), as does the rest time added. A question open
+            // and "in a car" start afresh: a restart mustn't ask at once ([askSince]).
+            val kept = catching { settings.workoutLive(w.start) }.onFailure { log("workout: live figures not read: $it") }.getOrNull()
+            keptLive = kept
+            if (trackStart != w.start) {
+                _kcal.value = kept?.let { k -> k.kcalActive?.let { a -> k.kcalTotal?.let { WorkoutRecorder.Kcal(a, it) } } }
+            }
+            stepTotals = emptyList()
+            synchronized(allReadings) { allReadings.clear(); allReadings.addAll(live) }
+            _history.value = live
+            window = live.filter { it.first >= now - STOP_WINDOW_S }
+            // What was stored stands for the time before now, and the distance adds to it.
+            _route.update { restored }
+            savedPoints = _route.value.size
+            trackFrom(w, routeSince = if (w.keepRoute) w.start else now, stepsSince = now, before = w)
+            // A restart mustn't ask at once about a stop it can't see the start of.
+            askSince = now
+            val restUntil = sets.lastOrNull()?.takeIf { it.end != null && it.restEnd == null }?.let { it.end!! + restRule(w).seconds }
+            // Logging is the sport's setting at its start, which Ready saved then.
+            val log = catching { settings.sportSettings.first()[org.openstrap.app.data.Workouts.tileType(w.sportType)]?.log }
+                .onFailure { log("workout: sport settings not read: $it") }.getOrNull() == true
+            begin(w, maxHr) {
+                it.copy(
+                    sets = sets, restUntil = restUntil, exercise = sets.lastOrNull()?.exercise, logSets = log, rounds = rounds,
+                    restExtra = kept?.restExtra ?: 0,
+                )
+            }
+            left
+        }
+
+    /**
+     * Starts a workout. The result says what came of it: [StartResult.AlreadyRecording] when one records already, and
+     * [StartResult.Failed] when its row or its recording couldn't be set up (nothing is left half started).
+     */
     fun start(
         sportType: Int, askToEnd: Boolean = true, target: org.openstrap.app.data.WorkoutTarget? = null,
         useGps: Boolean = false, keepRoute: Boolean = false,
         rest: org.openstrap.app.data.Strength.Rest? = null, setsTarget: Int? = null,
-        /** Auto-start: the workout began here, earlier, and [seed] holds its live readings so far. */
+        /** Started late: the workout began here, earlier, and [seed] holds its live readings so far. */
         from: Long? = null, seed: List<Pair<Long, Int>> = emptyList(), seedSteps: Int? = null,
         /** Strength: a log card after each set. Rounds or periods ([AppWorkout.structure]). */
         logSets: Boolean = false, structure: String? = null,
-    ) {
-        scope.launch {
+    ): Deferred<StartResult> = scope.async {
+        // The row's own write failing counts too: nothing was started then.
+        catching {
             lock.withLock {
-                if (_state.value is WorkoutState.Recording) return@withLock
+                if (_state.value is WorkoutState.Recording) return@withLock StartResult.AlreadyRecording
                 val w = AppWorkout(
                     start = from ?: now(), end = null, sportType = sportType, askToEnd = askToEnd, target = target?.code,
                     useGps = useGps, keepRoute = useGps && keepRoute,
                     rest = rest?.code, setsTarget = setsTarget, structure = structure,
                 )
-                _route.value = emptyList()
+                _route.update { emptyList() }
                 savedPoints = 0
                 trackFrom(w, routeSince = w.start, stepsSince = w.start, before = null)
                 synchronized(allReadings) { allReadings.clear() }
+                // Nothing of an earlier workout is written under this one's start.
+                synchronized(buffer) { buffer.clear() }
+                lastSecond = -1L
                 _history.value = emptyList()
                 dao.upsertAppWorkout(w)
+                _gps.value = GpsState.Off
                 _recent.value = emptyList()
                 _stats.value = null
                 sum = 0
@@ -276,33 +378,23 @@ class WorkoutSession(
                 _zoneSeconds.value = List(org.openstrap.app.data.Workouts.ZONES) { 0 }
                 lastReading = null
                 _kcal.value = null
-                // Auto-start: the strap's total where the effort began, so the steps since count.
+                // Started late: the strap's total where the effort began, so the steps since count.
                 stepTotals = listOfNotNull(seedSteps?.let { w.start to it })
                 window = emptyList()
                 askSince = w.start
                 minimized.value = false
-                begin(w, maxHeartRate(), seed) { it.copy(logSets = logSets) }
+                // Half started is not started: begin undid what it took, and the row goes too.
+                val begun = catching { begin(w, maxHeartRate(), seed) { it.copy(logSets = logSets) } }.onFailure {
+                    log("workout not started: $it")
+                    catching { dao.deleteAppWorkout(w.start) }.onFailure { e -> log("workout row not removed: ${e.message}") }
+                }
+                if (begun.isSuccess) StartResult.Started else StartResult.Failed
             }
+        }.getOrElse {
+            log("workout not started: $it")
+            StartResult.Failed
         }
     }
-
-    /** "Looks like a workout": auto-start's offer, the strap's effort watch and what is recorded from it. */
-    private val autoStart = AutoStartWatcher(
-        dao, settings, strap, _state, callRinging, ::maxHeartRate,
-        record = { o, seed, seedSteps -> start(o.sportType, from = o.start, seed = seed, seedSteps = seedSteps) },
-        clock = clock, scope = scope,
-    )
-
-    /**
-     * "Looks like a workout" ([AutoStart]): an effort under way that nobody started, while the question is open.
-     * The strap buzzes once as it is asked; the notification and the Today and Activity tabs ask it.
-     */
-    val offer: StateFlow<AutoStart.Offer?> = autoStart.offer
-
-    /** "Record": the workout starts where the effort began, with the readings since. */
-    fun recordOffer() = autoStart.recordOffer()
-
-    fun declineOffer() = autoStart.declineOffer()
 
     fun pause() = pauseFrom(toStrap = true)
 
@@ -340,20 +432,68 @@ class WorkoutSession(
      * (codemap 05 §5, 03 §3.20). The strap's own pause and stop (`11`) and ABANDON are followed but untried on hardware.
      */
 
+    /**
+     * The one state a reconnect sends after the config, as Zepp picks it from its engine state (verdict 25,
+     * d/bo60.java:472-480): PAUSE while paused, RESUME once resumed from a pause, else START with the original start.
+     */
+    internal fun reconnectState(w: AppWorkout) = when {
+        w.pausedAt != null -> org.openstrap.protocol.services.SportSession.State.PAUSE
+        w.pauseRanges.isNotEmpty() -> org.openstrap.protocol.services.SportSession.State.RESUME
+        else -> org.openstrap.protocol.services.SportSession.State.START
+    }
+
     /** Read at each start: whether a phone workout also runs a session on the strap ([SettingsStore.strapSessions]). */
     @Volatile private var strapSessions = true
     private var keepAlive: Job? = null
 
     /**
+     * A STOP or ABANDON that didn't reach the strap (out of range, Bluetooth off). The strap keeps that session running
+     * and sends its frames, which then lead the live heart rate (audit S11, seen 2026-11-11), so the next connect with
+     * nothing recording sends it once ([resendEnd]). A new START replaces it.
+     */
+    private class UnsentEnd(val state: org.openstrap.protocol.services.SportSession.State, val w: AppWorkout, val elapsed: Long)
+    @Volatile private var unsentEnd: UnsentEnd? = null
+
+    init {
+        scope.launch {
+            strap.connection.map { it is ConnectionState.Connected }.distinctUntilChanged().collect { if (it) resendEnd() }
+        }
+    }
+
+    private suspend fun resendEnd() {
+        val e = unsentEnd ?: return
+        if (_state.value is WorkoutState.Recording) return
+        log("strap session: the ${e.state} that didn't go out goes now")
+        catching {
+            val sport = org.openstrap.app.data.Workouts.strapType(e.w.sportType)
+            strap.sportSession(e.state, sport, e.w.start, e.elapsed, reconnect = false)
+        }
+            .onSuccess { if (unsentEnd === e) unsentEnd = null }
+            .onFailure { log("strap session ${e.state} not sent again: ${it.message}") }
+    }
+
+    /**
      * Tells the strap's sport module, when that's on; a failure is logged and the phone recording carries on. [send]
      * false when the strap made the change itself: nothing goes out, but a pause still gets its keep-alive.
      */
-    private fun strapState(state: org.openstrap.protocol.services.SportSession.State, w: AppWorkout, send: Boolean = true) {
+    private fun strapState(
+        state: org.openstrap.protocol.services.SportSession.State,
+        w: AppWorkout,
+        send: Boolean = true,
+        reconnect: Boolean = false,
+    ) {
         if (!strapSessions) return
         val elapsed = WorkoutRecorder.activeSeconds(w, now())
+        val end = state == org.openstrap.protocol.services.SportSession.State.STOP ||
+            state == org.openstrap.protocol.services.SportSession.State.ABANDON
+        if (state == org.openstrap.protocol.services.SportSession.State.START) unsentEnd = null
         if (send) scope.launch {
-            catching { strap.sportSession(state, w.sportType, w.start, elapsed) }
-                .onFailure { (strap as? StrapManager)?.log("strap session $state not sent: ${it.message}") }
+            catching { strap.sportSession(state, org.openstrap.app.data.Workouts.strapType(w.sportType), w.start, elapsed, reconnect) }
+                .onSuccess { if (end) unsentEnd = null }
+                .onFailure {
+                    (strap as? StrapManager)?.log("strap session $state not sent: ${it.message}")
+                    if (end) unsentEnd = UnsentEnd(state, w, elapsed)
+                }
         }
         keepAlive?.cancel()
         // While paused, Zepp sends the module a keep-alive every 5 s.
@@ -382,8 +522,25 @@ class WorkoutSession(
             return
         }
         if (p is org.openstrap.protocol.services.SportSession.Push.Status && p.status == org.openstrap.protocol.services.SportSession.STATUS_HR_NORMAL) {
-            if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
-            askToEnd(WorkoutRecorder.lastActive(window, steps, restingHr, r.maxHeartRate)?.takeIf { it > r.workout.start } ?: now())
+            val still = stillFor(r)
+            if (r.paused || still == null || r.endPrompt != null) return
+            // As Zepp (`lak.f`, `bo60.m`): the strap's workout status first, and the question only once it answers.
+            scope.launch {
+                val status = strap.sportStatus()
+                if (status == null) {
+                    log("workout: no strap status, no end question")
+                    return@launch
+                }
+                log("workout: strap status ${status.status}, asking to end")
+                val rec = _state.value as? WorkoutState.Recording ?: return@launch
+                val last = WorkoutRecorder.lastActive(window, steps, restingHr, rec.maxHeartRate)?.takeIf { it > rec.workout.start }
+                // The strap's own sense of normal can come before the sport's time (Games and sports wait 15 minutes).
+                if (last != null && now() - last < still) {
+                    log("workout: strap says normal, still under the sport's ${still / 60} min, no end question yet")
+                    return@launch
+                }
+                askToEnd(last ?: now())
+            }
         }
     }
 
@@ -396,7 +553,7 @@ class WorkoutSession(
         var asked = false
         _state.update { s ->
             val r = s as? WorkoutState.Recording
-            asked = r != null && !r.paused && r.workout.askToEnd && r.endPrompt == null
+            asked = r != null && !r.paused && stillFor(r) != null && r.endPrompt == null
             if (r != null && asked) r.copy(endPrompt = at, inCar = inCar) else s
         }
         if (asked && !callRinging()) scope.launch { catching { strap.buzz(STOP_BUZZ) }.onFailure { log("buzz stop not played: $it") } }
@@ -414,7 +571,7 @@ class WorkoutSession(
         val l = left ?: return finish(null, AppWorkout.END_USER, toStrap)
         scope.launch {
             val v = judge(l, final = true)
-            if (v is LeftRecording.Verdict.End) finish(v.at, AppWorkout.END_AUTO, toStrap, startOf = l.start)
+            if (v is LeftRecording.Verdict.End) finish(v.at, AppWorkout.END_AUTO, toStrap, startOf = l.start, ifShort = IfShort.EndAsRecorded)
             else finish(null, AppWorkout.END_USER, toStrap)
         }
     }
@@ -431,20 +588,47 @@ class WorkoutSession(
         _state.update { s -> (s as? WorkoutState.Recording)?.takeIf { it.endPrompt != null }?.copy(endPrompt = null, inCar = false) ?: s }
     }
 
-    /** [toStrap] false when the strap ended its session itself. [startOf]: only if it is still that workout recording. */
-    private fun finish(at: Long?, reason: Int, toStrap: Boolean = true, startOf: Long? = null) {
+    /** What an end the app worked out ([LeftRecording]) does when it would leave under a minute, which deletes it. */
+    private enum class IfShort {
+        /** Deleted, as any workout under a minute. */
+        Delete,
+        /** Not ended: it records on for the wearer to end or delete (an end nobody chose). */
+        RecordOn,
+        /** Ended where it was recorded to (End was tapped, so it ends, but not by deleting it). */
+        EndAsRecorded,
+    }
+
+    /**
+     * [toStrap] false when the strap ended its session itself. [startOf]: only if it is still that workout recording.
+     * [ifShort]: what an end at [at] that would leave under a minute does instead.
+     */
+    private fun finish(at: Long?, reason: Int, toStrap: Boolean = true, startOf: Long? = null, ifShort: IfShort = IfShort.Delete) {
         scope.launch {
             lock.withLock {
                 val r = _state.value as? WorkoutState.Recording ?: return@withLock
                 if (startOf != null && r.workout.start != startOf) return@withLock
+                // Readings after this one are dropped ([record]): they would be written after the last flush, under
+                // the next workout's start or as rows of one just deleted.
+                ending = true
+                _state.update { s -> (s as? WorkoutState.Recording)?.takeIf { it.endFailed }?.copy(endFailed = false) ?: s }
                 flush()
                 saveDistance()
                 val w = r.workout
                 val recorded = w.pausedAt ?: now()
-                val end = at?.coerceIn(w.start, recorded) ?: recorded
+                // Nothing said how long a workout left recording ran: deleting it would lose one the wearer started.
+                val asked = at?.coerceIn(w.start, recorded) ?: recorded
+                val short = !keptEndingAt(w, asked)
+                if (short && ifShort == IfShort.RecordOn) {
+                    log("workout left recording: ending at ${java.time.Instant.ofEpochSecond(asked)} would delete it, it records on")
+                    ending = false
+                    left = null
+                    return@withLock
+                }
+                val end = if (short && ifShort == IfShort.EndAsRecorded) recorded else asked
+                val endReason = if (end == asked) reason else AppWorkout.END_USER
                 // Its distance written here, over the range it shows: an update() queued behind this lock would find
                 // the workout already ended, and an early End leaves out what came after.
-                val ended = w.copy(end = end, pausedAt = null, endReason = reason, recordedEnd = recorded.takeIf { it > end })
+                val ended = w.copy(end = end, pausedAt = null, endReason = endReason, recordedEnd = recorded.takeIf { it > end })
                     .let { WorkoutDistance.withShown(it, recorded, track()) }
                 val kept = WorkoutRecorder.activeSeconds(ended, end) >= MIN_SAVED_S
                 closeLast(r.sets, r.rounds, end)
@@ -455,12 +639,12 @@ class WorkoutSession(
                 val stored = store(ended, recorded, kept, _route.value)
                 stored.exceptionOrNull()?.let {
                     log("workout ${if (kept) "not saved" else "not deleted"}, still recording: ${it.message}")
-                    _state.update { s -> (s as? WorkoutState.Recording)?.copy(saveFailed = true) ?: s }
+                    _state.update { s -> (s as? WorkoutState.Recording)?.copy(endFailed = true) ?: s }
+                    // Recording on, so readings count again.
+                    ending = false
                     return@withLock
                 }
                 left = null
-                // The heart rate stays up for a while after a workout, and that's not a new one to offer.
-                autoStart.offerNotBefore = now()
                 strapState(WorkoutRecorder.closingState(kept), w, send = toStrap)
                 keepAlive?.cancel()
                 stop(keepLive = true)
@@ -481,8 +665,7 @@ class WorkoutSession(
                 editor.refreshDays(ended.from, end)
                 onSaved(w.start)
             }
-            // The strap's history fills any minutes the phone missed; it batches, so ask now.
-            strap.syncNow()
+            // No sync of its own: Zepp starts none after a phone workout, the strap's history comes with the next one.
         }
     }
 
@@ -503,6 +686,24 @@ class WorkoutSession(
             dao.insertDismissedWorkouts(listOf(org.openstrap.app.data.db.DismissedWorkout(ended.start, recorded)))
         }
     }
+
+    /**
+     * The last moment anything stored says [w] went on: its heart rate [stored], its kept [route], its [sets] and
+     * [rounds], its laps and pauses. Never before its start. Without the strap's heart rate a GPS run still has its
+     * route, so it isn't taken as ended at its start.
+     */
+    private fun lastKnown(
+        w: AppWorkout, stored: List<AppWorkoutHeartRate>, route: List<Route.Point>,
+        sets: List<org.openstrap.app.data.db.AppWorkoutSet>, rounds: List<org.openstrap.app.data.db.AppWorkoutRound>,
+    ): Long = (
+        stored.map { it.timestamp } + route.map { it.t } + w.lapMarks + w.pauseRanges.map { it.last } +
+            listOfNotNull(w.pausedAt) + sets.flatMap { listOfNotNull(it.start, it.end, it.restEnd) } +
+            rounds.flatMap { listOfNotNull(it.workStart, it.workEnd, it.restEnd) }
+        ).fold(w.start, ::maxOf)
+
+    /** Whether [w] ended at [end] would be kept: [MIN_SAVED_S] active, or it is deleted as a mis-tap. */
+    private fun keptEndingAt(w: AppWorkout, end: Long): Boolean =
+        WorkoutRecorder.activeSeconds(w.copy(end = end, pausedAt = null), end) >= MIN_SAVED_S
 
     /**
      * A workout the app was killed during while paused, with no reading for [LEFT_RECORDING_S]: ended at its [last]
@@ -545,7 +746,7 @@ class WorkoutSession(
      */
     private suspend fun awaitStrap(l: LeftRecording.Left) {
         log("workout left recording since ${java.time.Instant.ofEpochSecond(l.leftAt)}: waiting for the strap's history")
-        strap.syncNow()
+        // No sync of its own (Zepp has none): the next one the usual rules start brings the history in.
         val v = withTimeoutOrNull(leftWaitMs) {
             // Once at the start too, for a history already in.
             strap.syncEnded.onSubscription { emit(Unit) }.map { judge(l, final = false) }.first { it != LeftRecording.Verdict.Wait }
@@ -553,7 +754,7 @@ class WorkoutSession(
         when (v) {
             is LeftRecording.Verdict.End -> {
                 log("workout left recording: ${v.why}, ended at ${java.time.Instant.ofEpochSecond(v.at)}")
-                finish(v.at, AppWorkout.END_AUTO, startOf = l.start)
+                finish(v.at, AppWorkout.END_AUTO, startOf = l.start, ifShort = IfShort.RecordOn)
             }
             LeftRecording.Verdict.CarryOn -> {
                 log("workout left recording: still under way, it records on")
@@ -711,7 +912,8 @@ class WorkoutSession(
     /** "+30 s". */
     fun extendRest() = editSets { r -> r.restUntil?.let { r.copy(restUntil = it + org.openstrap.app.data.Strength.EXTEND_S) } ?: r }
 
-    private fun editSets(change: (WorkoutState.Recording) -> WorkoutState.Recording) {
+    /** [change] to the sets under the lock, saved; [then] runs once it is applied, not when it changed nothing. */
+    private fun editSets(then: (() -> Unit)? = null, change: (WorkoutState.Recording) -> WorkoutState.Recording) {
         scope.launch {
             lock.withLock {
                 val r = _state.value as? WorkoutState.Recording ?: return@withLock
@@ -723,20 +925,34 @@ class WorkoutSession(
                 // while the save ran stays.
                 _state.update {
                     (it as? WorkoutState.Recording)
-                        ?.copy(sets = changed.sets, restUntil = changed.restUntil, exercise = changed.exercise, saveFailed = failed) ?: it
+                        ?.copy(sets = changed.sets, restUntil = changed.restUntil, exercise = changed.exercise)
+                        ?.withSave(SavePart.Sets, failed) ?: it
                 }
+                then?.invoke()
             }
         }
     }
 
-    /** Once a second while resting: rest is over at its time, or once heart rate holds below the chosen level. */
+    /**
+     * Once a second while resting: rest is over at its time, or once heart rate holds below the chosen level. Never
+     * while paused. Decided again under the lock, so a set started or +10 s tapped meanwhile wins, and the cue only
+     * plays for a rest it really ended.
+     */
     private fun checkRest() {
         val r = _state.value as? WorkoutState.Recording ?: return
-        val until = r.restUntil ?: return
-        val last = r.sets.lastOrNull()?.end ?: return
-        if (!org.openstrap.app.data.Strength.restOver(restRule(r.workout), last, until, window, now())) return
-        editSets { it.copy(sets = it.sets.dropLast(1) + it.sets.last().copy(restEnd = now()), restUntil = null) }
-        cue(org.openstrap.app.data.Cue.RestOver)
+        if (restEnded(r) == null) return
+        editSets(then = { cue(org.openstrap.app.data.Cue.RestOver) }) { restEnded(it) ?: it }
+    }
+
+    /** [r] with its rest ended now, when a finished set's rest is under way, not paused, and over; else null. */
+    private fun restEnded(r: WorkoutState.Recording): WorkoutState.Recording? {
+        val until = r.restUntil.takeIf { !r.paused }
+        val last = r.sets.lastOrNull()?.takeIf { it.restEnd == null }
+        val setEnd = last?.end
+        val over = until != null && setEnd != null &&
+            org.openstrap.app.data.Strength.restOver(restRule(r.workout), setEnd, until, window, now())
+        if (!over || last == null) return null
+        return r.copy(sets = r.sets.dropLast(1) + last.copy(restEnd = now()), restUntil = null)
     }
 
     /* ------------------------------------------- Rounds -------------------------------------------- */
@@ -764,6 +980,22 @@ class WorkoutSession(
             (s as? WorkoutState.Recording)?.takeIf { it.phase(t) is org.openstrap.app.data.Phase.Rest }
                 ?.let { it.copy(restExtra = it.restExtra + REST_ADD_S) } ?: s
         }
+        scope.launch { lock.withLock { keepLive() } }
+    }
+
+    /** The last figures [keepLive] wrote, so an unchanged tick writes nothing. */
+    private var keptLive: org.openstrap.app.data.settings.WorkoutLive? = null
+
+    /**
+     * Keeps the recording workout's rest time added and live kcal, which no row holds, so [restore] brings them back.
+     * Called under [lock], so the writes keep their order.
+     */
+    private suspend fun keepLive() {
+        val r = _state.value as? WorkoutState.Recording ?: return
+        val k = _kcal.value
+        val live = org.openstrap.app.data.settings.WorkoutLive(r.workout.start, r.restExtra, k?.active, k?.total)
+        if (live == keptLive) return
+        catching { settings.setWorkoutLive(live) }.onSuccess { keptLive = live }.onFailure { log("workout: live figures not kept: $it") }
     }
 
     /**
@@ -790,8 +1022,10 @@ class WorkoutSession(
                     val failed = catching { dao.upsertRounds(step.rounds) }.onFailure { log("rounds not saved: ${it.message}") }.isFailure
                     _state.update { s ->
                         val now = s as? WorkoutState.Recording ?: return@update s
-                        now.copy(rounds = step.rounds, restExtra = if (step.switch != null) 0 else now.restExtra, saveFailed = failed)
+                        now.copy(rounds = step.rounds, restExtra = if (step.switch != null) 0 else now.restExtra)
+                            .withSave(SavePart.Rounds, failed)
                     }
+                    keepLive()
                 }
                 step.switch?.let { buzz(org.openstrap.app.data.WorkoutBuzz.of(it, game = s is org.openstrap.app.data.Structure.Periods), it.name) }
                 if (step.switch == null && !skip) {
@@ -862,7 +1096,7 @@ class WorkoutSession(
                 // The whole workout is written each time, and again at its end, so a failed save costs nothing kept.
                 val failed = catching { dao.upsertAppWorkout(w) }.onFailure { log("workout not saved: ${it.message}") }.isFailure
                 // Only the workout is ours: everything else (an end prompt, say) may have changed while the save ran.
-                _state.update { (it as? WorkoutState.Recording)?.copy(workout = w, saveFailed = failed) ?: it }
+                _state.update { (it as? WorkoutState.Recording)?.copy(workout = w)?.withSave(SavePart.Workout, failed) ?: it }
             }
         }
     }
@@ -883,7 +1117,10 @@ class WorkoutSession(
     private val allReadings = mutableListOf<Pair<Long, Int>>()
     private val location = WorkoutLocation(context) { p ->
         val r = _state.value as? WorkoutState.Recording ?: return@WorkoutLocation
-        if (!r.paused) _route.value = _route.value + p
+        // Nothing after End began: the route is read for the stored workout.
+        if (ending) return@WorkoutLocation
+        _gps.value = GpsState.Fixed
+        if (!r.paused) _route.update { it + p }
     }
     private var heightCm: Int? = null
 
@@ -929,25 +1166,46 @@ class WorkoutSession(
     private fun track() = WorkoutDistance.Track(_route.value, stepTotals, heightCm, routeSince, stepsSince, before)
 
     /**
-     * Starts recording [w]: its state is [setup] of a fresh one, and [seed] (auto-start's readings so far) is recorded
+     * Starts recording [w]: its state is [setup] of a fresh one, and [seed] (the readings so far, when started late) is recorded
      * before the live readings start, so [record] only ever runs on one coroutine at a time.
      */
     private suspend fun begin(
-        w: AppWorkout, maxHr: Int, seed: List<Pair<Long, Int>> = emptyList(),
+        w0: AppWorkout, maxHr: Int, seed: List<Pair<Long, Int>> = emptyList(),
         setup: (WorkoutState.Recording) -> WorkoutState.Recording = { it },
     ) {
         // Waited for, so the calm down's own switch-off can't land after this workout turns the stream on.
         calmJob?.cancelAndJoin()
         calmJob = null
-        coach = org.openstrap.app.data.Coach(org.openstrap.app.data.WorkoutTarget.parse(w.target), w.targetReachedAt)
+        coach = org.openstrap.app.data.Coach(org.openstrap.app.data.WorkoutTarget.parse(w0.target), w0.targetReachedAt)
         strapSessions = catching { settings.strapSessions.first() }
             .onFailure { log("workout: strap sessions setting not read: $it") }.getOrDefault(true)
         heightCm = catching { settings.profile.first().heightCm }.onFailure { log("workout: height not read: $it") }.getOrNull()
-        if (w.useGps) location.start()
+        // No permission or no GPS provider: the workout says it doesn't use GPS, and measures from the strap's steps.
+        _gps.value = GpsState.Off
+        val w = if (w0.useGps && !location.start()) {
+            log("workout: GPS not available, distance from the strap's steps")
+            _gps.value = GpsState.Unavailable
+            w0.copy(useGps = false).also { catching { dao.upsertAppWorkout(it) }.onFailure { e -> log("workout not saved: ${e.message}") } }
+        } else {
+            if (w0.useGps) _gps.value = GpsState.Searching
+            w0
+        }
+        ending = false
         _state.update { setup(WorkoutState.Recording(w, maxHr)) }
+        // Anything that fails from here on undoes the start, so a workout is never left Recording with nothing behind it.
+        catching { startRecording(w, maxHr, seed) }.onFailure {
+            _state.update { WorkoutState.Idle }
+            stop()
+            throw it
+        }
+    }
+
+    /** What recording [w] needs, after its state is set: the strap, the service, the wake lock and the readings. */
+    private suspend fun startRecording(w: AppWorkout, maxHr: Int, seed: List<Pair<Long, Int>>) {
         strap.setWorkoutActive(true)
         startService(w.sportType)
-        strap.autoConnect()
+        // Not autoConnect: a Disconnect the user chose holds, and the Ready screen offers Connect.
+        strap.backgroundConnect()
         // The CPU must keep up with the strap's readings and the flushes while the screen is off.
         wake = context.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "unstrap:workout").apply { acquire(MAX_WAKE_MS) }
@@ -960,13 +1218,14 @@ class WorkoutSession(
             launch { strap.heartRateReadings.collect(::onReading) }
             if (strapSessions) {
                 launch { strap.sportSessionPushes.collect(::onStrapPush) }
-                // On every connect, START again with the original start (Zepp's resume after a disconnect), then pause if paused.
+                // Connected now, and on each new login, the workout again as Zepp's `bo60.j(2)`: the config, then one
+                // state. Zepp calls it at the start and on each AUTH_SUCCESS only (`xbc.k`, `rbc`, `yfk`), never on a
+                // battery change, which here is a new Connected value. Every login passes Connecting first.
                 launch {
-                    strap.connection.collect { c ->
-                        if (c !is ConnectionState.Connected) return@collect
+                    strap.connection.map { it is ConnectionState.Connected }.distinctUntilChanged().collect { connected ->
+                        if (!connected) return@collect
                         val now = (_state.value as? WorkoutState.Recording)?.workout ?: return@collect
-                        strapState(org.openstrap.protocol.services.SportSession.State.START, now)
-                        if (now.pausedAt != null) strapState(org.openstrap.protocol.services.SportSession.State.PAUSE, now)
+                        strapState(reconnectState(now), now, reconnect = true)
                     }
                 }
             }
@@ -997,8 +1256,11 @@ class WorkoutSession(
             var tick = 0
             while (isActive) {
                 delay(FLUSH_MS)
-                flush()
-                saveDistance()
+                // Under the lock finish takes, so a flush here can't run alongside the one that ends the workout.
+                lock.withLock {
+                    flush()
+                    saveDistance()
+                }
                 _history.value = synchronized(allReadings) { allReadings.toList() }
                 if (++tick % STOP_CHECK_TICKS == 0) checkStopped()
             }
@@ -1044,17 +1306,22 @@ class WorkoutSession(
                 cue(c)
                 update { it.copy(targetReachedAt = t) }
             }
+            if (tick % KCAL_READ_TICKS == 1) lock.withLock { keepLive() }
             delay(KCAL_TICK_MS)
         }
     }
 
-    /** Asks once the wearer has been calm and still for a while ([WorkoutRecorder.stoppedSince]); the strap buzzes. */
+    /**
+     * Asks once the wearer has been calm and still for the sport's time from "Ask to end when I stop"
+     * ([WorkoutRecorder.stoppedSince]); the strap buzzes. Off for the sport, or the switch off, never asks.
+     */
     @androidx.annotation.VisibleForTesting
     internal fun checkStopped() {
         val r = _state.value as? WorkoutState.Recording ?: return
-        if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
+        val still = stillFor(r)
+        if (r.paused || still == null || r.endPrompt != null) return
         val since = maxOf(askSince, r.workout.start)
-        WorkoutRecorder.stoppedSince(window, steps, restingHr, r.maxHeartRate, since, now())?.let { askToEnd(it) }
+        WorkoutRecorder.stoppedSince(window, steps, restingHr, r.maxHeartRate, since, now(), still)?.let { askToEnd(it) }
     }
 
     /**
@@ -1067,7 +1334,7 @@ class WorkoutSession(
             val cls = runCatching { device?.bluetoothClass?.deviceClass }.getOrNull() ?: return
             if (cls != android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO && cls != android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE) return
             val r = _state.value as? WorkoutState.Recording ?: return
-            if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
+            if (r.paused || stillFor(r) == null || r.endPrompt != null) return
             val at = WorkoutRecorder.lastActive(window, steps, restingHr, r.maxHeartRate)?.takeIf { it > r.workout.start } ?: now()
             askToEnd(at, inCar = true)
         }
@@ -1131,10 +1398,12 @@ class WorkoutSession(
         KeepRecordingNotice.clear(context)
         _lastCue.value = null
         location.stop()
+        _gps.value = GpsState.Off
         if (carRegistered) runCatching { context.unregisterReceiver(carReceiver) }
         carRegistered = false
         recordJob?.cancel()
         recordJob = null
+        synchronized(buffer) { buffer.clear() }
         if (!keepLive) strap.setWorkoutActive(false)
         wake?.takeIf { it.isHeld }?.release()
         wake = null
@@ -1149,7 +1418,7 @@ class WorkoutSession(
         val r = _state.value as? WorkoutState.Recording ?: return
         if (r.paused || !WorkoutRecorder.isValid(bpm)) return
         synchronized(buffer) {
-            if (t == lastSecond) return
+            if (ending || t == lastSecond) return
             lastSecond = t
             buffer += AppWorkoutHeartRate(r.workout.start, t, bpm)
         }
@@ -1180,6 +1449,7 @@ class WorkoutSession(
             .onSuccess {
                 if (flushFailing) log("heart rate saved again")
                 flushFailing = false
+                setSaved(SavePart.HeartRate, failed = false)
             }
             .onFailure { e ->
                 // Kept for the next flush rather than lost, but only the newest [MAX_UNSAVED]: a database that keeps
@@ -1193,12 +1463,18 @@ class WorkoutSession(
                 if (dropped > 0 && !flushDropping) log("heart rate unsaved for too long, the oldest readings are dropped")
                 flushFailing = true
                 flushDropping = dropped > 0
+                setSaved(SavePart.HeartRate, failed = true)
             }
     }
 
     /** Whether the last flush failed, and whether it had to drop readings, so a spell of failures is logged once. */
     private var flushFailing = false
     private var flushDropping = false
+
+    /** Records that [part]'s last save [failed] or worked, on the state as it is now. */
+    private fun setSaved(part: SavePart, failed: Boolean) {
+        _state.update { s -> (s as? WorkoutState.Recording)?.withSave(part, failed) ?: s }
+    }
 
     private fun now() = clock()
 
@@ -1218,6 +1494,9 @@ class WorkoutSession(
         )
 
         const val FLUSH_MS = 10_000L
+        /** A failed [restore] is tried again this many times, this far apart. */
+        const val RESTORE_TRIES = 3
+        const val RESTORE_RETRY_MS = 30_000L
         /** Live readings held while the database refuses them: two hours, one a second. */
         const val MAX_UNSAVED = 7_200
         /** The live kcal is worked out again this often. */
@@ -1239,8 +1518,6 @@ class WorkoutSession(
         val STOP_BUZZ = listOf(500, 250, 500)
         /** Only if the max-HR model can't run; 190 is Tanaka's estimate at 25. */
         const val DEFAULT_MAX_HR = 190
-        /** Auto-start's offer ([AutoStartWatcher]): three short pulses, unlike the stop question's two long ones. */
-        val OFFER_BUZZ = listOf(150, 150, 150, 150, 150)
         /** Saved workouts kept (workouts spec 2.5). */
         const val MAX_SAVED = 10
         /** "+10 s" on an interval's rest. */

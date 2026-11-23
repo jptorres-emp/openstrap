@@ -70,7 +70,9 @@
     <string name="core_activity_recover">自你%2$s结束的%1$s起计算。</string>
     <string name="core_activity_calories_at_rest">在没有任何运动前，你的身体每天静息消耗约 %1$s kcal。</string>
     <string name="core_activity_distance_from_steps">km，来自步数</string>
+    <string name="core_activity_distance_from_steps_mi">英里，来自步数</string>
     <string name="core_activity_distance_from_strap">km，来自手环</string>
+    <string name="core_activity_distance_from_strap_mi">英里，来自手环</string>
     <string name="core_activity_distance_steps_today">今天截至目前超过 %1$s 步。</string>
     <string name="core_activity_distance_steps_day">当天超过 %1$s 步。</string>
 </resources>

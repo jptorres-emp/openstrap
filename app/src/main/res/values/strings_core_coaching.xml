@@ -13,7 +13,11 @@
     <!-- An active calories target, as a chip. -->
     <string name="core_coach_kcal" tools:ignore="PluralsCandidate"><xliff:g id="kcal" example="300">%1$d</xliff:g> kcal</string>
     <!-- A distance target under a kilometre, in metres, as a chip. -->
-    <string name="core_coach_meters"><xliff:g id="meters" example="800">%1$d</xliff:g> m</string>
+    <string name="core_coach_meters"><xliff:g id="meters" example="800">%1$s</xliff:g> m</string>
+    <!-- A distance target under a tenth of a mile, in feet, as a chip. -->
+    <string name="core_coach_feet"><xliff:g id="feet" example="528">%1$s</xliff:g> ft</string>
     <!-- A distance target in kilometres, as a chip: "5 km", "21.1 km". -->
     <string name="core_coach_km"><xliff:g id="km" example="21.1">%1$s</xliff:g> km</string>
+    <!-- A distance target in miles, as a chip: "3.1 mi", "13.1 mi". -->
+    <string name="core_coach_mi"><xliff:g id="mi" example="13.1">%1$s</xliff:g> mi</string>
 </resources>

@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.components
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.theme.Ink
 
 /** One destination in [FloatingNavBar]; [tint] colours its capsule while it's the tab showing (white on Today). */
 data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon, val tint: Color = Color.White)
@@ -69,7 +72,7 @@ fun FloatingNavBar(
         modifier.fillMaxWidth().drawBehind {
             val height = maxOf(TabBarFade.Height.toPx(), size.height)
             drawRect(TabBarFade.brush(size.height - height, size.height), Offset(0f, size.height - height), Size(size.width, height))
-        }.navigationBarsPadding().padding(horizontal = 28.dp, vertical = 10.dp),
+        }.navigationBarsPadding().padding(horizontal = Space.S24, vertical = Space.S12),
         contentAlignment = Alignment.Center,
     ) {
         // No shadow: it would show through the glass as a dark smudge.
@@ -78,7 +81,7 @@ fun FloatingNavBar(
             var barWidth by remember { mutableIntStateOf(0) }
             val density = androidx.compose.ui.platform.LocalDensity.current
             Box(
-                Modifier.padding(6.dp).height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                Modifier.padding(Space.S8).height(androidx.compose.foundation.layout.IntrinsicSize.Min)
                     .onSizeChanged { barWidth = it.width },
             ) {
                 // One capsule that slides to the selected tab, rather than each cell lighting up on its own.
@@ -95,7 +98,7 @@ fun FloatingNavBar(
                     items.forEachIndexed { i, item ->
                         NavCell(item, i == selected, modifier = Modifier.clip(CircleShape).clickable { onSelect(i) }
                             .weight(1f)
-                            .padding(vertical = 8.dp))
+                            .padding(vertical = Space.S8))
                     }
                 }
             }
@@ -113,13 +116,13 @@ fun FloatingNavRail(
     items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
 ) {
     Box(
-        modifier.fillMaxHeight().systemBarsPadding().displayCutoutPadding().padding(horizontal = 10.dp, vertical = 20.dp),
+        modifier.fillMaxHeight().systemBarsPadding().displayCutoutPadding().padding(horizontal = Space.S8, vertical = Space.S20),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.width(NavRailWidth - 20.dp).heightIn(max = 380.dp).fillMaxHeight().glassPill(glass)) {
             var barHeight by remember { mutableIntStateOf(0) }
             val density = androidx.compose.ui.platform.LocalDensity.current
-            Box(Modifier.padding(6.dp).onSizeChanged { barHeight = it.height }) {
+            Box(Modifier.padding(Space.S8).onSizeChanged { barHeight = it.height }) {
                 val gap = 2.dp
                 val cell = (with(density) { barHeight.toDp() } - gap * (items.size - 1)) / items.size
                 val y by androidx.compose.animation.core.animateDpAsState(
@@ -216,7 +219,7 @@ val NavRailWidth = 92.dp
 private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top) {
     Column(modifier, verticalArrangement = verticalArrangement, horizontalAlignment = Alignment.CenterHorizontally) {
         val tint by androidx.compose.animation.animateColorAsState(
-            if (on) Color.White else Color.White.copy(alpha = 0.55f),
+            if (on) Color.White else Ink.Tertiary,
             tween(Motion.QUICK), label = "nav tint",
         )
         val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
@@ -232,11 +235,11 @@ private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArra
 private val GlassBlur = HazeBlurStyle {
     blurRadius(24.dp)
     backgroundColor(Color.Black)
-    colorEffects(listOf(HazeColorEffect.tint(Color(0xFF0B0B0D).copy(alpha = 0.7f))))
+    colorEffects(listOf(HazeColorEffect.tint(Greys.Tint.copy(alpha = 0.7f))))
     // Without blur (before Android 12), a near-opaque tint instead.
-    fallbackColorEffect(HazeColorEffect.tint(Color(0xFF0B0B0D).copy(alpha = 0.92f)))
+    fallbackColorEffect(HazeColorEffect.tint(Greys.Tint.copy(alpha = 0.92f)))
 }
-private val GlassChip = Color.White.copy(alpha = 0.1f)
+private val GlassChip = Ink.Edge
 private val GlassChipEdge = BorderStroke(
-    1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 1f to Color.Transparent),
+    1.dp, Brush.verticalGradient(0f to Ink.Line, 1f to Color.Transparent),
 )

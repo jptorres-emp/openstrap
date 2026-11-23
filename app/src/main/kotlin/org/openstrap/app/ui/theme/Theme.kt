@@ -20,19 +20,46 @@ import androidx.compose.ui.unit.sp
  */
 object MetricColors {
     val heart = Color(0xFFFF5A5F)
+    /** Heart's lighter step: the text of a small destructive pill (delete, discard) on its dark fill. */
+    val heartLight = Color(0xFFFF7A7E)
     val steps = Color(0xFFC3F53C)
+    /** Heart points and Active minutes share this lime, a step apart from Steps' own. */
+    val activityLime = Color(0xFFC6F55A)
     val sleepDeep = Color(0xFF4C6FFF)
+    /** Sleep's navy: the near-black "Midnight" glow's light from below (the Training card). */
+    val sleepNavy = Color(0xFF2A44B0)
     val sleepLight = Color(0xFF8FA8FF)
     val sleepRem = Color(0xFFB37CFF)
     val sleepAwake = Color(0xFFFFB547)
     val spo2 = Color(0xFF38BDF8)
     val stress = Color(0xFFF062C0)
     val hrv = Color(0xFF2DD4BF)
-    val temperature = Color(0xFFFF8A3D)
+    /**
+     * Skin temperature at your normal: grey-white. Its colour comes from the reading ([temperatureFor]), cooler toward
+     * ice cyan and warmer toward dusty rose, so it never shares Energy's orange (calmer pass, 14 Nov 2026).
+     */
+    val temperature = Color(0xFFD8D8D8)
+    val temperatureCool = Color(0xFF8FD8F5)
+    val temperatureWarm = Color(0xFFCA6789)
+
+    /** Skin temperature's colour for a reading [deviation] °C from your normal: full cyan or rose at 1 °C off. */
+    fun temperatureFor(deviation: Float?): Color {
+        if (deviation == null) return temperature
+        val k = (kotlin.math.abs(deviation) / TEMP_FULL_AT).coerceIn(0f, 1f)
+        return androidx.compose.ui.graphics.lerp(temperature, if (deviation < 0f) temperatureCool else temperatureWarm, k)
+    }
+
+    private const val TEMP_FULL_AT = 1f
     /** Recovery: one teal on every surface. */
     val readiness = Color(0xFF7CF2C9)
+    /** Recovery's pale step: the text a lit teal card takes on (the rest-or-recovery drop on a workout summary). */
+    val readinessPale = Color(0xFFD9FBEF)
+    /** Recovery's softer step: the strap picture's own light when it is connected. */
+    val readinessSoft = Color(0xFF7DE0C0)
     /** Charge: Ember orange on every surface, whatever the level. */
     val charge = Color(0xFFF66C28)
+    /** Charge's deeper step: the Drained bar beside Recharged's [charge] (board HaloRecovery). */
+    val chargeDrained = Color(0xFFC55620)
     /**
      * Calories: Gold (hue 48), between Charge's orange and Steps' lime and lighter than the warning amber, so Calories
      * and Steps read as two metrics side by side on Activity.
@@ -58,21 +85,44 @@ object MetricColors {
     }
 }
 
+/**
+ * The workout families' colours (workout-rules.md, Colour): they belong to no metric, so they sit here and not in
+ * [MetricColors]. Distance takes Steps' lime and Intervals takes Heart's red, as the family is the same data.
+ */
+object SportColors {
+    val distance = MetricColors.steps
+    val intervals = MetricColors.heart
+    /** Indoor cardio: a bright blue. */
+    val indoorCardio = Color(0xFF52ACFC)
+    /** Strength: orange, a step brighter and redder than Charge's. */
+    val strength = Color(0xFFFF8410)
+    /** Mind and body: a soft purple. */
+    val mindBody = Color(0xFFB67AE8)
+    /** Games: a dusty slate blue. */
+    val games = Color(0xFF6E8FB8)
+}
+
+/** Glow tints that belong to a card, not a metric. */
+object GlowTints {
+    /** The "Last test" card's pink rim ("Bloom"). */
+    val bloom = Color(0xFFD65AA0)
+}
+
 private val Dark = darkColorScheme(
     // No accent: controls (switches, checkboxes, buttons, progress) are white with black on top, like the
     // marks on the glow cards, so colour in the app always means data. The containers Material would
     // otherwise fill with its own purple-blue are neutral greys.
     primary = Color(0xFFFFFFFF),
     onPrimary = Color(0xFF000000),
-    primaryContainer = Color(0xFF2C2C2E),
+    primaryContainer = Greys.Control,
     onPrimaryContainer = Color(0xFFFFFFFF),
     secondary = Color(0xFFFFFFFF),
     onSecondary = Color(0xFF000000),
-    secondaryContainer = Color(0xFF2C2C2E),
+    secondaryContainer = Greys.Control,
     onSecondaryContainer = Color(0xFFFFFFFF),
     tertiary = Color(0xFFFFFFFF),
     onTertiary = Color(0xFF000000),
-    tertiaryContainer = Color(0xFF2C2C2E),
+    tertiaryContainer = Greys.Control,
     onTertiaryContainer = Color(0xFFFFFFFF),
     // Elevation would tint raised surfaces with the primary; white would lift them to grey.
     surfaceTint = Color.Transparent,
@@ -82,12 +132,12 @@ private val Dark = darkColorScheme(
     surface = Color(0xFF000000),
     onSurface = Color(0xFFFFFFFF),
     surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF0A0A0A),
-    surfaceContainer = Color(0xFF141414),
-    surfaceContainerHigh = Color(0xFF1C1C1E),
-    surfaceContainerHighest = Color(0xFF2C2C2E),
-    onSurfaceVariant = Color(0xFF8E8E93),
-    outline = Color(0xFF2C2C2E),
+    surfaceContainerLow = Greys.Card,
+    surfaceContainer = Greys.Raised,
+    surfaceContainerHigh = Greys.Control,
+    surfaceContainerHighest = Greys.Picked,
+    onSurfaceVariant = Ink.Tertiary,
+    outline = Color(0xFF2C2C2C),
     outlineVariant = Color(0xFF232323),
     error = Color(0xFFFF6B6B),
 )

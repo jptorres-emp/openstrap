@@ -8,28 +8,28 @@
     <!-- The status word beside a value against your normal. Short, one line. -->
     <string name="core_detail_status_above">Above your normal</string>
     <string name="core_detail_status_below">Below your normal</string>
-    <string name="core_detail_status_usual">Usual</string>
+    <string name="core_detail_status_usual">Your normal</string>
 
     <!-- The label of the band on the chart that marks your normal. The values are already written with their decimals. -->
     <string name="core_detail_band_label">Your normal, <xliff:g id="low" example="44">%1$s</xliff:g> to <xliff:g id="high" example="58">%2$s</xliff:g></string>
     <!-- Under the value before your normal is known: how many of the 7 nights it needs have data. -->
     <plurals name="core_detail_learning_nights">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
     </plurals>
     <!-- Under the value before your normal is known: how many of the 7 days it needs have data. -->
     <plurals name="core_detail_learning_days">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day</item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days</item>
     </plurals>
     <!-- The same as a sentence, under a chart. -->
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night.</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights.</item>
+        <item quantity="one">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night.</item>
+        <item quantity="other">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights.</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day.</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days.</item>
+        <item quantity="one">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day.</item>
+        <item quantity="other">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days.</item>
     </plurals>
 
     <!-- Small numbers in words, inside a sentence: "no", "one" to "nine". Used for counts of nights, days, naps and workouts. -->
@@ -57,7 +57,13 @@
     <!-- The label under a metric's value on the Day view. bpm is beats a minute. Short, one line. -->
     <string name="core_detail_label_bpm_now">bpm now</string>
     <string name="core_detail_label_bpm_latest">bpm, latest</string>
-    <string name="core_detail_label_bpm_resting">bpm resting</string>
+    <string name="core_detail_label_bpm_resting">bpm, last night</string>
+    <string name="core_detail_label_bpm_resting_that_night">bpm, that night</string>
+    <!-- The label under a resting heart rate unstrap worked out itself, because the strap sent none for the day. -->
+    <string name="core_detail_label_bpm_resting_estimated">bpm, last night, estimated</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">bpm, that night, estimated</string>
+    <!-- The label under a heart rate when the day's data ends early: today, or a day the strap was worn part of. -->
+    <string name="core_detail_label_bpm_up_to">bpm, up to <xliff:g id="time" example="09:10">%1$s</xliff:g></string>
     <string name="core_detail_label_steps_today">steps so far today</string>
     <string name="core_detail_label_steps">steps</string>
     <!-- br/min is breaths a minute. -->
@@ -66,6 +72,15 @@
     <string name="core_detail_label_day_average">Day average</string>
     <!-- The label under a value on the Day view, after its unit ("ms", "%", "°C"). -->
     <string name="core_detail_label_unit_day_average"><xliff:g id="unit" example="ms">%1$s</xliff:g>, day average</string>
+    <!-- The label under stress's value on the Day view (no unit): the level of its latest reading of the day, and when it was taken. -->
+    <string name="core_detail_label_stress_latest_at"><xliff:g id="level" example="High">%1$s</xliff:g>, latest at <xliff:g id="time" example="14:05">%2$s</xliff:g></string>
+    <!-- Under skin temperature's level on a day's detail: the signed change from your normal with its unit, and which side of it. -->
+    <string name="core_detail_skin_above"><xliff:g id="change" example="+1.4 °C">%1$s</xliff:g>, above your normal</string>
+    <string name="core_detail_skin_below"><xliff:g id="change" example="−0.7 °C">%1$s</xliff:g>, below your normal</string>
+    <string name="core_detail_skin_within"><xliff:g id="change" example="+0.1 °C">%1$s</xliff:g>, within your normal</string>
+    <!-- The label under blood oxygen's value on the Day view, after its unit: the latest reading of the day, whether it was taken awake or asleep, and when. -->
+    <string name="core_detail_label_unit_daytime_latest_at"><xliff:g id="unit" example="%">%1$s</xliff:g>, daytime, latest at <xliff:g id="time" example="14:05">%2$s</xliff:g></string>
+    <string name="core_detail_label_unit_asleep_latest_at"><xliff:g id="unit" example="%">%1$s</xliff:g>, while asleep, latest at <xliff:g id="time" example="05:10">%2$s</xliff:g></string>
     <!-- The label under the steps for a week, month or year: the daily average. -->
     <string name="core_detail_label_steps_week">steps a day, last 7 days</string>
     <string name="core_detail_label_steps_month">steps a day, last 30 days</string>
@@ -101,10 +116,10 @@
 
     <!-- Under the state word when a metric has no value: why. Short, one line. -->
     <string name="core_detail_none_during_sleep">Measured during sleep</string>
-    <string name="core_detail_none_last_night">For last night</string>
-    <string name="core_detail_none_that_night">For that night</string>
+    <string name="core_detail_none_last_night">Last night</string>
+    <string name="core_detail_none_that_night">That night</string>
     <string name="core_detail_none_so_far_today">So far today</string>
-    <string name="core_detail_none_that_day">For that day</string>
+    <string name="core_detail_none_that_day">That day</string>
     <string name="core_detail_none_week">In the last 7 days</string>
     <string name="core_detail_none_month">In the last 30 days</string>
     <string name="core_detail_none_year">In the last 12 months</string>
@@ -145,9 +160,18 @@
     </plurals>
 
     <!-- The year's sentence from weekly averages, after which comes the unit ("ms", "bpm"). The values are already written with their decimals. -->
-    <string name="core_detail_year_unit">Over the last 12 months, weekly averages ran from <xliff:g id="lowest" example="48">%1$s</xliff:g> to <xliff:g id="highest" example="61">%2$s</xliff:g> <xliff:g id="unit" example="ms">%3$s</xliff:g>.</string>
+    <string name="core_detail_year_unit">Over the <xliff:g id="span" example="last 3 weeks">%4$s</xliff:g>, weekly averages ran from <xliff:g id="lowest" example="48">%1$s</xliff:g> to <xliff:g id="highest" example="61">%2$s</xliff:g> <xliff:g id="unit" example="ms">%3$s</xliff:g>.</string>
     <!-- The year's sentence for a value with no unit (Stress). -->
-    <string name="core_detail_year">Over the last 12 months, weekly averages ran from <xliff:g id="lowest" example="20">%1$s</xliff:g> to <xliff:g id="highest" example="41">%2$s</xliff:g>.</string>
+    <string name="core_detail_year">Over the <xliff:g id="span" example="last 3 weeks">%3$s</xliff:g>, weekly averages ran from <xliff:g id="lowest" example="20">%1$s</xliff:g> to <xliff:g id="highest" example="41">%2$s</xliff:g>.</string>
+    <!-- The span the year view's data covers, after "Over the": the weeks of data while there are few, then months up to a year. -->
+    <plurals name="core_detail_year_span_weeks">
+        <item quantity="one">last week</item>
+        <item quantity="other">last <xliff:g id="n" example="3">%1$d</xliff:g> weeks</item>
+    </plurals>
+    <plurals name="core_detail_year_span_months">
+        <item quantity="one">last month</item>
+        <item quantity="other">last <xliff:g id="n" example="5">%1$d</xliff:g> months</item>
+    </plurals>
 
     <!-- A score's week sentence with a single score so far. -->
     <string name="core_detail_score_week_one">One score in the last 7 days so far.</string>
@@ -175,7 +199,7 @@
     <!-- Recovery's hero word for a night without a score. Short. -->
     <string name="core_detail_recovery_no_score">No score</string>
     <!-- Under it, when the night had too little heart data. -->
-    <string name="core_detail_recovery_no_heart_data">Not enough heart data that night</string>
+    <string name="core_detail_recovery_no_heart_data">Not enough heart data</string>
     <!-- Under it, otherwise. -->
-    <string name="core_detail_recovery_scored_mornings">Scored each morning from the night before</string>
+    <string name="core_detail_recovery_scored_mornings">Scored each morning</string>
 </resources>

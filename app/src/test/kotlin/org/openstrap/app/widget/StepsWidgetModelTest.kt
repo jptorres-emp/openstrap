@@ -34,7 +34,7 @@ class StepsWidgetModelTest {
         val m = model()
         assertEquals("Steps", m.title)
         assertEquals("Goal 10,000", m.goalNote)
-        assertEquals("8,432", m.stepsText)
+        assertEquals("8432", m.stepsText)
         assertEquals("today", m.word)
         assertEquals("1,568 to go", m.toGo)
         assertEquals("84% of your goal", m.share)
@@ -47,17 +47,17 @@ class StepsWidgetModelTest {
     @Test fun `the dots keep the dot font's marks, the words follow the phone's language`() {
         Locale.setDefault(Locale.GERMANY)
         val m = StepsWidgetModel.from(today, 8_432, hourly, 14, 10_000, past, Locale.GERMANY)
-        assertEquals("8,432", m.stepsText)
+        assertEquals("8432", m.stepsText)
         assertEquals("Goal 10.000", m.goalNote)
         assertEquals("1.568 to go", m.toGo)
         assertEquals("8.432 steps today, 84% of your goal", m.description)
     }
 
     @Test fun `the Small shortens five digits to thousands, the Wide and Large keep them all`() {
-        assertEquals("9,999", model(steps = 9_999).smallText)
+        assertEquals("9999", model(steps = 9_999).smallText)
         val m = model(steps = 10_000)
         assertEquals("10k", m.smallText)
-        assertEquals("10,000", m.stepsText)
+        assertEquals("10\u2009000", m.stepsText)
         assertEquals("12.3k", model(steps = 12_345).smallText)
         // Cut down, never up: 12,999 hasn't reached 13,000.
         assertEquals("12.9k", model(steps = 12_999).smallText)
@@ -88,7 +88,7 @@ class StepsWidgetModelTest {
 
     @Test fun `the Small's decimal mark follows the locale, in the dot font's digits`() {
         assertEquals("12,3k", StepsWidgetModel.short(12_345, Locale.GERMANY))
-        assertEquals("9,999", StepsWidgetModel.short(9_999, Locale.GERMANY))
+        assertEquals("9999", StepsWidgetModel.short(9_999, Locale.GERMANY))
         assertEquals("12.3k", StepsWidgetModel.short(12_345, Locale.US))
         // Arabic digits and mark are not in the dot font: ASCII digits, and its mark only when it is a comma.
         for (l in listOf(Locale.GERMANY, Locale.US, Locale.forLanguageTag("ar-EG"), Locale.forLanguageTag("fa-IR"))) {
@@ -185,21 +185,24 @@ class StepsWidgetModelTest {
     private val wide = WidgetSizes.Wide.width.value - 2 * WidgetSizes.PADDING_DP to WidgetSizes.Wide.height.value - 2 * WidgetSizes.PADDING_DP
     private val large = WidgetSizes.Large.width.value - 2 * WidgetSizes.PADDING_DP to WidgetSizes.Large.height.value - 2 * WidgetSizes.PADDING_DP
 
-    /** The Small's column, as SmallContent stacks it. */
+    /** The Small's column, as SmallContent stacks it: the grid's top row, a flexible space, the number, a gap, the bar and the share. */
     private fun smallHeight(fit: StepsLayout.Small, fontScale: Float): Float =
-        WidgetText.line(WidgetText.TITLE_SP, fontScale) + StepsLayout.dotsHeight(fit.dot) +
+        WidgetGrid.TOP_ROW_DP + StepsLayout.MIN_GAP_DP + StepsLayout.dotsHeight(fit.dot) +
             (if (fit.word) StepsLayout.SMALL_WORD_GAP_DP + WidgetText.line(WidgetText.BODY_SP, fontScale) else 0f) +
-            StepsLayout.SMALL_BAR_GAP_DP + StepsLayout.BAR_DP +
+            StepsLayout.MIN_GAP_DP + StepsLayout.BAR_DP +
             (if (fit.share) StepsLayout.SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f)
 
-    @Test fun `the Small keeps everything at the default font and fits at 1_3`() {
+    @Test fun `the Small keeps the dots, the bar and the share at the default font and fits at 1_3, dropping lines not cutting them`() {
         val m = model()
         val normal = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1f)
-        assertEquals(Triple(StepsLayout.SMALL_DOT, true, true), Triple(normal.dot, normal.word, normal.share))
+        // The Small's 110 dp holds the top row, the dots, the bar and the share on the grid's 8 dp gaps: "today" is what goes.
+        assertEquals(Triple(StepsLayout.SMALL_DOT, false, true), Triple(normal.dot, normal.word, normal.share))
         assertTrue(smallHeight(normal, 1f) <= small.second)
         val big = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1.3f)
         assertTrue(smallHeight(big, 1.3f) <= small.second)
-        assertTrue(big.word || big.share)
+        // At 1.3 the lines are too tall for the grid's gaps: the number and the bar stay, "today" and the share go.
+        assertFalse(big.word)
+        assertFalse(big.share)
         // Five figures shrink the dots to the width rather than clip.
         val many = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
         assertTrue(many.dot < StepsLayout.SMALL_DOT)
@@ -266,5 +269,13 @@ class StepsWidgetModelTest {
         val small = StepsLayout.small(m.stepsText, m.share, 140f, 180f, 1f, l)
         assertNull(small.top.words)
         assertEquals(StatusButton.SIZE_DP, small.top.height, 0f)
+    }
+
+    @Test fun `the not-paired Small gives the pills' room to its words`() {
+        val m = model()
+        val l = StatusLine(StrapStatus.NotPaired, listOf("Pair your strap", "Pair strap", "Pair"))
+        val words = StatusButton.words(l, small.first, 1f)!!
+        val withBar = StepsLayout.small(m.stepsText, words, small.first, small.second, 1f, l, pills = false)
+        assertTrue(withBar.share)
     }
 }

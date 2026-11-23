@@ -33,6 +33,9 @@ object DotFont {
         'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
         '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
         ' ' to listOf("..", "..", "..", "..", "..", "..", ".."),
+        // The thin space grouping big numbers ("26 120"): no columns of its own, so the groups sit two empty columns apart,
+        // twice the gap between digits.
+        '\u2009' to listOf("", "", "", "", "", "", ""),
     )
 
     /** Rows in every glyph. */
@@ -120,5 +123,8 @@ enum class DotSize(val dot: Dp) {
     companion object {
         /** The gap between dots as a share of the dot. */
         const val DOT_GAP = 0.38f
+
+        /** A digit's height in dots: 7 rows, 6 gaps of [DOT_GAP] between them, and 7 * (1 + gap) - gap in all. */
+        const val ROWS_IN_DOTS = 7 * (1 + DOT_GAP) - DOT_GAP
     }
 }

@@ -79,7 +79,8 @@ class RecordParsersTest {
         assertEquals(7000, res.records[1].distanceCm)
         assertEquals(90, res.records[0].steps)
         assertEquals(t0 + 60, res.records[1].timestamp)
-        assertEquals(t0 + 120, res.nextCursor)
+        // Zepp's f40: header + N minutes + 1 s.
+        assertEquals(t0 + 121, res.nextCursor)
         assertFailure(HistoryParsers.todayActivityExtended.parse(p.copyOf(23), ctx))
     }
 
@@ -107,11 +108,12 @@ class RecordParsersTest {
     }
 
     @Test
-    fun secHrV2OnlyPaddingStillAdvances() {
+    fun secHrV2OnlyPaddingEndsTheLoop() {
+        // Zepp's next is the last kept sample + 1 s: with none, the loop stops there.
         val p = w().u32(t0).u16(3).u8(0xFF).u8(0xFF).u8(0xFF).toByteArray()
         val res = ok(HistoryParsers.secondHrV2.parse(p, ctx))
         assertTrue(res.records.isEmpty())
-        assertEquals(t0 + 3, res.nextCursor)
+        assertEquals(null, res.nextCursor)
     }
 
     @Test
@@ -211,10 +213,12 @@ class RecordParsersTest {
 
     @Test
     fun spo2Legacy() {
-        val p = w().u32(t0).u8(0x80 or 97).u32(t0 + 60).u8(70).toByteArray()
+        val p = w().u32(t0).u8(0x80 or 97).u32(t0 + 60).u8(70).u32(t0 + 120).u8(127).u32(t0 + 180).u8(0).toByteArray()
         val res = ok(HistoryParsers.spo2Single.parse(p, ctx))
         assertEquals(97, res.records[0].spo2); assertTrue(res.records[0].isAuto); assertTrue(res.records[0].isPlausible)
+        // Only 80 to 100 is kept, as Zepp does: 70 is out, 127 is the invalid marker and 0 is none.
         assertEquals(70, res.records[1].spo2); assertFalse(res.records[1].isAuto); assertFalse(res.records[1].isPlausible)
+        assertFalse(res.records[2].isPlausible); assertFalse(res.records[3].isPlausible)
         assertNull(res.records[0].history)
     }
 

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -142,6 +143,24 @@ class DayViewModelUiStateTest {
         assertEquals(listOf(ChartPoint(at(12), 45f)), s.hrv)
     }
 
+    @Test fun `the day's lowest and highest come from the minutes, the strap's maximum when higher`() {
+        // A one-minute dip and spike inside two 5-minute buckets that average them away.
+        val hr = (0 until 10).map { HeartRateSample(at(10) + it * 60L, if (it == 3) 44 else if (it == 6) 151 else 70) }
+        val s = DayViewModel.toUiState(DayData(date, heartRate = hr))
+        assertEquals(hr.map { it.timestamp to it.bpm }, s.heartMinutes)
+        assertEquals(listOf(65f, 86f), s.heartRate.map { it.y })
+        assertEquals(44 to 151, s.heartRateRange)
+        assertEquals(44 to 163, DayViewModel.toUiState(DayData(date, heartRate = hr, dailyMaxHeartRate = 163)).heartRateRange)
+        assertEquals(44 to 151, DayViewModel.toUiState(DayData(date, heartRate = hr, dailyMaxHeartRate = 120)).heartRateRange)
+        assertNull(DayViewModel.toUiState(DayData(date)).heartRateRange)
+    }
+
+    @Test fun `the night's stored readings are kept for its lowest`() {
+        val night = listOf(HeartRateSample(at(2), 52), HeartRateSample(at(2, 1), 46), HeartRateSample(at(2, 2), 55))
+        val s = DayViewModel.toUiState(DayData(date, nightHeartRate = night))
+        assertEquals(night.map { it.timestamp to it.bpm }, s.sleepHeartMinutes)
+    }
+
     @Test fun `the Activity screens get the day's Heart points and energy as state`() = runTest {
         val repo = FakeDays()
         val clock = FixedClock(Instant.parse("2026-01-15T12:00:00Z"))
@@ -197,6 +216,42 @@ class DayViewModelUiStateTest {
         assertNull(s.stressStrip[10])
     }
 
+    @Test fun `the week view gets the later days' active minutes and nights from the week's last day`() = runTest {
+        val repo = FakeDays()
+        val clock = FixedClock(Instant.parse("2026-01-25T12:00:00Z"))
+        val vm = DayViewModel(repo, clock = { clock.clock }, work = UnconfinedTestDispatcher(testScheduler))
+        // Thursday the 15th is shown, and its week ends on Sunday the 18th.
+        val sunday = date.plusDays(3)
+        fun night(morning: LocalDate) = org.openstrap.app.data.SleepNight(morning, SleepSession(0, 8 * 3600, lightMinutes = 420))
+        repo.changed = flowOf(Unit)
+        repo.result = { d ->
+            val day = org.openstrap.app.data.Activity.Day(
+                0, org.openstrap.app.data.Activity.Mvpa(0, 0, 0), 0, null, 8000,
+                byDay = mapOf(d to org.openstrap.app.data.Activity.Mvpa(10, 5, 0), d.minusDays(1) to org.openstrap.app.data.Activity.Mvpa(30, 0, 0)),
+            )
+            org.openstrap.app.data.RecoveryResult(
+                d, org.openstrap.app.data.Recovery.Readiness(null, emptyList(), 30, false, emptyList(), false),
+                org.openstrap.app.data.Recovery.ChargeDay(emptyList(), null, null, 0f, 0f, 0f, 0f, null, null, anchored = true), emptyList(),
+                0f, null, 52f, 190f, true, org.openstrap.app.data.Recovery.StressThreshold(60, null, 0), activity = day,
+            )
+        }
+        repo.nights = { d -> listOf(night(d.minusDays(1)), night(d)) }
+        val w = vm.weekThrough(sunday).first { it.active.isNotEmpty() && it.asleepByMorning.isNotEmpty() }
+        assertEquals(mapOf(sunday to 20, sunday.minusDays(1) to 30), w.active)
+        // Sunday's night ended on Monday morning, so the nights are Monday's.
+        assertEquals(setOf(sunday, sunday.plusDays(1)), w.asleepByMorning.keys)
+        assertEquals(sunday.plusDays(1) to false, repo.dayAsked)
+        // This week's last morning is today's, never tomorrow's.
+        val today = LocalDate.of(2026, 1, 25)
+        vm.weekThrough(today).first { it.asleepByMorning.isNotEmpty() }
+        assertEquals(today to true, repo.dayAsked)
+        // Active minutes that can't be worked out leave the nights standing.
+        repo.result = null
+        val nightsOnly = vm.weekThrough(sunday).first { it.asleepByMorning.isNotEmpty() }
+        assertTrue(nightsOnly.active.isEmpty())
+        vm.viewModelScope.coroutineContext[Job]?.cancel()
+    }
+
     /** A day repository with one day of Heart points and energy, noting the windows asked for. */
     private inner class FakeDays : DayRepository {
         var paiWindow: Pair<LocalDate, LocalDate>? = null
@@ -212,12 +267,20 @@ class DayViewModelUiStateTest {
         override fun personalBest(kind: String): Flow<org.openstrap.app.data.db.PersonalBest?> = stored
         override suspend fun mostStepsBefore(date: LocalDate): Int = 25000
 
-        override fun day(date: LocalDate, isToday: Boolean): Flow<DayData> = flowOf(DayData(date, isToday))
+        var result: ((LocalDate) -> RecoveryResult)? = null
+        var changed: Flow<Unit> = emptyFlow()
+        var nights: (LocalDate) -> List<org.openstrap.app.data.SleepNight> = { emptyList() }
+        var dayAsked: Pair<LocalDate, Boolean>? = null
+
+        override fun day(date: LocalDate, isToday: Boolean): Flow<DayData> {
+            dayAsked = date to isToday
+            return flowOf(DayData(date, isToday, nights = nights(date)))
+        }
         override fun daysWithData(): Flow<Set<LocalDate>> = flowOf(emptySet())
         override suspend fun hourlySteps(from: LocalDate, to: LocalDate): Map<LocalDate, List<Float>> = emptyMap()
-        override suspend fun recovery(date: LocalDate, profile: UserProfile): RecoveryResult = error("not read here")
+        override suspend fun recovery(date: LocalDate, profile: UserProfile): RecoveryResult = result?.invoke(date) ?: error("not read here")
         override suspend fun healthspan(date: LocalDate, profile: UserProfile): Healthspan.Outcome = error("not read here")
-        override fun changes(): Flow<Unit> = emptyFlow()
+        override fun changes(): Flow<Unit> = changed
         override fun deletedSleep(): Flow<List<SleepEdits.Resolved>> = flowOf(emptyList())
         override suspend fun setSleepTimes(strap: SleepSession, start: Long, end: Long) = Unit
         override suspend fun deleteSleep(strap: SleepSession) = Unit
@@ -235,3 +298,6 @@ class DayViewModelUiStateTest {
         }
     }
 }
+
+/** The activity history, now part of [DayViewModel.screen]. */
+private val DayViewModel.activityHistory get() = screen.map { it.activity }

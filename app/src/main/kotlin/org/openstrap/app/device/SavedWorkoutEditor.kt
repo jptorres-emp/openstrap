@@ -32,6 +32,8 @@ internal class SavedWorkoutEditor(
     private val scope: CoroutineScope,
     /** The route and step totals still in memory for the workout [start] (the last one recorded), else null. */
     private val track: (start: Long) -> WorkoutDistance.Track? = { null },
+    /** The workout [start] was deleted, with all it was recorded over, [from] to [to]: auto sync takes it out of Health Connect. */
+    private val onRemoved: (start: Long, from: Long, to: Long) -> Unit = { _, _, _ -> },
 ) {
     /**
      * Deletes a phone workout, and closes its summary if it is the one showing. The strap's own records of it
@@ -41,24 +43,13 @@ internal class SavedWorkoutEditor(
     fun discard(start: Long) {
         scope.launch {
             lock.withLock {
-                // Not deleted, its summary stays, so Discard can be tried again.
-                val w = catching {
-                    dao.appWorkoutOnce(start).also { w ->
-                        // Gone before its twins: a start trimmed into a twin would make it another owner of the
-                        // strap's effect, and the effect would stay, its recovery carried into the next workout.
-                        dao.deleteAppWorkout(start)
-                        if (w?.end != null) {
-                            val t = clock()
-                            val range = org.openstrap.app.data.Workouts.phoneRange(w, t)
-                            org.openstrap.app.data.Workouts.strapTwins(dao.workoutsOnce(range.first, range.last), range)
-                                .forEach { dao.deleteStrapWorkout(it.start, t) }
-                            // The strap's copy usually syncs after the summary shows, so after a Discard tapped there:
-                            // its time is remembered, and the sync leaves out a strap workout over it.
-                            dao.insertDismissedWorkouts(listOf(org.openstrap.app.data.db.DismissedWorkout(range.first, range.last)))
-                        }
-                    }
-                }.onFailure { log("workout not discarded: ${it.message}") }.getOrElse { return@withLock }
-                if (w?.end != null) refreshDays(w.start, w.recordedEnd ?: w.end)
+                // One transaction: not deleted, nothing is, its summary stays, and Discard can be tried again.
+                val w = catching { dao.discardAppWorkout(start, clock()) }
+                    .onFailure { log("workout not discarded: ${it.message}") }.getOrElse { return@withLock }
+                if (w?.end != null) {
+                    refreshDays(w.start, w.recordedEnd ?: w.end)
+                    onRemoved(w.start, w.start, w.recordedEnd ?: w.end)
+                }
                 onDiscarded(start)
             }
         }
@@ -107,7 +98,9 @@ internal class SavedWorkoutEditor(
         scope.launch {
             lock.withLock {
                 val w = catching { dao.appWorkoutOnce(start) }.getOrNull()?.takeIf { it.end != null } ?: return@withLock
-                val changed = change(w).let { c -> if (c.from == w.from && c.end == w.end) c else withDistance(w, c) }
+                val changed = change(w).let { c ->
+                    if (c.from == w.from && c.end == w.end) c else trackOf(w).let { withStretches(withDistance(w, c, it), it) }
+                }
                 if (changed == w) return@withLock
                 catching { dao.upsertAppWorkout(withEffect(changed, dao.appWorkoutHeartRateOnce(start))) }
                     .onFailure { log("workout edit not saved: ${it.message}") }
@@ -119,19 +112,35 @@ internal class SavedWorkoutEditor(
         }
     }
 
+    /** What [old]'s distance and stretches are worked out from again: the route and step totals in memory, or a kept route. */
+    private suspend fun trackOf(old: AppWorkout): WorkoutDistance.Track? = track(old.start) ?: run {
+        if (!old.keepRoute) return@run null
+        catching { dao.routeOnce(old.start).map { it.point } }.getOrNull()
+            ?.let { WorkoutDistance.Track(it, emptyList(), null, routeSince = old.start, stepsSince = old.start) }
+    }
+
     /**
-     * [new], a new range of [old], with the distance over it ([WorkoutDistance]): from the route and step totals in
-     * memory, or a kept route, and without either [old]'s by the share of moving time kept.
+     * [new], a new range of [old], with the distance over it ([WorkoutDistance]): from [track], and without it
+     * [old]'s by the share of moving time kept.
      */
-    private suspend fun withDistance(old: AppWorkout, new: AppWorkout): AppWorkout {
-        val track = track(old.start) ?: run {
-            if (!old.keepRoute) return@run null
-            catching { dao.routeOnce(old.start).map { it.point } }.getOrNull()
-                ?.let { WorkoutDistance.Track(it, emptyList(), null, routeSince = old.start, stepsSince = old.start) }
-        }
+    private fun withDistance(old: AppWorkout, new: AppWorkout, track: WorkoutDistance.Track?): AppWorkout {
         val shown = track?.let { WorkoutDistance.shown(new, clock(), it) }
         return if (shown != null) new.copy(distanceMeters = shown.first, distanceFromSteps = shown.second)
         else new.copy(distanceMeters = WorkoutDistance.scaledTo(old, new))
+    }
+
+    /**
+     * [w] with its fastest stretches worked out again over the range it shows, as when it was saved: a trim can leave a
+     * stretch that started outside it, and an undo needs ones never worked out. Left as they are without the whole route.
+     */
+    private fun withStretches(w: AppWorkout, track: WorkoutDistance.Track?): AppWorkout {
+        val end = w.end
+        // Only a route from the start: one picked up after a restart would lose the stretches before it.
+        val whole = track?.takeIf { it.routeSince <= w.start && it.route.isNotEmpty() }
+        if (end == null || whole == null) return w
+        val stretches = org.openstrap.app.data.Rewards.stretches(whole.route.filter { it.t in w.from..end }, w.pauseRanges)
+            .let(org.openstrap.app.data.Rewards.Stretch::format)
+        return w.copy(stretches = stretches)
     }
 
     /** Writes the daily calories rows from [from] to [to] again ([org.openstrap.app.data.DailyCaloriesHistory.updateDays]). */

@@ -44,6 +44,7 @@ import org.openstrap.app.data.db.SavedWorkout
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutSession
 import org.openstrap.app.device.WorkoutState
+import org.openstrap.app.device.inProgress
 import org.openstrap.app.device.locationAvailable
 import org.openstrap.app.presentation.SummaryRewards
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -56,6 +57,8 @@ import org.openstrap.app.ui.glow.GlowTabletopHeart
 import org.openstrap.app.ui.glow.GlowWorkoutReadyScreen
 import org.openstrap.app.ui.glow.GlowWorkoutSummaryScreen
 import org.openstrap.app.ui.glow.PushOverlay
+import org.openstrap.app.ui.glow.readyLast
+import org.openstrap.app.presentation.Pace
 import org.openstrap.app.ui.glow.WorkoutCapsule
 import org.openstrap.app.ui.glow.WorkoutMorph
 import org.openstrap.app.ui.glow.live.GlowWorkoutGlance
@@ -151,7 +154,8 @@ internal fun pickerSports(workoutsVm: WorkoutsViewModel, rootVm: AppRootViewMode
 @Composable
 internal fun AddWorkoutHost(nav: AppNavState, container: AppContainer, workoutsVm: WorkoutsViewModel, rootVm: AppRootViewModel) {
     val date = nav.addingOn ?: return
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // A sheet over the app, so no page behind it (the sport picker brings its own black page).
+    Box(Modifier.fillMaxSize()) {
         val series by produceState<List<Pair<Long, Int>>?>(null, date) { value = workoutsVm.dayMinuteHeartRate(date) }
         val maxHr by workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
         val (recent, sides) = pickerSports(workoutsVm, rootVm)
@@ -228,7 +232,7 @@ internal fun BoxScope.WorkoutLayer(
         else -> Unit
     }
     // The ready screen comes and goes like any other screen, and a workout starting replaces it at once.
-    val recording = state is WorkoutState.Recording || state is WorkoutState.Ended
+    val recording = state.inProgress
     // Read once for both screens, and handed down to be read only there.
     val saved by remember { container.workout.savedWorkouts() }.collectAsStateWithLifecycle(emptyList())
     // Choose sits under Ready, so closing Ready comes back to it.
@@ -393,6 +397,7 @@ private fun ChooseOverlay(
     )
 }
 
+@Suppress("ForbiddenMethodCall/uiClock")
 @Composable
 private fun ReadyOverlay(
     nav: AppNavState,
@@ -410,6 +415,14 @@ private fun ReadyOverlay(
     val (recentSports, sides) = pickerSports(workoutsVm, rootVm)
     val key = Workouts.tileType(sport)
     val maxHr by workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    // The last workout you started in this sport: its figures and pace for Ready's last-time row and "Ends about".
+    val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
+    val lastOne = remember(workouts, key) {
+        workouts.filter { it.startedByYou && Workouts.tileType(it.workout.sportType) == key }.maxByOrNull { it.workout.start }
+    }
+    val zone = ZoneId.systemDefault()
+    val last = remember(lastOne) { lastOne?.let { readyLast(it, LocalDate.now(zone), zone) } }
+    val lastPace = remember(lastOne) { lastOne?.let { Pace.of(it.distanceMeters, it.activeSeconds) } }
     GlowWorkoutReadyScreen(
         sport, ready?.picking == true, hooks.connection, hooks.live, padding,
         settings = sportSettings()[key] ?: SportSettings(),
@@ -421,6 +434,7 @@ private fun ReadyOverlay(
         onSport = nav::readySport,
         onStart = hooks.startPlan,
         onBack = nav::closeReady,
+        last = last, lastPace = lastPace,
     )
 }
 

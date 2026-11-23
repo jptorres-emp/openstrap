@@ -57,7 +57,7 @@ class ForgetDeviceTest {
         val strap = setOf(
             "device_address", "device_auth_key", "device_name",
             "companion_association_id", "companion_declined", "held_disconnected",
-            "strap_battery", "strap_charging", "strap_last_sync_done",
+            "strap_battery", "strap_charging", "strap_last_sync_done", "strap_sync_failing_since",
             "zepp_app_token", "zepp_user_id", "zepp_api_base", "zepp_china", "zepp_login_token", "zepp_app_token_at", "zepp_app_ttl",
             "last_sync_gdsp_1", "last_sync_gdsp_16",
         )
@@ -65,12 +65,20 @@ class ForgetDeviceTest {
         assertEquals(strap - setOf("last_sync_gdsp_1", "last_sync_gdsp_16"), SettingsStore.STRAP_KEYS)
     }
 
+    @Test fun `a failure is kept from its first time and a full sync's success ends it`() = runTest {
+        settings.setLastSyncDone(100)
+        settings.setSyncFailing(200)
+        settings.setSyncFailing(300)
+        assertEquals(StrapSnapshot(false, null, false, 100, 200), settings.strapSnapshot.first())
+        settings.setLastSyncDone(400)
+        assertEquals(StrapSnapshot(false, null, false, 400, null), settings.strapSnapshot.first())
+    }
+
     @Test fun `a write to another setting doesn't re-emit a flow`() = runTest {
         val seen = Collections.synchronizedList(mutableListOf<Goals>())
         val job = scope.launch { settings.goals.collect { seen += it } }
         suspend fun until(n: Int) = withContext(Dispatchers.Default) { withTimeout(5_000) { while (seen.size < n) delay(10) } }
         until(1)
-        settings.setAutoStartWorkouts(false)
         settings.setWeeklyRecap(false)
         val changed = seen[0].copy(steps = seen[0].steps + 1_000)
         settings.saveGoals(changed)

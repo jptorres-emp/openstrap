@@ -5,13 +5,16 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.openstrap.app.data.History
+import org.openstrap.app.presentation.DetailCopy.Latest
 import org.openstrap.app.presentation.DetailCopy.Level
 import java.time.LocalDate
 import java.util.Locale
+import org.openstrap.app.presentation.localNumber
 import org.openstrap.app.presentation.DaySource
 import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.presentation.Range
+import org.openstrap.app.presentation.StressLevel
 import org.openstrap.app.presentation.daySource
 import org.openstrap.app.presentation.TodayCopy
 
@@ -21,7 +24,7 @@ class DetailCopyTest {
 
     @Test fun `the status word says where a value sits against your normal`() {
         assertEquals("Above your normal", DetailCopy.statusWord(1))
-        assertEquals("Usual", DetailCopy.statusWord(0))
+        assertEquals("Your normal", DetailCopy.statusWord(0))
         assertEquals("Below your normal", DetailCopy.statusWord(-1))
         assertNull(DetailCopy.statusWord(null))
     }
@@ -37,8 +40,8 @@ class DetailCopyTest {
 
     @Test fun `the band is labelled with your normal`() {
         assertEquals("Your normal, 44 to 58", DetailCopy.bandLabel(normal) { Math.round(it).toString() })
-        assertEquals("Learning your normal, 4 of 7 nights", DetailCopy.learningNormal(4, nightly = true))
-        assertEquals("Learning your normal, 7 of 7 days", DetailCopy.learningNormal(12, nightly = false))
+        assertEquals("Learning, 4 of 7 nights", DetailCopy.learningNormal(4, nightly = true))
+        assertEquals("Learning, 7 of 7 days", DetailCopy.learningNormal(12, nightly = false))
     }
 
     @Test fun `the latest run off your normal counts back over missing days`() {
@@ -55,7 +58,7 @@ class DetailCopyTest {
         assertEquals("That day, above your normal.", DetailCopy.day(1, DaySource.SoFar, today = false, days = 30))
         assertEquals("That night, within your normal.", DetailCopy.day(0, DaySource.Night, today = false, days = 30))
         assertEquals("That day's average, within your normal.", DetailCopy.day(0, DaySource.Average, today = false, days = 30))
-        assertEquals("Learning your normal, 3 of 7 days.", DetailCopy.day(null, DaySource.SoFar, today = true, days = 3))
+        assertEquals("Still learning your normal, 3 of 7 days.", DetailCopy.day(null, DaySource.SoFar, today = true, days = 3))
         assertEquals("Between 52 and 148 bpm so far today.", DetailCopy.heartDay(52, 148, today = true))
     }
 
@@ -74,7 +77,7 @@ class DetailCopyTest {
         )
         assertEquals("Learning" to "6 of 7 nights", DetailCopy.recoveryState(learning, today = true))
         assertEquals("Waiting" to "For last night's sleep", DetailCopy.recoveryState(null, today = true))
-        assertEquals("For last night", DetailCopy.noValue(Metric.RestingHr, Range.Day, today = true))
+        assertEquals("Last night", DetailCopy.noValue(Metric.RestingHr, Range.Day, today = true))
         assertEquals("In the last 7 days", DetailCopy.noValue(Metric.Hrv, Range.Week, today = true))
     }
 
@@ -90,7 +93,7 @@ class DetailCopyTest {
         )
         // One day off isn't a run.
         assertEquals("Within your normal on 6 of 7 days.", DetailCopy.span(Range.Week, mixed.reversed(), nightly = false, normalKnown = true, days = 30))
-        assertEquals("Learning your normal, 5 of 7 days.", DetailCopy.span(Range.Week, mixed, nightly = false, normalKnown = false, days = 5))
+        assertEquals("Still learning your normal, 5 of 7 days.", DetailCopy.span(Range.Week, mixed, nightly = false, normalKnown = false, days = 5))
         assertNull(DetailCopy.span(Range.Week, List(7) { null }, nightly = false, normalKnown = true, days = 0))
     }
 
@@ -110,9 +113,38 @@ class DetailCopyTest {
     @Test fun `the label under the value names what it is for the range`() {
         assertEquals("bpm now", DetailCopy.valueLabel(Metric.HeartRate, Range.Day, live = true))
         assertEquals("ms, day average", DetailCopy.valueLabel(Metric.Hrv, Range.Day))
+        // Blood oxygen's day is its latest reading and when it was taken; its longer ranges stay averages.
+        assertEquals("%, daytime, latest at 14:05", DetailCopy.valueLabel(Metric.Spo2, Range.Day, latest = Latest("14:05")))
+        assertEquals("%, while asleep, latest at 05:10", DetailCopy.valueLabel(Metric.Spo2, Range.Day, latest = Latest("05:10", asleep = true)))
+        // Stress is never asleep or awake: its day says the level of its latest reading and when it was taken.
+        assertEquals("High, latest at 14:05", DetailCopy.valueLabel(Metric.Stress, Range.Day, latest = Latest("14:05", asleep = true, level = StressLevel.High)))
+        assertEquals("%, average of the last 30 days", DetailCopy.valueLabel(Metric.Spo2, Range.Month, latest = Latest("14:05")))
         assertEquals("Day average", DetailCopy.valueLabel(Metric.Stress, Range.Day))
+        // Stress has no unit: its longer ranges stay averages.
+        assertEquals("Normal, latest at 14:05", DetailCopy.valueLabel(Metric.Stress, Range.Day, latest = Latest("14:05", level = StressLevel.Normal)))
+        assertEquals("Average of the last 30 days", DetailCopy.valueLabel(Metric.Stress, Range.Month, latest = Latest("14:05", level = StressLevel.High)))
+        assertEquals("bpm, last night", DetailCopy.valueLabel(Metric.RestingHr, Range.Day))
+        assertEquals("bpm, last night, estimated", DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true))
         assertEquals("steps a day, last 7 days", DetailCopy.valueLabel(Metric.Steps, Range.Week))
         assertEquals("ms, average of the last 30 days", DetailCopy.valueLabel(Metric.Hrv, Range.Month))
+    }
+
+    @Test fun `skin temperature's change on a card is just the signed change and its unit`() {
+        // Numbers as the test's locale writes them: the build also runs these under German.
+        fun n(ascii: String) = localNumber(ascii, Locale.getDefault())
+        assertEquals("+${n("0.3")} °C", DetailCopy.changeWithUnit(Metric.SkinTemperature, 0.3f))
+        assertEquals("\u2212${n("0.2")} °C", DetailCopy.changeWithUnit(Metric.SkinTemperature, -0.2f))
+        // No change, or one that rounds to nothing, keeps a plus, never a lone minus.
+        assertEquals("+${n("0.0")} °C", DetailCopy.changeWithUnit(Metric.SkinTemperature, 0f))
+        assertEquals("+${n("0.0")} °C", DetailCopy.changeWithUnit(Metric.SkinTemperature, -0.01f))
+    }
+
+    @Test fun `skin temperature's day says its change and which side of your normal it is on`() {
+        val skin = Metric.SkinTemperature
+        fun n(ascii: String) = localNumber(ascii, Locale.getDefault())
+        assertEquals("\u2212${n("0.7")} °C, below your normal", DetailCopy.skinChangeWord(skin, -0.7f, -1))
+        assertEquals("+${n("1.4")} °C, above your normal", DetailCopy.skinChangeWord(skin, 1.4f, 1))
+        assertEquals("+${n("0.1")} °C, within your normal", DetailCopy.skinChangeWord(skin, 0.1f, 0))
     }
 
     @Test fun `the strip ends today while the day shown is in the last week`() {
@@ -130,9 +162,29 @@ class DetailCopyTest {
     @Test fun `no detail sentence uses an interpunct, semicolon or em dash`() {
         val lines = listOfNotNull(
             DetailCopy.day(0, DaySource.Night, true, 30), DetailCopy.heartDay(1, 2, false), DetailCopy.year("1", "2", "ms"),
+            DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true), DetailCopy.valueLabel(Metric.Spo2, Range.Day, latest = Latest("14:05")),
+            DetailCopy.valueLabel(Metric.Spo2, Range.Day, latest = Latest("05:10", asleep = true)),
+            DetailCopy.valueLabel(Metric.Stress, Range.Day, latest = Latest("14:05", level = StressLevel.High)),
+            DetailCopy.skinChangeWord(Metric.SkinTemperature, -0.7f, -1),
             DetailCopy.span(Range.Month, listOf(Level.Above, Level.Above), false, true, 30), DetailCopy.scoreWeek(listOf(1, 2)),
             DetailCopy.charge(1, 2, 1, true, false, 3), DetailCopy.learningNormal(1, true), DetailCopy.bandLabel(normal) { it.toString() },
         ) + Metric.entries.flatMap { m -> Range.entries.map { DetailCopy.valueLabel(m, it) } }
         lines.forEach { assertTrue(it, it.none { c -> c == '·' || c == ';' || c == '—' }) }
+    }
+
+    @Test fun `recovery's resting heart rate and sleep rows read the day's figures, the score keeps the night's`() {
+        val rhr = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.RestingHr, 60, org.openstrap.app.data.Recovery.Detail.RestingHr(47, 0f),
+        )
+        val sleep = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.Sleep, 83, org.openstrap.app.data.Recovery.Detail.Asleep(481),
+        )
+        val figures = DetailCopy.DriverFigures(restingBpm = 59, restingNormal = 59.4f, asleepSeconds = 477 * 60L)
+        assertEquals("59 bpm, your normal 59", DetailCopy.driverReading(rhr, figures))
+        assertEquals(0.5f, DetailCopy.driverPlace(rhr, figures), 0.03f)
+        assertTrue(DetailCopy.driverReading(sleep, figures)!!.contains("7 h 57"))
+        // Without a normal the reading stands alone; without figures it's the model's.
+        assertEquals("59 bpm", DetailCopy.driverReading(rhr, figures.copy(restingNormal = null)))
+        assertEquals("47 bpm, your normal 47", DetailCopy.driverReading(rhr))
     }
 }

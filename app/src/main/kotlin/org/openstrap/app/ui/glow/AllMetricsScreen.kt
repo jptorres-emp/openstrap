@@ -1,6 +1,39 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.SportIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -15,7 +48,11 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.Score
+import org.openstrap.app.presentation.Units
+import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
+import org.openstrap.app.ui.dashboard.LatestReading
 import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.theme.MetricColors
@@ -97,9 +134,11 @@ fun metricIndex(
     today: LocalDate = LocalDate.now(),
     /** The strap's own Recovery for the day, shown as its estimate while OpenStrap's score is withheld, as on Today. */
     strapScore: Int? = null,
+    /** The time as epoch seconds, which says whether a latest reading is old enough to show when it was taken. */
+    now: Long = java.time.Instant.now().epochSecond,
     strings: Strings = Strings.app,
 ): List<IndexGroup> {
-    val rec = recovery?.takeIf { it.date == state.date }
+    val rec = recovery
     val (habitValue, habitStatus) = habitAgeRow(healthspan, strings)
     val weekFrom = state.date.minusDays(6)
     // The 7 days up to the day shown, not Your week's Monday to Sunday, so the row says so. The strap's own
@@ -143,7 +182,7 @@ fun metricIndex(
                 ),
             ),
         ),
-    ) + signalGroups(state, strings) + listOf(
+    ) + signalGroups(state, now, strings) + listOf(
         IndexGroup(
             strings.get(R.string.glow_metrics_group_activity),
             listOf(
@@ -151,6 +190,25 @@ fun metricIndex(
                     strings, Metric.Steps, R.string.glow_metrics_steps, MetricColors.steps, state.steps.toFloat(),
                     R.string.glow_metrics_for_the_day,
                 ),
+                // Heart points is the 7 day total its Activity card shows; Active kcal is the day's estimate and opens Calories.
+                row(
+                    Score.HeartPoints.title(strings), MetricColors.heart, state.pai?.total?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.HeartPoints)),
+                ),
+                row(
+                    strings.get(R.string.glow_metrics_active_kcal), MetricColors.calories,
+                    rec?.calories?.activeKcal?.let { Units.count(Math.round(it)) },
+                    strings.get(R.string.glow_metrics_for_the_day_estimated), IndexTarget.Open(Detail.OfScore(Score.Calories)),
+                ),
+                row(
+                    Score.Load.title(strings), MetricColors.load, rec?.load?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.Load)),
+                ),
+            ),
+        ),
+        IndexGroup(
+            strings.get(R.string.glow_metrics_workouts),
+            listOf(
                 row(
                     strings.get(R.string.glow_metrics_workouts), MetricColors.heart, week.toString(),
                     strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.AllWorkouts),
@@ -173,10 +231,30 @@ private fun metric(
     value: Float?,
     @StringRes status: Int = R.string.glow_metrics_day_average,
     suffix: String = "",
-) = row(strings.get(name), color, value?.let { m.format(it) + suffix }, strings.get(status), IndexTarget.Open(Detail.OfMetric(m, m in SleepCopy.NIGHT_SIGNALS)))
+    /** The status as already worded, for a latest reading whose line depends on its time. */
+    line: String? = null,
+) = row(strings.get(name), color, value?.let { m.format(it) + suffix }, line ?: strings.get(status), IndexTarget.Open(Detail.OfMetric(m, m in SleepCopy.NIGHT_SIGNALS)))
+
+/**
+ * Skin temperature's row: the night's average level, with its change from your normal in the status line once there's
+ * a normal, as the Sleep tab says it; before that, "Average asleep".
+ */
+private fun skinTemperatureRow(state: DayUiState, strings: Strings): IndexRow {
+    val m = Metric.SkinTemperature
+    val v = SleepCopy.nightValue(state, m)
+    val normal = SleepCopy.nightNormal(state, m)
+    val name = strings.get(R.string.glow_metrics_skin_temperature)
+    val target = IndexTarget.Open(Detail.OfMetric(m, m in SleepCopy.NIGHT_SIGNALS))
+    val status = if (v != null && normal != null) {
+        DetailCopy.changeWithUnit(m, v - normal.mean)
+    } else {
+        strings.get(R.string.glow_metrics_night_average)
+    }
+    return row(name, MetricColors.temperature, v?.let { m.format(it) }, status, target)
+}
 
 /** The index's Heart and Body signals groups, a row for each of their metrics. */
-private fun signalGroups(state: DayUiState, strings: Strings): List<IndexGroup> = listOf(
+private fun signalGroups(state: DayUiState, now: Long, strings: Strings): List<IndexGroup> = listOf(
     IndexGroup(
         strings.get(R.string.glow_metrics_group_heart),
         listOf(
@@ -184,9 +262,10 @@ private fun signalGroups(state: DayUiState, strings: Strings): List<IndexGroup> 
                 strings, Metric.HeartRate, R.string.glow_metrics_heart_rate, MetricColors.heart, state.latestHeartRate?.toFloat(),
                 R.string.glow_metrics_latest_reading,
             ),
+            // Our own estimate says so when the strap sent none for the day.
             metric(
-                strings, Metric.RestingHr, R.string.glow_metrics_resting_heart_rate, MetricColors.heart,
-                state.restingHeartRate?.toFloat(), R.string.glow_metrics_for_the_day,
+                strings, Metric.RestingHr, R.string.glow_metrics_resting_heart_rate, MetricColors.heart, state.restingHeartRate?.toFloat(),
+                if (state.restingEstimated) R.string.glow_metrics_for_the_day_estimated else R.string.glow_metrics_for_the_day,
             ),
             metric(
                 strings, Metric.Hrv, R.string.glow_metrics_hrv, MetricColors.hrv, SleepCopy.nightValue(state, Metric.Hrv),
@@ -197,28 +276,32 @@ private fun signalGroups(state: DayUiState, strings: Strings): List<IndexGroup> 
     IndexGroup(
         strings.get(R.string.glow_metrics_group_body),
         listOf(
+            // Blood oxygen leads with the day's latest reading, as heart rate does, and opens the day's detail. The line says
+            // whether it was taken awake or asleep, and when once it is an hour old.
+            metric(
+                strings, Metric.Spo2, R.string.glow_metrics_blood_oxygen, MetricColors.spo2, LatestReading.spo2(state)?.y,
+                suffix = "%", line = latestLine(Metric.Spo2, state, now, strings, time = ::clock),
+            ),
             // Night signals: last night's, as every tab and detail shows them (SleepCopy.NIGHT_SIGNALS).
-            metric(
-                strings, Metric.Spo2, R.string.glow_metrics_blood_oxygen, MetricColors.spo2, SleepCopy.nightValue(state, Metric.Spo2),
-                R.string.glow_metrics_night_average, suffix = "%",
-            ),
-            metric(
-                strings, Metric.SkinTemperature, R.string.glow_metrics_skin_temperature, MetricColors.temperature,
-                SleepCopy.nightValue(state, Metric.SkinTemperature), R.string.glow_metrics_night_average,
-            ),
+            skinTemperatureRow(state, strings),
             metric(
                 strings, Metric.Breathing, R.string.glow_metrics_breathing_rate, MetricColors.sleepLight,
                 SleepCopy.nightValue(state, Metric.Breathing), R.string.glow_metrics_night_average,
             ),
-            metric(strings, Metric.Stress, R.string.glow_metrics_stress, MetricColors.stress, state.stress.avg()?.toFloat()),
+            // The latest reading, as on Today; its High tag and rim are on the Today and Recovery cards, so the line says the level.
+            metric(
+                strings, Metric.Stress, R.string.glow_metrics_stress, MetricColors.stress, LatestReading.stress(state)?.y,
+                line = latestLine(Metric.Stress, state, now, strings, time = ::clock),
+            ),
         ),
     ),
 )
 
 /**
- * The index as a sheet over the tab (spec 3.2), from the grid button in the header: one grouped list per section.
- * [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
+ * The index as a sheet over the tab (spec 3.2), from the grid button in the header: a search field, then one grouped
+ * list per section. [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
  */
+@Suppress("ModifierMissing", "ComposeModifierMissing")
 @Composable
 fun AllMetricsSheet(
     groups: List<IndexGroup>,
@@ -226,11 +309,23 @@ fun AllMetricsSheet(
     onDismiss: () -> Unit,
     onOpen: (IndexTarget) -> Unit,
 ) {
-    PageSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), side = 16.dp) {
-        groups.forEach { group ->
-            ListPanel(title = group.title) {
+    var query by rememberSaveable { mutableStateOf("") }
+    // Back clears what's typed before it closes the sheet (this handler is the innermost, so it is asked first).
+    BackHandler(enabled = query.isNotEmpty()) { query = "" }
+    val shown = remember(groups, query) { filterIndex(groups, query) }
+    HaloSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), variant = HaloSheetVariant.Grouped) {
+        MetricSearchField(query, { query = it })
+        if (shown.isEmpty()) Text(
+            stringResource(R.string.glow_metrics_no_match, query.trim()), color = Ink.Secondary,
+            style = GlowType.secondary, modifier = Modifier.padding(start = Space.S4, top = Space.S8),
+        )
+        shown.forEach { group ->
+            DetailPanel(title = group.title, muted = true) {
                 group.rows.forEachIndexed { i, r ->
-                    ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0, icon = r.target.rowIcon())
+                    MetricRow(
+                        r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0,
+                        icon = r.target.rowIcon(),
+                    )
                 }
             }
         }

@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.AppWorkout
+import org.openstrap.app.data.db.AppWorkoutRound
 import org.openstrap.app.data.db.OpenStrapDatabase
 import org.openstrap.app.data.settings.SettingsStore
 import org.robolectric.RobolectricTestRunner
@@ -78,6 +79,20 @@ class RewardsKeeperTest {
         assertFalse(settings.historyBadgesWaiting.first())
         assertEquals(4, dao.weekResultsOnce().sumOf { it.count })
     }
+    @Test fun `rounds counted are the finished ones of a structured workout, none for a game or one with none recorded`() = runBlocking {
+        val dao = db.healthDao()
+        val hiit = AppWorkout(start, start + 1800, 52, structure = "t:20/10x8")
+        val game = AppWorkout(start + 86_400L, start + 86_400L + 1800, 52, structure = "p:2x2700/900")
+        val bare = workout(2)
+        dao.insertAppWorkouts(listOf(hiit, game, bare))
+        // Seven finished rounds and one still under way.
+        dao.upsertRounds((0 until 8).map { i -> AppWorkoutRound(hiit.start, i, hiit.start + i * 30L, if (i < 7) hiit.start + i * 30L + 20 else null, null) })
+        dao.upsertRounds(listOf(AppWorkoutRound(game.start, 0, game.start, game.start + 600, null)))
+        val listed = listOf(hiit, game, bare).map { WorkoutRecorder.analyse(it, emptyList(), 190, HeartZones.STANDARD) }
+        val facts = RewardsKeeper(dao, settings).facts(listed)
+        assertEquals(listOf(7, 0, 0), facts.workouts.sortedBy { it.start }.map { it.rounds })
+    }
+
     @Test fun `the steps per day it keeps follow new minutes, older ones and a rewritten one`() = runBlocking {
         val dao = db.healthDao()
         val keeper = RewardsKeeper(dao, settings)
@@ -113,6 +128,34 @@ class RewardsKeeperTest {
         dao.upsertAppWorkout(AppWorkout(start, null, 52))
         keeper.refresh(emptyList(), 3)
         assertTrue(settings.rewardsStarted.first())
+    }
+
+    @Test fun `steps earn their badge and best with no workout at all`() = runBlocking {
+        val dao = db.healthDao()
+        // 10,000 steps in one day: 100 minutes of 100, from 10:00 local so they never cross midnight.
+        val morning = java.time.LocalDate.of(2026, 10, 15).atTime(10, 0).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+        dao.insertActivity((0 until 100).map { ActivityMinute(morning + it * 60L, 100, 0, 0, null) })
+        RewardsKeeper(dao, settings).refresh(emptyList(), 3)
+        assertTrue(dao.badgesOnce().any { it.id == "first_10k_steps" })
+        assertTrue(dao.personalBestsOnce().any { it.kind == Rewards.Kind.MOST_STEPS })
+        // Earned before the rewards started, so it waits with the history badges.
+        assertTrue(settings.historyBadgesWaiting.first())
+    }
+
+    @Test fun `deleting the last workout takes its bests and its week, and the badges stay`() = runBlocking {
+        val dao = db.healthDao()
+        val keeper = RewardsKeeper(dao, settings)
+        val w = workout(0)
+        dao.insertAppWorkouts(listOf(w))
+        keeper.refresh(listOf(WorkoutRecorder.analyse(w, emptyList(), 190, HeartZones.STANDARD)), 3)
+        assertTrue(dao.personalBestsOnce().isNotEmpty())
+        assertEquals(1, dao.weekResultsOnce().sumOf { it.count })
+        val badges = dao.badgesOnce()
+        dao.deleteAppWorkout(w.start)
+        keeper.refresh(emptyList(), 3)
+        assertTrue(dao.personalBestsOnce().isEmpty())
+        assertEquals(0, dao.weekResultsOnce().sumOf { it.count })
+        assertEquals(badges, dao.badgesOnce())
     }
 
     @Test fun `a strap workout is history, so the empty list waits for it`() = runBlocking {

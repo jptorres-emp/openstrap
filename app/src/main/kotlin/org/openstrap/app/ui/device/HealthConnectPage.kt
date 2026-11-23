@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import org.openstrap.app.ui.theme.Space
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -24,16 +29,13 @@ import org.openstrap.app.R
 import org.openstrap.app.data.settings.HealthConnectAuto
 import org.openstrap.app.health.HcAvailability
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.PageSwitchRow
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PanelLabelInset
-import org.openstrap.app.ui.glow.SectionLabel
-import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.SwitchRow
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.ActionRow
+import org.openstrap.app.ui.glow.PageGroup
 import org.openstrap.app.ui.theme.AppIcons
 
 /**
@@ -55,34 +57,37 @@ fun HealthConnectPage(
     onOpen: () -> Unit,
     onInstall: () -> Unit,
     onBack: () -> Unit,
+    caloriesMissing: Boolean = false,
+    onOfferCalories: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_hc_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_hc_title), onBack) }
         if (availability == HcAvailability.INSTALLABLE) item { InstallPanel(onInstall) }
         item {
-            PageRows {
-                val now = System.currentTimeMillis() / 1000
-                val line = healthConnectLine(auto, now, java.time.ZoneId.systemDefault(), availability = availability)
-                PageSwitchRow(stringResource(R.string.you_hc_auto), line, auto.on, onAuto, divider = false, icon = AppIcons.Refresh04)
+            val now = System.currentTimeMillis() / 1000
+            val line = healthConnectLine(auto, now, java.time.ZoneId.systemDefault(), availability = availability)
+            PageGroup(footnote = if (caloriesMissing) stringResource(R.string.you_hc_calories_note) else null) {
+                SwitchRow(stringResource(R.string.you_hc_auto), line, auto.on, onAuto, divider = false)
             }
         }
-        item { SectionLabel(stringResource(R.string.you_hc_any_time), Modifier.padding(top = 4.dp), PanelLabelInset) }
+        if (caloriesMissing) item {
+            PageGroup {
+                ActionRow(stringResource(R.string.you_hc_calories_offer), onOfferCalories, icon = AppIcons.Plus, divider = false)
+            }
+        }
+        // Copy now and Restore do something now, so they are action rows (HaloHealthConnect board, rules B3).
         item {
-            PageRows {
-                PageRow(
-                    stringResource(R.string.you_hc_copy_now), stringResource(R.string.you_hc_copy_now_note), onClick = onCopyNow,
-                    below = true,
-                    divider = false, icon = AppIcons.Heartbeat,
-                )
-                PageRow(
-                    stringResource(R.string.you_action_restore), stringResource(R.string.you_hc_restore_note), onClick = onRestore,
-                    below = true,
-                    icon = AppIcons.ArrowCounterClockwise,
-                )
-                PageRow(
+            PageGroup(footnote = stringResource(R.string.you_hc_actions_note)) {
+                ActionRow(stringResource(R.string.you_hc_copy_now), onCopyNow, icon = AppIcons.Heartbeat, divider = false)
+                ActionRow(stringResource(R.string.you_action_restore), onRestore, icon = AppIcons.ArrowCounterClockwise)
+            }
+        }
+        item {
+            PageGroup {
+                NavRow(
                     stringResource(R.string.you_hc_open), stringResource(R.string.you_hc_open_note), onClick = onOpen, below = true,
-                    icon = AppIcons.SlidersHorizontal,
+                    divider = false, icon = AppIcons.SlidersHorizontal,
                 )
             }
         }
@@ -95,10 +100,11 @@ fun HealthConnectPage(
  */
 @Composable
 private fun InstallPanel(onInstall: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        PageNote(stringResource(R.string.you_hc_install_note))
-        PageButton(
-            stringResource(R.string.you_hc_install), onInstall, Modifier.fillMaxWidth(), primary = true, icon = AppIcons.DownloadSimple,
+    Column(Modifier.fillMaxWidth().padding(horizontal = Space.S4), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        HaloNote(stringResource(R.string.you_hc_install_note))
+        HaloButton(
+            stringResource(R.string.you_hc_install), onInstall, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary,
+            icon = AppIcons.DownloadSimple,
         )
     }
 }

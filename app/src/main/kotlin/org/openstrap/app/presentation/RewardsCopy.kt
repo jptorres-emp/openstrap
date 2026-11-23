@@ -47,6 +47,7 @@ object RewardsCopy {
                 Rewards.Kind.LONGEST_RUN -> R.string.core_rewards_best_longest_run
                 Rewards.Kind.LONGEST_WORKOUT -> R.string.core_rewards_best_longest_workout
                 Rewards.Kind.MOST_STEPS -> R.string.core_rewards_best_most_steps
+                Rewards.Kind.MOST_ROUNDS -> R.string.core_rewards_best_most_rounds
                 else -> R.string.core_rewards_best_personal
             },
         )
@@ -63,6 +64,7 @@ object RewardsCopy {
         return when (kind) {
             Rewards.Kind.LONGEST_RUN -> "RUN"
             Rewards.Kind.MOST_STEPS -> "STEP"
+            Rewards.Kind.MOST_ROUNDS -> "RND"
             else -> "TIME"
         }
     }
@@ -74,6 +76,8 @@ object RewardsCopy {
             strings.format(R.string.core_rewards_kg, org.openstrap.app.data.Strength.kgText(value.toFloat()))
         kind == Rewards.Kind.LONGEST_RUN -> workoutDistance(value, locale, strings)
         kind == Rewards.Kind.LONGEST_WORKOUT -> Units.duration(Math.round(value), locale)
+        kind == Rewards.Kind.MOST_ROUNDS ->
+            strings.plural(R.plurals.core_rewards_rounds, Math.round(value).toInt(), Units.count(Math.round(value), locale))
         else -> Units.count(Math.round(value), locale)
     }
 
@@ -116,6 +120,7 @@ object RewardsCopy {
             Rewards.Kind.liftName(b.kind) != null -> Beat.KgMore to org.openstrap.app.data.Strength.kgText(diff.toFloat())
             b.kind == Rewards.Kind.LONGEST_RUN -> Beat.Farther to workoutDistance(diff, locale, strings)
             b.kind == Rewards.Kind.LONGEST_WORKOUT -> Beat.Longer to Math.round(diff / 60).coerceAtLeast(1)
+            b.kind == Rewards.Kind.MOST_ROUNDS -> Beat.MoreRounds to Units.count(Math.round(diff), locale)
             else -> Beat.More to Units.count(Math.round(diff), locale)
         }
     }
@@ -127,16 +132,20 @@ object RewardsCopy {
         Farther(R.string.core_rewards_beat_farther, R.string.core_rewards_beat_line_farther),
         Longer(R.string.core_rewards_beat_longer, R.string.core_rewards_beat_line_longer),
         More(R.string.core_rewards_beat_more, R.string.core_rewards_beat_line_more),
+        MoreRounds(R.string.core_rewards_beat_rounds, R.string.core_rewards_beat_line_rounds),
     }
 
-    /** Which new best leads: the fastest stretches first, then the longest run, a lift, the longest workout. */
+    private const val LAST = 4
+
+    /** Which new best leads: the fastest stretches first, then the longest run, a lift, the longest workout, the most rounds. */
     fun leading(bests: List<Rewards.NewBest>): Rewards.NewBest? = bests.minByOrNull { n ->
         val k = n.best.kind
         when {
             Rewards.Kind.fastestMeters(k) != null -> 0
             k == Rewards.Kind.LONGEST_RUN -> 1
             Rewards.Kind.liftName(k) != null -> 2
-            else -> 3
+            k == Rewards.Kind.MOST_ROUNDS -> LAST
+            else -> LAST - 1
         }
     }
 
@@ -190,7 +199,7 @@ object RewardsCopy {
         if (inARow > 1) strings.plural(R.plurals.core_rewards_moment_weeks, inARow, inARow)
         else strings.get(R.string.core_rewards_moment_first)
 
-    /** "Thursday, 30 October 2026, morning run": when a best was set, and what. */
+    /** "Tue 10 Nov, morning run": when a best was set, and what. */
     fun whenSet(
         date: Long, sportName: String, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault(),
         strings: Strings = Strings.app,
@@ -202,12 +211,18 @@ object RewardsCopy {
             in 17..21 -> R.string.core_rewards_when_evening
             else -> R.string.core_rewards_when_night
         }
-        return strings.format(part, t.format(Formatters.of("EEEE, d MMMM yyyy", locale)), sportName.lowercase(locale))
+        return strings.format(part, dayLong(date, zone, locale), sportName.lowercase(locale))
     }
 
-    /** "27 October to 2 November": a week from its first day. */
+    /** "Tue 10 Nov", "10 Nov 2025" from an earlier year: the day a badge was earned, or a best set by a day rather than a workout. */
+    fun dayLong(date: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+        val day = Instant.ofEpochSecond(date).atZone(zone).toLocalDate()
+        return if (day.year == LocalDate.now(zone).year) DayWords.short(day, locale) else DayWords.dayMonthYear(day, locale)
+    }
+
+    /** "27 Oct to 2 Nov": a week from its first day. */
     fun weekRange(first: LocalDate, locale: Locale = Locale.getDefault()): String {
-        val f = Formatters.of("d MMMM", locale)
+        val f = Formatters.of("d MMM", locale)
         return Ranges.of(first.format(f), first.plusDays(6).format(f))
     }
 
@@ -221,14 +236,15 @@ object RewardsCopy {
     }
 
     /**
-     * A locked badge's need: "712 of 1,000 km", "3 of 10 workouts", and metres as km over many days: "4.2 of 5 km".
+     * A locked badge's need, always in km: its goal is a fixed distance named in km ("First 5 km run", "100 km in all"),
+     * whatever the system. "712 of 1,000 km", "3 of 10 workouts", and metres as km over many days: "4.2 of 5 km".
      * [unit] is the badge's own unit word from its definition.
      */
     fun progressLine(have: Long, need: Long, unit: String, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
         when (unit) {
             "m" -> strings.format(
                 R.string.core_rewards_progress_km,
-                Units.km(have.toFloat(), Units.Precision.Day, locale),
+                Units.decimal(have / Units.METERS_PER_KM, 1, locale),
                 Units.count(need / 1000, locale),
             )
             "km" -> strings.format(R.string.core_rewards_progress_km, Units.count(have, locale), Units.count(need, locale))
@@ -243,7 +259,7 @@ object RewardsCopy {
             }
         }
 
-    /** The recap notification: "4 of 4 workouts, goal met. 6 weeks in a row." */
+    /** The recap notification: "4 of 4 workouts, 6 weeks in a row" */
     fun recapText(week: WeekResult, inARow: Int, strings: Strings = Strings.app): String = when {
         !week.met -> strings.plural(R.plurals.core_rewards_recap, week.goal, week.goal, week.count)
         inARow > 1 -> strings.plural(R.plurals.core_rewards_recap_met_in_a_row, inARow, inARow, week.count, week.goal)

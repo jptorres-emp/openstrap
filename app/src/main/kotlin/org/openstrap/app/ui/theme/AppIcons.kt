@@ -65,10 +65,34 @@ object AppIcons {
     val TapCaret: ImageVector by lazy { hugeicon("TapCaret", arrayOf("M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18"), CARET, false, true) }
     val CaretUpFill: ImageVector by lazy { solid("CaretUpFill", "M5.5 15.5L12 8.5L18.5 15.5Z") }
     val CaretDownFill: ImageVector by lazy { solid("CaretDownFill", "M5.5 8.5L12 15.5L18.5 8.5Z") }
+    /** A lightning bolt, solid, for a strap that is charging. */
+    val Bolt: ImageVector by lazy { solid("BoltFill", "M13.5 2.5L5 13.5H11L10 21.5L19 10H13Z") }
     val User: ImageVector by lazy { line("User", "M20 21.0001C19.713 17.269 16.7289 14.3151 12.995 14.0662L12 13.9999C11.6446 14.0096 11.3134 14.0225 11.0008 14.0378C7.3 14.2192 4.28417 17.3057 4 21.0001", "M8 6.9999A4 4 0 1 0 16 6.9999A4 4 0 1 0 8 6.9999Z") }
     /** MinusSign and PlusSign, for a goal's step buttons. */
     val Minus: ImageVector by lazy { line("Minus", "M20 12L4 12") }
     val Plus: ImageVector by lazy { line("Plus", "M12 4V20M20 12H4") }
+    /** A pushpin, drawn in the set's stroke, for pinning a card under Today's top card. */
+    val Pin: ImageVector by lazy { line("Pin", "M8.5 3.5H15.5", "M9.5 3.5L9 9.5L6 13.5H18L15 9.5L14.5 3.5", "M12 13.5V20.5") }
+    /** An eye struck through, drawn in the set's stroke, for hiding a card. */
+    val ViewOff: ImageVector by lazy {
+        line(
+            "ViewOff", "M3 3L21 21", "M10.6 6.1C11.1 6 11.5 6 12 6C17 6 21 12 21 12C20.3 13.1 19.4 14.2 18.4 15.2",
+            "M6.3 7.6C4.2 9.1 3 12 3 12C3 12 7 18 12 18C13.4 18 14.8 17.7 16 17.1",
+            "M9.9 10.1C8.7 11.3 8.7 13.2 9.9 14.3C11.1 15.4 12.9 15.4 14.1 14.2",
+        )
+    }
+    /** Six dots, the handle a row is dragged by. */
+    val DragDots: ImageVector by lazy {
+        solid(
+            "DragDots",
+            "M7.6 6A1.4 1.4 0 1 0 10.4 6A1.4 1.4 0 1 0 7.6 6Z",
+            "M13.6 6A1.4 1.4 0 1 0 16.4 6A1.4 1.4 0 1 0 13.6 6Z",
+            "M7.6 12A1.4 1.4 0 1 0 10.4 12A1.4 1.4 0 1 0 7.6 12Z",
+            "M13.6 12A1.4 1.4 0 1 0 16.4 12A1.4 1.4 0 1 0 13.6 12Z",
+            "M7.6 18A1.4 1.4 0 1 0 10.4 18A1.4 1.4 0 1 0 7.6 18Z",
+            "M13.6 18A1.4 1.4 0 1 0 16.4 18A1.4 1.4 0 1 0 13.6 18Z",
+        )
+    }
     val CaretDown: ImageVector by lazy { line("CaretDown", "M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9") }
     val Tick02: ImageVector by lazy { line("Tick02", "M5 14L8.5 17.5L19 6.5") }
     val ShutDown: ImageVector by lazy { line("ShutDown", "M7.86907 4C4.97674 5.49689 3 8.51664 3 11.9981C3 16.9686 7.02944 20.9981 12 20.9981C16.9706 20.9981 21 16.9686 21 11.9981C21 8.51664 19.0233 5.49689 16.1309 4", "M12 3V10") }

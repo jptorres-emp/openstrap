@@ -175,6 +175,8 @@ class FrameTest {
         assertEquals(Detail.Recovery, Detail.fromRoute("Recovery"))
         assertEquals(Detail.Sleep, Detail.fromRoute("Sleep"))
         assertEquals(Detail.OfScore(Score.Sleep), Detail.fromRoute(Detail.SLEEP_SCORE_ROUTE))
+        assertEquals(Detail.OfScore(Score.Energy), Detail.fromRoute("Energy"))
+        assertEquals(Detail.OfScore(Score.Load), Detail.fromRoute("Load"))
         assertNull(Detail.fromRoute("Readiness"))
     }
 

@@ -4,8 +4,9 @@ Every screen of the app at font sizes 1.0, 1.15 and 1.3, captured on the emulato
 
 ## Running it
 
-1. Build and install the dev app, then set the emulator up:
+1. Start the emulator with the Mac's GPU (software drawing, `swiftshader_indirect`, makes every screen several times slower), build and install the dev app, then set the emulator up:
    ```bash
+   emulator -avd openstrap -no-snapshot-save -no-audio -no-boot-anim -no-window -gpu host
    ./gradlew :app:assembleDebug -PdevApp && adb install -r app/build/outputs/apk/debug/app-debug.apk
    docs/testing/screens/setup.sh
    ```
@@ -13,11 +14,13 @@ Every screen of the app at font sizes 1.0, 1.15 and 1.3, captured on the emulato
    ```bash
    docs/testing/screens/sweep.sh ~/screens/before
    FONTS=1.15 docs/testing/screens/sweep.sh ~/screens/after details tabs
+   FONTS=1.3 docs/testing/screens/sweep.sh ~/screens/after changed
    ```
+   `changed` captures only the groups whose screens the files changed since `SINCE` (default `HEAD`, the uncommitted work) can show on.
 
 The emulator is an API 36 phone at 1080 × 2400 and 420 dpi. The clock is the sample week's Friday, 13 Nov 2026 at 18:05. Taps by position assume that screen. A tap in any app other than unstrap stops the run.
 
-A cold start late in a session takes about 30 s before Today shows the day (`WAIT`). A capture with an empty Today or the splash means the wait was too short.
+Nothing waits a fixed time. After each start, tap and scroll the sweep watches the screen and moves on once it has stopped changing (2.5 s after a cold start, `STILL`), up to `WAIT` (30 s). Animations are off for the run, so a screen is still as soon as it is drawn (`ANIM=1` keeps them on). A screen with a ticking timer, like Live, never settles and waits its whole limit. A capture with an empty Today or the splash means the screen sat still while loading: raise `STILL`.
 
 ## Screens
 

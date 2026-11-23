@@ -83,7 +83,7 @@ class TodayCopyTest {
         assertEquals("Ready for effort", TodayCopy.windowTitle(78))
         assertEquals("Steady session", TodayCopy.windowTitle(60))
         assertEquals("Easy session", TodayCopy.windowTitle(40))
-        assertEquals("Your usual workout time", TodayCopy.windowTitle(null))
+        assertEquals("Workout time", TodayCopy.windowTitle(null))
         assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window(1, 58))
         assertEquals("You usually work out around now.", TodayCopy.window(null, null))
         assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window(4, 20))
@@ -124,8 +124,8 @@ class TodayCopyTest {
         assertEquals("A steady day. A workout and 6,000 steps.", TodayCopy.evening(listOf(OTHER_SPORT), 6_000, 8_000, LoadBand.SoFar, Locale.UK))
         assertEquals("A steady day. A ride and 6,000 steps.", TodayCopy.evening(listOf(4), 6_000, 8_000, null, Locale.UK))
         // The app's hero says the steps against the goal, since it shows the count in dots.
-        assertEquals("A quiet day. Well short of your step goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
-        assertEquals("A full day. A run, past your step goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
+        assertEquals("A quiet day. Steps well short of your goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
+        assertEquals("A full day. A run, steps past your goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
     }
 
     @Test fun `bedtime counts down and stops once passed`() {
@@ -204,14 +204,14 @@ class TodayCopyTest {
     @Test fun `values read against your normal`() {
         assertEquals("Above your normal", TodayCopy.normalWord(1))
         assertEquals("Below your normal", TodayCopy.normalWord(-1))
-        assertEquals("Usual", TodayCopy.normalWord(0))
+        assertEquals("Your normal", TodayCopy.normalWord(0))
         assertEquals("Learning", TodayCopy.normalWord(null))
     }
 
     @Test fun `the after workout Smalls say a number and a word`() {
         assertEquals("Above your usual", TodayCopy.loadWord(LoadBand.Above))
         assertEquals("So far today", TodayCopy.loadWord(LoadBand.SoFar))
-        assertEquals("Learning", TodayCopy.loadWord(null))
+        assertEquals("Learning usual", TodayCopy.loadWord(null))
         val zone = ZoneId.of("Europe/London")
         val now = ZonedDateTime.of(2026, 10, 23, 18, 0, 0, 0, zone).toEpochSecond()
         assertEquals("14" to "Ready tomorrow", TodayCopy.recoverShort(14 * 3600L, now, zone))
@@ -238,9 +238,9 @@ class TodayCopyTest {
 
     @Test
     fun `steps against the goal read as words`() {
-        assertEquals("well short of your step goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
-        assertEquals("short of your step goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
-        assertEquals("close to your step goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
-        assertEquals("past your step goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
+        assertEquals("steps well short of your goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
+        assertEquals("steps short of your goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
+        assertEquals("steps close to your goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
+        assertEquals("steps past your goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
     }
 }

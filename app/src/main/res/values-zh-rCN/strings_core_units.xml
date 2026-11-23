@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="core_unit_meters">%1$s m</string>
+    <string name="core_unit_ft">%1$s 英尺</string>
     <string name="core_unit_km">%1$s km</string>
+    <string name="core_unit_mi">%1$s 英里</string>
     <string name="core_unit_minutes">%1$s 分钟</string>
     <string name="core_unit_hours">%1$s 小时</string>
     <string name="core_unit_hours_minutes">%1$s 小时 %2$s 分</string>
+    <string name="core_unit_minutes_seconds">%1$s 分钟 %2$s 秒</string>
     <string name="core_unit_seconds">%1$s 秒</string>
     <string name="core_unit_pace">%1$s/km</string>
+    <string name="core_unit_pace_mi">%1$s/英里</string>
     <string name="core_unit_kcal">%1$s kcal</string>
     <string name="core_unit_bpm">bpm</string>
     <string name="core_unit_ms">ms</string>
@@ -17,5 +21,13 @@
     <string name="core_unit_kg">%1$d kg</string>
     <string name="core_unit_feet_inches">%1$d′%2$d″</string>
     <string name="core_unit_cm">%1$d cm</string>
+    <string name="core_unit_label_km">km</string>
+    <string name="core_unit_label_mi">英里</string>
+    <string name="core_unit_label_m">m</string>
+    <string name="core_unit_label_ft">英尺</string>
+    <string name="core_unit_label_per_km">/km</string>
+    <string name="core_unit_label_per_mi">/英里</string>
+    <string name="core_unit_label_kmh">km/h</string>
+    <string name="core_unit_label_mph">mph</string>
     <string name="core_range">%1$s 到 %2$s</string>
 </resources>

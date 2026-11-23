@@ -235,12 +235,22 @@ internal fun WorkoutHeartCard(
             stringResource(R.string.workout_live_heart_title),
             bpm?.let { stringResource(R.string.workout_live_heart_of_max, it * 100 / r.maxHeartRate) }, tint,
         )
-        if (bpm != null) HaloBigNumber("$bpm", BigNumber.Live, unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint)
+        if (bpm != null) Row(verticalAlignment = Alignment.Bottom) {
+            HaloBigNumber(
+                "$bpm", BigNumber.Live, Modifier.weight(1f), unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint,
+            )
+            zone?.let { org.openstrap.app.ui.glow.ZoneChip(it, Modifier.padding(bottom = Space.S8)) }
+        }
         else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
         if (zone != null) {
             val (name, _) = WorkoutCopy.zoneTitle(zone)
-            HeroLine("$name, ${zoneRange(zone, r.maxHeartRate)}, ${WorkoutCopy.zoneTime(zoneSeconds[zone])}", tint)
-        } else HeroLine(WorkoutCopy.noZone(r.paused), tint)
+            HeroLine("$name, ${zoneRange(zone, r.maxHeartRate)}", tint)
+            HeroLine(WorkoutCopy.zoneTime(zoneSeconds[zone]), tint)
+        } else {
+            HeroLine(WorkoutCopy.noZone(r.paused), tint)
+            // The second line's room is kept, so the hero doesn't change height when a zone comes.
+            HeroLine("\u00A0", tint)
+        }
     }
     if (zoneBar && !fill) LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

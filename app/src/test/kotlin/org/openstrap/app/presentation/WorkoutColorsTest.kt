@@ -16,9 +16,9 @@ class WorkoutColorsTest {
     }
 
     @Test
-    fun pausedIsTheLiveScreensGreyAndRestIsZoneTwo() {
+    fun pausedIsTheLiveScreensGreyAndRestIsLilac() {
         assertEquals(PausedColor.toArgb(), WorkoutColors.PAUSED_GREY)
-        assertEquals(ZONE_COLORS[1].toArgb(), WorkoutColors.REST_GREEN)
+        assertEquals(0xFFB79CFF.toInt(), WorkoutColors.REST)
     }
 
     @Test

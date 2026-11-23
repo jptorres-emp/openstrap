@@ -99,7 +99,7 @@ class SyncStatesTest {
         val charging = real.previewed(StrapPreview.Charging, now)
         assertEquals("Charging 80%", strapChip(charging.paired, charging.connection, charging.sync, charging.lastSeen, now).text)
         val none = real.previewed(StrapPreview.NotPaired, now)
-        assertEquals("Not paired", strapChip(none.paired, none.connection, none.sync, none.lastSeen, now).text)
+        assertEquals("No strap", strapChip(none.paired, none.connection, none.sync, none.lastSeen, now).text)
         // A strap that isn't connected still previews a battery.
         val offline = real.copy(connection = ConnectionState.Disconnected).previewed(StrapPreview.Charging, now)
         assertEquals("Charging 64%", strapChip(offline.paired, offline.connection, offline.sync, offline.lastSeen, now).text)

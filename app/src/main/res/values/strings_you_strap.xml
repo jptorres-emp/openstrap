@@ -16,6 +16,7 @@
     <!-- The strap refused unstrap's auth key. -->
     <string name="you_strap_state_key_rejected">Key rejected</string>
     <string name="you_strap_state_cant_connect">Can\'t connect</string>
+    <string name="you_strap_state_cant_connect_seen">Can\'t connect, last seen %1$s</string>
     <string name="you_strap_state_not_paired">No strap paired</string>
     <!-- The state, then how long ago in lower case, "Not connected, last seen 18 min ago". A phrase. -->
     <string name="you_strap_state_last_seen">Not connected, last seen %1$s</string>
@@ -71,7 +72,7 @@
     <string name="you_strap_battery_settings_failed">Couldn\'t open battery settings on this phone.</string>
     <!-- After the battery's number in large dots, "86% battery". The number isn't part of it: the placeholder is the percent sign, which can move or take a space before it. -->
     <!-- Under the reason the strap couldn't connect. -->
-    <string name="you_strap_retrying">Still trying. Keep the strap on its charger near the phone, and close the Zepp app.</string>
+    <string name="you_strap_retrying">Still trying by itself. Connect tries again now.</string>
     <!-- Why the sync stopped, a sentence from the sync. -->
     <string name="you_strap_sync_stopped">Sync stopped. <xliff:g id="reason" example="The strap stopped answering.">%1$s</xliff:g></string>
     <!-- Under it. The sentence before is "Your data is still on the strap." -->

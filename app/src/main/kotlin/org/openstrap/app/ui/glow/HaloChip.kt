@@ -1,5 +1,18 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.runtime.getValue
+import org.openstrap.app.ui.components.Motion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -137,7 +150,8 @@ internal fun HaloChip(
     val ink = if (picked || variant == ChipVariant.Filled) Color.White else Ink.Secondary
     val lead = icon != null || dot != null
     Row(
-        modifier.height(size.height).alpha(if (enabled) 1f else ChipSpec.DISABLED).clip(Corner.Pill).background(fill)
+        modifier.let { if (onClick != null) it.minimumInteractiveComponentSize() else it }
+            .height(size.height).alpha(if (enabled) 1f else ChipSpec.DISABLED).clip(Corner.Pill).background(fill)
             .let {
                 when {
                     picked -> it.border(ChipSpec.Ring, Color.White, Corner.Pill)
@@ -308,17 +322,30 @@ internal fun GlowSegments(
     role: Role = Role.RadioButton,
     size: SegmentSize = SegmentSize.Regular,
 ) {
-    Row(modifier.fillMaxWidth().height(size.height).clip(Corner.Pill).background(OnSurface.track).padding(SegmentSpec.Pad)) {
+    // The track is drawn at [size]; the control's touch area is at least 48 high. The chosen pill is drawn behind the
+    // labels and slides to the new segment (P6) instead of snapping; no nested layout, so a list item measures it once.
+    val at by animateFloatAsState(selected.coerceAtLeast(0).toFloat(), tween(Motion.SWIFT, easing = Motion.easing), label = "segment")
+    Row(
+        modifier.minimumInteractiveComponentSize().fillMaxWidth().height(size.height).clip(Corner.Pill)
+            .background(OnSurface.track).padding(SegmentSpec.Pad)
+            .drawBehind {
+                if (selected < 0) return@drawBehind
+                val w = this.size.width / options.size.coerceAtLeast(1)
+                drawRoundRect(Color.White, Offset(w * at, 0f), Size(w, this.size.height), CornerRadius(this.size.height / 2))
+            },
+    ) {
         options.forEachIndexed { i, label ->
             val on = i == selected
+            val ink by animateColorAsState(
+                if (on) Color.Black else Ink.Secondary, tween(Motion.QUICK, easing = Motion.easing), label = "segmentInk",
+            )
             Box(
-                Modifier.weight(1f).fillMaxWidth().height(size.height - SegmentSpec.Pad * 2).clip(Corner.Pill)
-                    .background(if (on) Color.White else Color.Transparent)
+                Modifier.weight(1f).fillMaxHeight().clip(Corner.Pill)
                     .pressClickable({ onSelect(i) }, Corner.Pill, scale = SegmentSpec.PRESS)
                     .semantics { this.role = role; this.selected = on },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, color = if (on) Color.Black else Ink.Secondary, style = size.label, maxLines = 1)
+                Text(label, color = ink, style = size.label, maxLines = 1)
             }
         }
     }

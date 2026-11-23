@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow.live
 
 import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.Space
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -37,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Route
@@ -47,21 +49,28 @@ import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
 /**
- * A distance workout's map page (board Map view): the map from the top of the screen, with minimize, the heart rate
- * in its zone's [color] and the GPS over it, route only and follow me on the right; under it a black panel with the
+ * A distance workout's map page (board Map view): the map from the top of the screen, with the frame's top bar (minimize,
+ * sport, time, strap and GPS) and the heart rate over it, route only and follow me on the right; under it a black panel with the
  * distance, the moving time and the pace (a ride's speed) and the latest kilometre, above the bar shared with the
  * pace page ([LiveBottomBar]). A drag on the map pans it and stops following; follow me fits the route again.
  */
+// The GPS lines are built once per screen from the recording, so the list never changes under a recomposition.
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 internal fun LiveMapScreen(
     r: WorkoutState.Recording,
     route: List<Route.Point>,
     readings: List<Pair<Long, Int>>,
     bpm: Int?,
-    color: Color,
+    connected: Boolean,
     contentPadding: PaddingValues,
     controls: LiveControls,
     figures: List<Pair<String?, String>>,
+    /** The total time, as on every live screen's top bar. */
+    time: () -> Long,
+    battery: Int?,
+    /** The GPS line under the strap's in the top bar. */
+    status: List<Pair<String, Color>>,
     /** The height of the bar shared with the other view ([LiveBottomBar]): the panel leaves this much room for it. */
     bottomRoom: Dp,
     /** False when the heart rate is on the other half of a folded phone. */
@@ -82,32 +91,20 @@ internal fun LiveMapScreen(
         Box(Modifier.fillMaxWidth().fillMaxHeight().padding(bottom = (panel - PANEL_OVERLAP).coerceAtLeast(0.dp))) {
             WorkoutMap(
                 stretches, routeOnly, Modifier.fillMaxSize(), here,
-                fitPadding = PaddingValues(start = Space.S24, top = top + 64.dp, end = 76.dp, bottom = PANEL_OVERLAP + Space.S32),
+                fitPadding = PaddingValues(start = Space.S24, top = top + 112.dp, end = 76.dp, bottom = PANEL_OVERLAP + Space.S32),
                 creditBottom = PANEL_OVERLAP + 14.dp,
-                hereColor = color.takeIf { bpm != null },
+                hereColor = liveColor(r),
                 follow = follow, onPanned = { follow = false },
             )
-            Row(
-                Modifier.fillMaxWidth().padding(top = top, start = Space.S16, end = Space.S16),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8),
+            // The frame's own top bar over the map (sport, time, strap and GPS), on a scrim so it reads on any map, and
+            // the heart rate under it.
+            Column(
+                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.ScrimMap, Color.Transparent)))
+                    .padding(top = top, start = Space.S16, end = Space.S16, bottom = Space.S12),
+                verticalArrangement = Arrangement.spacedBy(Space.S8),
             ) {
-                HaloIconButton(
-                    AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
-                    variant = HaloIconVariant.Glass,
-                )
-                if (heartPill) LitHeartPill(bpm, r.maxHeartRate, WorkoutRecorder.liveZone(bpm, r.maxHeartRate,
-                    heartZones)?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White, r.paused, 36.dp)
-                Spacer(Modifier.weight(1f))
-                val acc = route.lastOrNull()?.accuracy
-                Row(
-                    Modifier.height(32.dp).clip(CircleShape).background(OverMap).padding(horizontal = Space.S12),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(if (acc != null &&
-                        acc <= Route.MAX_ACCURACY_M) TrendGood else TrendBad))
-                    Spacer(Modifier.width(Space.S8))
-                    Text(WorkoutCopy.gpsPill(acc), color = Color.White, style = GlowType.secondary, maxLines = 1)
-                }
+                LiveTopBar(r, connected, controls, null, time, status, battery, quiet = false)
+                if (heartPill) LitHeartPill(bpm, r.maxHeartRate, r.paused, 36.dp)
             }
             // On its side the map is short, so the buttons hang under the GPS pill instead of rising into it.
             Column(
@@ -115,16 +112,17 @@ internal fun LiveMapScreen(
                 else Modifier.align(Alignment.BottomEnd).padding(end = Space.S16, bottom = PANEL_OVERLAP + 44.dp),
                 verticalArrangement = Arrangement.spacedBy(Space.S12),
             ) {
-                // White while what it does is on, translucent near black over the map otherwise.
+                // Pause is the page's one white tap, so these stay glass and show what is on by the sport's colour.
+                val on = liveColor(r)
                 HaloIconButton(
                     AppIcons.MapFold,
                     stringResource(if (routeOnly) R.string.workout_live_map_show_map else R.string.workout_live_map_route_only),
                     { routeOnly = !routeOnly },
-                    variant = if (routeOnly) HaloIconVariant.Primary else HaloIconVariant.Glass,
+                    variant = HaloIconVariant.Glass, tint = if (routeOnly) on else Color.White,
                 )
                 HaloIconButton(
                     AppIcons.NavigationArrow, stringResource(R.string.workout_live_map_follow), { follow = true },
-                    variant = if (follow) HaloIconVariant.Primary else HaloIconVariant.Glass,
+                    variant = HaloIconVariant.Glass, tint = if (follow) on else Color.White,
                 )
             }
         }
@@ -146,9 +144,6 @@ internal fun LiveMapScreen(
 /** How far the map runs under the panel's rounded top. */
 private val PANEL_OVERLAP = 28.dp
 
-
-/** Buttons and pills drawn over the map: near black, a little see-through. */
-private val OverMap = OverMapSurface
 
 /** The latest whole kilometre on a dark row with how long ago it ended, until the next; nothing before the first. */
 @Composable

@@ -236,14 +236,15 @@ object RewardsCopy {
     }
 
     /**
-     * A locked badge's need: "712 of 1,000 km", "3 of 10 workouts", and metres as km over many days: "4.2 of 5 km".
+     * A locked badge's need, always in km: its goal is a fixed distance named in km ("First 5 km run", "100 km in all"),
+     * whatever the system. "712 of 1,000 km", "3 of 10 workouts", and metres as km over many days: "4.2 of 5 km".
      * [unit] is the badge's own unit word from its definition.
      */
     fun progressLine(have: Long, need: Long, unit: String, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
         when (unit) {
             "m" -> strings.format(
                 R.string.core_rewards_progress_km,
-                Units.km(have.toFloat(), Units.Precision.Day, locale),
+                Units.decimal(have / Units.METERS_PER_KM, 1, locale),
                 Units.count(need / 1000, locale),
             )
             "km" -> strings.format(R.string.core_rewards_progress_km, Units.count(have, locale), Units.count(need, locale))

@@ -320,7 +320,7 @@ private fun TabRoot(
             onOpenProfile = { onOpenPage(Page.Profile) },
             showCharge = showCharge, onChargeShown = onChargeConsume,
             recoveryFailure = shown.recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
-            wear = shown.wear, firstScore = shown.firstScore,
+            wear = shown.wear, firstScore = shown.firstScore, history = histories.daily,
         )
         Tab.Sleep -> GlowSleepScreen(
             day, header = { TabHeader(Tab.Sleep, header) }, contentPadding = padding,

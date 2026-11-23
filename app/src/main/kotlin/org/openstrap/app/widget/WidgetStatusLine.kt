@@ -28,9 +28,12 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
         ): StatusLine {
             val full = strapStatusLine(status, now, zone, locale, strings)
             val shorter = when (status) {
-                StrapStatus.NotPaired -> listOf(strings.get(R.string.system_widget_status_not_paired_short))
+                StrapStatus.NotPaired -> listOf(
+                    strings.get(R.string.system_widget_status_not_paired_short),
+                    strings.get(R.string.system_widget_status_not_paired_shortest),
+                )
                 is StrapStatus.LowBattery -> listOf(strings.format(R.string.system_widget_status_percent, status.percent))
-                StrapStatus.Syncing, StrapStatus.SyncFailed -> emptyList()
+                StrapStatus.Syncing, StrapStatus.SyncFailed, is StrapStatus.Synced -> emptyList()
                 StrapStatus.BluetoothOff -> listOf(strings.get(R.string.system_widget_status_bluetooth_off_short))
                 is StrapStatus.StaleSync -> {
                     val then = Instant.ofEpochSecond(status.at).atZone(zone).toLocalDate()
@@ -78,9 +81,10 @@ object StatusButton {
 }
 
 /**
- * A widget's top row (spec 5): the title at [titleSp], always; while the strap needs something its [status] button at
- * the right with the [words] that fit beside it (none on a Small, or when none fits); else whether the [note] on the
- * right still fits. [height] is what every layout's sums use: the title's line, or the button's when it shows.
+ * A widget's top row (spec 5): the title at [titleSp], always; its [status] button at the right, quiet while all is
+ * well, and while the strap needs something with the [words] that fit beside it (none on a Small, or when none fits),
+ * which replace the [note]; else whether the note still fits before the button. [height] is always the grid's top row
+ * ([WidgetGrid.TOP_ROW_DP]), so the status never moves what is under it.
  */
 data class TopRow(
     val status: StatusLine?, val note: Boolean, val height: Float,
@@ -100,11 +104,14 @@ data class TopRow(
             title: String, note: String?, line: StatusLine?, width: Float, fontScale: Float, withWords: Boolean,
             titleSizes: List<Float> = TITLE_SIZES,
         ): TopRow {
-            if (line == null) {
-                val sp = titleSizes.first()
-                val keep = note != null &&
-                    WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP + WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) <= width
-                return TopRow(null, keep, WidgetText.line(sp, fontScale), titleSp = sp)
+            if (line == null || line.status is StrapStatus.Synced) {
+                // All well: the quiet button (when there's a line) keeps its room, and the note shows if it still fits.
+                // The title takes the first size that fits beside the button, so a long one steps down rather than be cut.
+                val button = if (line != null) StatusButton.WORDS_GAP_DP + StatusButton.SIZE_DP else 0f
+                val sp = titleSizes.firstOrNull { WidgetText.fitWidth(title, it, fontScale) + button <= width } ?: titleSizes.last()
+                val keep = note != null && WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP +
+                    WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) + button <= width
+                return TopRow(line, keep, WidgetGrid.TOP_ROW_DP, titleSp = sp)
             }
             val beside = StatusButton.SIZE_DP + StatusButton.TITLE_GAP_DP
             fun room(sp: Float) = width - WidgetText.fitWidth(title, sp, fontScale) - StatusButton.TITLE_GAP_DP - StatusButton.WORDS_GAP_DP - StatusButton.SIZE_DP
@@ -113,8 +120,7 @@ data class TopRow(
             val sp = if (!withWords) fitting else titleSizes.take(2).filter { it <= fitting }
                 .firstOrNull { StatusButton.words(line, room(it), fontScale) != null } ?: fitting
             val words = if (withWords) StatusButton.words(line, room(sp), fontScale) else null
-            val h = maxOf(WidgetText.line(sp, fontScale), StatusButton.SIZE_DP, if (words != null) WidgetText.line(StatusButton.WORDS_SP, fontScale) else 0f)
-            return TopRow(line, false, h, words, sp)
+            return TopRow(line, false, WidgetGrid.TOP_ROW_DP, words, sp)
         }
     }
 }

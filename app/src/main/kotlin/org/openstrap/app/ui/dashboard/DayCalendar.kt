@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
+import org.openstrap.app.ui.components.Motion
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -119,8 +120,8 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                 targetState = month,
                 transitionSpec = {
                     val dir = if (targetState > initialState) 1 else -1
-                    (slideInHorizontally(tween(220)) { it * dir / 4 } + fadeIn(tween(220)))
-                        .togetherWith(slideOutHorizontally(tween(220)) { -it * dir / 4 } + fadeOut(tween(160)))
+                    (slideInHorizontally(tween(Motion.SWIFT)) { it * dir / 4 } + fadeIn(tween(Motion.SWIFT)))
+                        .togetherWith(slideOutHorizontally(tween(Motion.SWIFT)) { -it * dir / 4 } + fadeOut(tween(Motion.QUICK)))
                 },
                 label = "month",
             ) { m ->

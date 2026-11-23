@@ -17,8 +17,6 @@
     <string name="glow_sleep_stage_span"><xliff:g id="stage" example="Deep">%1$s</xliff:g>, <xliff:g id="times" example="01:10 to 01:55">%2$s</xliff:g>, <xliff:g id="minutes" example="45">%3$d</xliff:g> min</string>
     <!-- Title of the list of heart rate, HRV and breathing while asleep. -->
     <string name="glow_sleep_vitals_title">Night vitals</string>
-    <!-- The note on the night vitals' title row: each is compared with your earlier nights. -->
-    <string name="glow_sleep_vitals_note">Against your normal</string>
     <!-- Title of the sleep regularity card. -->
     <string name="glow_sleep_regularity_title">Sleep regularity</string>
     <!-- The regularity card's note on its title row. -->
@@ -51,7 +49,7 @@
     <!-- Title of the night's heart rate chart. -->
     <string name="glow_sleep_heart_rate">Heart rate</string>
     <!-- The note on the night's heart rate chart: its lowest and average. -->
-    <string name="glow_sleep_heart_note">Lowest <xliff:g id="lowest" example="48">%1$d</xliff:g>, average <xliff:g id="average" example="55">%2$d</xliff:g> bpm</string>
+    <string name="glow_sleep_heart_note">Low <xliff:g id="lowest" example="48">%1$d</xliff:g>, average <xliff:g id="average" example="55">%2$d</xliff:g> bpm</string>
     <!-- The note on the night's breathing chart: its average, breaths a minute. -->
     <string name="glow_sleep_breathing_note">Average <xliff:g id="rate" example="14.2">%1$s</xliff:g> br/min</string>
     <!-- Title of the night's breathing chart. -->
@@ -78,6 +76,4 @@
     <string name="glow_sleep_naps_none">None that day</string>
     <!-- Under a Sleep Small's number before its first night: the word form of waiting, 18 characters at most. -->
     <string name="glow_sleep_after_a_night">After a night</string>
-    <!-- Unit beside the naps total, which is shown as hours and minutes ("1:30 h"). -->
-    <string name="glow_sleep_unit_hours">h</string>
 </resources>

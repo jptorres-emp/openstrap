@@ -66,27 +66,31 @@ internal fun DetailStages(spans: List<StageSpan>, modifier: Modifier = Modifier,
     if (spans.isEmpty()) return
     val start = spans.minOf { it.start }
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
+    // A run of one stage is one bar as long as the run.
+    val joined = remember(spans) { NightStages.join(spans) }
     val rows = DayViewModel.SLEEP_STAGE_ROWS
     val order = rows.entries.sortedBy { it.value }.map { it.key }
+    // The names' column grows with the font, so "Awake" is never cut at a large size.
+    val nameWidth = 40.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         order.forEach { stage ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-                Text(SLEEP_NAMES[stage].orEmpty(), Modifier.width(40.dp), color = DetailAxisInk, style = GlowType.caption, maxLines = 1)
+                Text(SLEEP_NAMES[stage].orEmpty(), Modifier.width(nameWidth), color = DetailAxisInk, style = GlowType.caption, maxLines = 1)
                 Canvas(Modifier.weight(1f).height(8.dp)) {
                     drawRoundRect(StageTrack, Offset.Zero, size, CornerRadius(4.dp.toPx()))
-                    spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage !in rows) }.forEach { sp ->
+                    joined.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage !in rows) }.forEach { sp ->
                         val x0 = size.width * (sp.start - start) / (end - start)
                         val x1 = size.width * (sp.end - start) / (end - start)
                         val inside = kept == null || (sp.end > kept.first && sp.start < kept.last)
                         drawRoundRect(
                             stageColor(stage).copy(alpha = if (inside) 1f else 0.35f), Offset(x0, 0f),
-                            Size((x1 - x0).coerceAtLeast(2.dp.toPx()), size.height), CornerRadius(4.dp.toPx()),
+                            Size((x1 - x0).coerceAtLeast(3.dp.toPx()), size.height), CornerRadius(4.dp.toPx()),
                         )
                     }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = 48.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(start = nameWidth + Space.S8), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf(start, start + (end - start) / 2, end).forEach { t ->
                 Text(clock(t), color = DetailAxisInk, style = GlowType.caption)
             }
@@ -147,7 +151,7 @@ internal fun DetailSleepWindows(
     modifier: Modifier = Modifier,
     selected: LocalDate? = null,
     onNight: ((LocalDate) -> Unit)? = null,
-    height: Dp = 200.dp,
+    height: Dp = DetailChartHeight,
 ) {
     val m = rememberTextMeasurer()
     // Minutes since the noon before each night, so a night never wraps.

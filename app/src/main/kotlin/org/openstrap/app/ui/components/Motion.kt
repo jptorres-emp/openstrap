@@ -23,8 +23,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 object Motion {
     /** Small state changes: colours, press feedback, selection. */
     const val QUICK = 140
-    /** Moving between screens. */
+    /** Moving between screens, a pill sliding to another choice. */
     const val SWIFT = 240
+    /**
+     * Not an animation: how long a switch to another day keeps the last day's numbers up before the new day's
+     * placeholder shows (long enough for a day read from the phone's own database to land without a flash).
+     */
+    const val HOLD = 300
     val easing = FastOutSlowInEasing
 }
 

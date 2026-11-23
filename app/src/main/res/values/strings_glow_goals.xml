@@ -19,14 +19,14 @@
     </plurals>
     <!-- The personal bests panel's title. -->
     <string name="glow_goals_personal_bests">Personal bests</string>
-    <!-- The personal bests panel before there are any. -->
-    <string name="glow_goals_no_bests">Your bests show here after your first workouts.</string>
+    <!-- The note beside the personal bests title: how many of the bests are set. -->
+    <string name="glow_goals_set_count" tools:ignore="PluralsCandidate"><xliff:g id="set" example="2">%1$d</xliff:g> of <xliff:g id="total" example="9">%2$d</xliff:g> set</string>
     <!-- The badges panel's title on the Goals and bests page. Its note says how many are earned (glow_goals_earned_count). -->
     <string name="glow_goals_badges">Badges</string>
     <!-- The title of the card with the badge closest to earned, its name and how far along under it. -->
     <string name="glow_goals_next_badge">Next badge</string>
     <!-- Under a personal best's medal, and on its sheet, while that best hasn't been set. -->
-    <string name="glow_goals_not_set">Not set</string>
+    <string name="glow_goals_not_set">Not set yet</string>
     <!-- On a badge's sheet, and read out for its medal, while it hasn't been earned. -->
     <string name="glow_goals_not_earned">Not earned yet</string>
     <!-- On a badge's sheet, and read out for its medal: the day it was earned, written out in full. -->
@@ -48,7 +48,7 @@
     <!-- A button that opens every badge, and that page's title. -->
     <string name="glow_goals_all_badges">All badges</string>
     <!-- A button that opens last week's recap. -->
-    <string name="glow_goals_last_week">Last week\'s recap</string>
+    <string name="glow_goals_last_week">Last week</string>
     <!-- A button that opens the settings for which moments get a celebration. -->
     <string name="glow_goals_celebrations">Celebrations</string>
     <!-- Under the All badges title: how many are earned out of all of them. -->
@@ -65,7 +65,7 @@
     <string name="glow_goals_sheet_note">Counts any workout of 10 min or more. Changes start this week, and your weeks in a row carry on.</string>
 
     <!-- The weekly recap's title. -->
-    <string name="glow_goals_your_week">Your week</string>
+    <string name="glow_goals_recap_title">Weekly recap</string>
     <!-- The weekly recap card's title when the week's goal was met. -->
     <!-- Under the weekly recap's dots: how many weeks in a row met the goal. -->
     <plurals name="glow_goals_weekly_streak">
@@ -89,7 +89,7 @@
         <item quantity="other"><xliff:g id="count" example="4">%d</xliff:g> workouts</item>
     </plurals>
     <!-- Under a total time in the recap and on the share card. -->
-    <string name="glow_goals_hours">Hours</string>
+    <string name="glow_goals_hours">Time</string>
     <!-- Under a total distance on the share card. -->
     <string name="glow_goals_distance">Distance</string>
     <!-- Under the total calories burned in workouts. -->
@@ -124,14 +124,12 @@
         <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> personal best</item>
         <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> personal bests</item>
     </plurals>
-    <!-- The recap's value row that opens the weekly goal sheet. -->
-    <string name="glow_goals_next_week_goal">Next week\'s goal</string>
     <!-- Over what a best measures, in its sheet. -->
     <string name="glow_goals_what_it_measures">What it measures</string>
     <!-- The Celebrations row's line on Goals and bests: what is switched on. -->
-    <string name="glow_goals_celebrations_both">Goal moment, weekly recap</string>
+    <string name="glow_goals_celebrations_both">Goal moment and your week</string>
     <string name="glow_goals_celebrations_goal">Goal moment</string>
-    <string name="glow_goals_celebrations_recap">Weekly recap</string>
+    <string name="glow_goals_celebrations_recap">Your week</string>
     <string name="glow_goals_celebrations_off">Off</string>
     <!-- The goals sheet's unit after the calorie goal, and after the workouts goal. -->
     <string name="glow_goals_unit_kcal">kcal</string>
@@ -140,4 +138,9 @@
     <string name="glow_goals_lower">Lower <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
     <string name="glow_goals_raise">Raise <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
     <string name="glow_goals_type">Type <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
+    <!-- The (i) on the Goals and bests page, read by screen readers, and the sections of the sheet it opens. -->
+    <string name="glow_goals_about">About goals and bests</string>
+    <string name="glow_goals_about_goal">A workout of 10 min or more counts toward it, two a day at most.</string>
+    <string name="glow_goals_about_bests">A best is set by a workout you started, in moving time. Runs are measured by GPS and the steps best is the strap\'s count for one day. A best is replaced only by a better one.</string>
+    <string name="glow_goals_about_badges">A badge is earned once and stays. Workouts of 10 min or more count toward the ones that count workouts, whether you start them or keep them.</string>
 </resources>

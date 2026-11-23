@@ -7,7 +7,6 @@ import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
 import org.openstrap.app.presentation.DayWords
-import org.openstrap.app.presentation.RecoveryCopy
 import org.openstrap.app.presentation.Units
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -29,7 +29,6 @@ import org.openstrap.app.presentation.chargeShown
 import org.openstrap.app.data.DailyMetric
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
-import org.openstrap.app.ui.components.dayHeld
 import org.openstrap.app.ui.components.detailNumber
 import org.openstrap.app.ui.components.rememberDayHold
 import org.openstrap.app.ui.dashboard.ActivityHistory
@@ -100,7 +99,11 @@ fun GlowScoreDetailScreen(
         s, result, workouts, activity, history, onOpen, onSwitch, onSelectDay, onEditProfile, contentPadding, onBack,
         stripDate = state.date,
     )
-    Box(modifier.dayHeld(hold.pending && score in HELD_SCORES)) { when (score) {
+    // The held day dims the page through the template, as it does for every detail ([LocalDetailDay]).
+    val shownDay = LocalDetailDay.current
+    val dayPending = shownDay.pending || (hold.pending && score in HELD_SCORES)
+    CompositionLocalProvider(LocalDetailDay provides DetailDay(shownDay.picked, dayPending)) {
+    Box(modifier) { when (score) {
         Score.Recovery -> RecoveryDetail(
             heldState, heldR, heldStrapScore, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack, state.date,
         )
@@ -113,6 +116,7 @@ fun GlowScoreDetailScreen(
         Score.ActiveMinutes, Score.Load -> ActivityScoreDetail(score, activityOf(heldState, heldR))
         Score.HeartPoints, Score.Vo2Max, Score.Recover, Score.Calories, Score.Distance -> ActivityScoreDetail(score, activityOf(state, r))
     } }
+    }
 }
 
 /** The details whose page is held for a moment on a day switch ([rememberDayHold]). */
@@ -122,8 +126,9 @@ private val HELD_SCORES = setOf(Score.Recovery, Score.Energy, Score.ActiveMinute
 @Composable
 internal fun daysWithData(metric: DailyMetric, from: LocalDate, to: LocalDate, history: DailyHistory): Set<LocalDate> {
     val stats by remember(metric, from, to) { if (from < to) history(metric, from.plusDays(1), to) else flowOf(emptyList()) }
-        .collectAsStateWithLifecycle(emptyList())
-    return stats.map { it.date }.toSet()
+        .collectAsStateWithLifecycle(null)
+    // The last strip's days stay marked while the next day's strip loads (P2).
+    return rememberHeld(metric, fresh = stats?.map { it.date }?.toSet()).orEmpty()
 }
 
 /**
@@ -165,6 +170,8 @@ private fun RecoveryDetail(
     val today = LocalDate.now()
     val isToday = state.date == today
     val week = r?.readinessTrend.orEmpty()
+    // Resting heart rate and sleep read the day's figures, as Today and their own details do.
+    val resting = rememberDriverFigures(state, history)
     // A night's resting heart rate marks every day of the strip, so a day keeps its dot whichever day is shown and while
     // the score is worked out; the trend adds the days it has a score for.
     val nights = stripDaysWithData(DailyMetric.RestingHr, stripDate, today, history)
@@ -196,27 +203,44 @@ private fun RecoveryDetail(
             { DetailGauge(shown / 100f, color, key = Score.Recovery) { DetailScoreNumber(shown, state.date) } }
         },
     ) {
-        if (range == Range.Day) {
-            val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
-            if (all.isNotEmpty()) item {
-                val mid = (RecoveryBands.READY_FROM + RecoveryBands.READY_FOR_MORE_FROM) / 2f
-                Column {
-                    HaloTitle(
-                        stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
-                        note = stringResource(R.string.glow_detail_against_normal),
-                    )
-                    DetailDrivers(
-                        all.map { c ->
-                            DetailDriver(
-                                TabCopy.factorName(c.factor), null,
-                                RecoveryCopy.detail(c.detail).takeIf { it.isNotBlank() } ?: TabCopy.contributorWord(c.score),
-                                (c.score - mid) / DRIVER_RANGE,
-                            )
+        // The picture crossfades between ranges while the header and the figures stay put, as the metric detail's does.
+        val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
+        if (range == Range.Week || all.isNotEmpty()) item {
+            RangeCrossfade(range) { shown ->
+                if (shown == Range.Day) {
+                    val mid = (RecoveryBands.READY_FROM + RecoveryBands.READY_FOR_MORE_FROM) / 2f
+                    Column {
+                        HaloTitle(
+                            stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
+                            note = stringResource(R.string.glow_detail_against_normal),
+                        )
+                        DetailDrivers(
+                            all.map { c ->
+                                DetailDriver(
+                                    TabCopy.factorName(c.factor), null,
+                                    DetailCopy.driverReading(c, resting) ?: TabCopy.contributorWord(c.score),
+                                    (c.score - mid) / DRIVER_RANGE,
+                                )
+                            },
+                            color, scaleWords(),
+                        )
+                    }
+                } else if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_recovery_none_week))
+                else {
+                    val values = week.map { it.second?.toFloat() }
+                    DetailColumns(
+                        values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                        band = r?.readinessUsual?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
+                        onScrub = { i ->
+                            scrub = i?.let { week[it] }?.let { (d, v) ->
+                                v?.let { DetailHeadline(it.toString(), DayWords.short(d), TodayCopy.recoveryWord(it, false)) }
+                            }
                         },
-                        color, scaleWords(),
                     )
                 }
             }
+        }
+        if (range == Range.Day) {
             item {
                 Column {
                     DetailSentence(
@@ -235,33 +259,19 @@ private fun RecoveryDetail(
             }
             val avg = known.takeIf { it.isNotEmpty() }?.average()
             val usual = r?.readinessUsual
-            if (score != null) item {
+            // Always three, a dash for one that can't be worked out yet, so the page keeps its shape (P1).
+            item {
                 HaloFigures(
                     listOf(
                         usual?.let { Math.round((it.low + it.high) / 2f).toString() } to stringResource(R.string.glow_detail_your_normal),
                         avg?.let { Math.round(it).toString() } to stringResource(R.string.glow_detail_seven_day_average),
-                        week.getOrNull(week.size - 2)?.second?.let { y -> signed(score - y) } to
+                        score?.let { now -> week.getOrNull(week.size - 2)?.second?.let { y -> signed(now - y) } } to
                             stringResource(R.string.glow_detail_vs_yesterday),
                     ),
                     missing = null,
                 )
             }
         } else {
-            item {
-                if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_recovery_none_week))
-                else {
-                    val values = week.map { it.second?.toFloat() }
-                    DetailColumns(
-                        values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
-                        band = r?.readinessUsual?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
-                        onScrub = { i ->
-                            scrub = i?.let { week[it] }?.let { (d, v) ->
-                                v?.let { DetailHeadline(it.toString(), DayWords.short(d), TodayCopy.recoveryWord(it, false)) }
-                            }
-                        },
-                    )
-                }
-            }
             DetailCopy.scoreWeek(week.map { it.second })?.let { item { DetailSentence(it) } }
         }
         item { ScoreRelated(Score.Recovery, state, r, history, onOpen) }
@@ -284,9 +294,6 @@ private fun signed(n: Int): String = if (n > 0) "+$n" else if (n < 0) "\u2212${-
 /* ----------------------------------------------- Charge --------------------------------------------- */
 
 private val HOURS = listOf("00", "06", "12", "18", "24")
-
-/** A Charge curve over fewer hours than this gets the short chart. */
-private const val SHORT_CURVE_HOURS = 3f
 
 /**
  * The Charge detail: the day's curve to scrub, where it started and how high and low it went, what filled and drained
@@ -365,16 +372,13 @@ private fun ChargeDetail(
             if (c == null || now == null || c.points.size < 2) DetailEmpty(TabCopy.chargeLine(now, atWake, c?.anchored == true))
             else Column(Modifier.padding(top = Space.S8)) {
                 // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.
-                // A curve covering only a few hours gets a short chart, so it doesn't stand tall and empty; the axis stays
-                // the whole day, so the gap reads as time without a Charge.
-                val known = values.indices.filter { values[it] != null }
-                val hours = if (known.isEmpty()) 0f else (known.last() - known.first()) * step / 3600f
+                // The axis is the whole day, so a curve covering a few hours leaves a gap that reads as time without a Charge.
                 HaloTitle(
                     stringResource(R.string.glow_detail_through_day), variant = TitleVariant.OutOfCard,
                     note = atWake?.let { stringResource(R.string.glow_detail_at_waking_note, it) },
                 )
                 DetailLineChart(
-                    values, color, HOURS, height = if (hours < SHORT_CURVE_HOURS) 110.dp else 200.dp, yRange = 0f..100f,
+                    values, color, HOURS, yRange = 0f..100f,
                     onScrub = { i ->
                         scrub = i?.let { values[it] }?.let { v ->
                             val shown = chargeShown(v)

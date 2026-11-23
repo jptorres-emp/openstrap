@@ -9,7 +9,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- A scale under a value read against the user's own normal, low to high. One or two words each, side by side. -->
     <string name="day_info_scale_normal_below">Below your normal</string>
-    <string name="day_info_scale_normal_usual">Usual</string>
+    <string name="day_info_scale_normal_usual">Your normal</string>
     <string name="day_info_scale_normal_above">Above your normal</string>
 
     <!-- Energy's scale, low to high: how much is left in the body's battery. One or two words each, side by side. -->

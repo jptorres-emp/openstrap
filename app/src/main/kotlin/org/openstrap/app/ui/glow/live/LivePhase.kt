@@ -2,14 +2,19 @@ package org.openstrap.app.ui.glow.live
 
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import org.openstrap.app.data.Phase
+import org.openstrap.app.presentation.WorkoutColors
 import org.openstrap.app.ui.workout.IntervalMoment
 import org.openstrap.app.ui.workout.StartCopy
 
 /* The words of HIIT's phase hero (boards HaloLiveHiitWork and HaloLiveHiitRest), apart from the screen that lays them out. */
+
+/** Rest between sets and intervals, the lilac the hero and its text take on (workout-rules.md, Colour). */
+internal val RestColor = Color(WorkoutColors.REST)
 
 /** The title and its note on the hero's first row. */
 @Composable

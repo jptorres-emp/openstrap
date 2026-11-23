@@ -28,8 +28,6 @@
     <string name="glow_share_stat_bpm_end">Bpm at end</string>
     <!-- A game card's figure label: the training load. One word, a third of the card's width. -->
     <string name="glow_share_stat_load">Load</string>
-    <!-- Unit after a pace figure: a kilometre. Very short. -->
-    <string name="glow_share_unit_per_km">/km</string>
 
     <!-- Unit beside the kilograms a strength card says were lifted. Very short. -->
     <string name="glow_share_unit_kg">kg</string>

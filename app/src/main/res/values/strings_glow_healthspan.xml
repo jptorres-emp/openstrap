@@ -90,9 +90,9 @@
     <!-- The pace row before there's enough history. -->
     <string name="glow_healthspan_pace_needs">Needs 30 days with enough data, and 3 months before them to tell a real change from day-to-day noise.</string>
     <!-- The pace row when the last 30 days were better than usual. -->
-    <string name="glow_healthspan_pace_beat">Your last 30 days beat your 6-month habits. Kept up, the estimate will come down.</string>
+    <string name="glow_healthspan_pace_beat">Your last 30 days beat your 6-month habits. If you keep that up, the estimate will come down.</string>
     <!-- The pace row when the last 30 days were worse than usual. -->
-    <string name="glow_healthspan_pace_behind">Your last 30 days fall behind your 6-month habits. Kept up, the estimate will go up.</string>
+    <string name="glow_healthspan_pace_behind">Your last 30 days fall behind your 6-month habits. If that continues, the estimate will go up.</string>
     <!-- The pace row when the last 30 days were as usual. -->
     <string name="glow_healthspan_pace_match">Your last 30 days match your 6-month habits, so the estimate is moving in step with the calendar.</string>
     <!-- The left end of the pace scale. Very short. -->

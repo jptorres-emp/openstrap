@@ -28,7 +28,7 @@
     <string name="glow_today_stress">压力</string>
     <string name="glow_today_charge_fills_back">睡眠会恢复精力</string>
     <string name="glow_today_charge_steady">自醒来保持平稳</string>
-    <string name="glow_today_load">负荷</string>
+    <string name="glow_today_load">今日负荷</string>
     <string name="glow_today_to_recover">恢复所需</string>
     <string name="glow_today_hours_unit">小时</string>
     <string name="glow_today_recover_no_estimate">手环暂无预估</string>
@@ -104,4 +104,10 @@
     <string name="glow_today_hold_pin">置顶到顶栏卡片下方</string>
     <string name="glow_today_hold_unpin">取消置顶</string>
     <string name="glow_today_hold_hide">从今日隐藏</string>
+    <string name="glow_today_usual_bedtime">你平时的入睡时间</string>
+    <string name="glow_today_open_strap">打开手环页面</string>
+    <string name="glow_today_after_finished">%1$s前结束</string>
+    <string name="glow_today_after_active">活动 %1$s</string>
+    <string name="glow_today_after_active_time">活动时间</string>
+    <string name="glow_today_after_zones">各区间时间</string>
 </resources>

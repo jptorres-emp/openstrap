@@ -410,10 +410,13 @@ internal fun NoteText(text: String) =
 @androidx.compose.runtime.Immutable
 data class TitleTag(val text: String, val onClick: (() -> Unit)? = null)
 
-/** What sits next to a card's title: the sync [marker] when there's one, else the [tag]. One mark per card. */
+/**
+ * What sits next to a card's title: the sync [marker] and the [tag], both when a card has a partial day and an "Up to"
+ * time, each its own pill in the title's row.
+ */
 @Composable
 internal fun TitleMark(marker: String?, tag: TitleTag?, modifier: Modifier = Modifier) {
     if (marker != null) HaloTag(marker, modifier, TagVariant.Marker)
-    else if (tag != null) HaloTag(tag.text, modifier, onClick = tag.onClick)
+    if (tag != null) HaloTag(tag.text, onClick = tag.onClick)
 }
 

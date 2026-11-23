@@ -61,11 +61,16 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.CalmDownLine
 import org.openstrap.app.presentation.EarnedLine
+import org.openstrap.app.presentation.RewardsCopy
 import org.openstrap.app.presentation.SummaryRewards
+import org.openstrap.app.data.Rewards
 import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.SummaryCopy
 import org.openstrap.app.ui.dashboard.LocalHeartZones
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /*
  * The summary right after a workout (workouts spec 2.8, boards HaloSummaryRun to HaloSummaryGames): back, the sport and
@@ -74,6 +79,16 @@ import org.openstrap.app.ui.dashboard.LocalHeartZones
  * usual. A personal best ticks once, no modal. Past workouts open their own page ([GlowWorkoutDetailScreen]), which
  * shares the Load panel and the cards.
  */
+
+/** These rewards without the longest-workout best, when [short] says the workout is too short to count. */
+private fun SummaryRewards.withoutShortBest(short: Boolean): SummaryRewards {
+    if (!short) return this
+    val longest = RewardsCopy.bestTitle(Rewards.Kind.LONGEST_WORKOUT)
+    return copy(
+        earned = earned.filterNot { it.kind == EarnedLine.Kind.Best && it.text == longest },
+        best = best?.takeUnless { it.best.kind == Rewards.Kind.LONGEST_WORKOUT },
+    )
+}
 
 /** Where Done has got to: the summary, a personal best's card, the goal moment. */
 private enum class SummaryStep { Summary, Best, Moment }
@@ -104,15 +119,19 @@ fun GlowWorkoutSummaryScreen(
     celebrations: Celebrations? = null,
 ) {
     val a = summary?.analysis
+    // A workout too short to count toward the goal and the badges sets no longest-workout best either.
+    val tooShort = a != null && !Rewards.countsTowardGoal(true, a.activeSeconds)
+    val shownRewards = remember(rewards, tooShort) { rewards?.withoutShortBest(tooShort) }
     // Done goes through the celebrations it earned (workouts spec 3.4): a personal best's card, then the goal moment
     // once a week, then away.
     var step by rememberSaveable { mutableStateOf(SummaryStep.Summary) }
     var settings by rememberSaveable { mutableStateOf(false) }
-    val moment = rewards != null && celebrations != null && rewards.goalMet && celebrations.goalMoment && celebrations.momentWeek != rewards.weekStart
+    val moment = shownRewards != null && celebrations != null && shownRewards.goalMet &&
+        celebrations.goalMoment && celebrations.momentWeek != shownRewards.weekStart
     fun next(from: SummaryStep) {
         step = when {
-            from < SummaryStep.Best && rewards?.best != null -> SummaryStep.Best
-            from < SummaryStep.Moment && moment -> SummaryStep.Moment.also { celebrations.markMoment(rewards.weekStart) }
+            from < SummaryStep.Best && shownRewards?.best != null -> SummaryStep.Best
+            from < SummaryStep.Moment && moment -> SummaryStep.Moment.also { celebrations.markMoment(shownRewards.weekStart) }
             else -> { onDone(); return }
         }
     }
@@ -124,19 +143,28 @@ fun GlowWorkoutSummaryScreen(
     // Share opens the share screen (workouts spec 2.9) in the summary's place; close comes back here.
     var sharing by rememberSaveable { mutableStateOf(false) }
     if (sharing && summary != null && hero != null) {
-        WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
+        WorkoutShareScreen(summary, hero, shownRewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
         return
     }
-    if (step == SummaryStep.Best && rewards?.best != null && a != null) {
+    // The route map page in the summary's place, as Share is; its state in a ViewModel ([RouteMapModel]).
+    val routeMap = routeMapModel()
+    if (summary != null && routeMap != null && routeMap.isOpen(summary.analysis.workout.start)) {
+        RouteMapPage(summary, routeMap, contentPadding)
+        return
+    }
+    if (step == SummaryStep.Best && shownRewards?.best != null && a != null) {
         BestCardScreen(
-            rewards.best, a.sportName, contentPadding, onContinue = done,
+            shownRewards.best, a.sportName, contentPadding, onContinue = done,
             onShare = if (hero != null) ({ sharing = true }) else null,
         )
         return
     }
-    if (step == SummaryStep.Moment && rewards != null) {
+    if (step == SummaryStep.Moment && shownRewards != null) {
         val starts = remember(workouts) { goalWeekStarts(workouts) }
-        GoalMomentScreen(rewards.week.count, rewards.week.goal, rewards.inARow, starts, contentPadding, onSettings = { settings = true }, onContinue = done)
+        GoalMomentScreen(
+            shownRewards.week.count, shownRewards.week.goal, shownRewards.inARow, starts, contentPadding,
+            onSettings = { settings = true }, onContinue = done,
+        )
         if (settings && celebrations != null) CelebrationsSheet(
             celebrations.goalMoment, celebrations.weeklyRecap, celebrations.setGoalMoment, celebrations.setWeeklyRecap, onDismiss = { settings = false },
         )
@@ -178,7 +206,7 @@ fun GlowWorkoutSummaryScreen(
         val w = a.workout
         val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
         val usualLoad = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
-        val earned = rewards?.earned.orEmpty()
+        val earned = shownRewards?.earned.orEmpty()
         // A personal best ticks once (the hero no longer swells: Halo's hero has no effort light).
         val haptics = rememberHaptics()
         var ticked by rememberSaveable(w.start) { mutableStateOf(false) }
@@ -200,13 +228,14 @@ fun GlowWorkoutSummaryScreen(
         SummaryHeroCard(shownHero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = Space.S4), onCard = false)
-        val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
-        FamilySection(family, summary, liveRoute, others, weekStarts, week = rewards?.week, figures = shownHero.figures)
+        val weekStarts = remember(workouts) { workoutDayStarts(workouts) }
+        FamilySection(family, summary, liveRoute, others, weekStarts, week = shownRewards?.week, figures = shownHero.figures)
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }
         val dropShown = summary.recorded.isNotEmpty() || !live?.readings.isNullOrEmpty()
-        if (dropShown) CalmDownHero(summary, live, usualDrop) { info = true }
+        // Mind and body has no drop card (workout-rules.md, Summary).
+        if (dropShown && family != Workouts.Family.MindBody) CalmDownHero(summary, live, usualDrop) { info = true }
         WorkoutLoadCard(a, usualLoad)
         DeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete)
     }
@@ -255,7 +284,8 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
                         horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         Text("${line.drop}", color = Color.White, style = GlowType.figureLarge)
                         Text(
-                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4), color = ink,
+                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4),
+                            color = if (beats) ink else DropTealInk,
                             style = GlowType.secondary,
                         )
                     }
@@ -265,7 +295,7 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
                         Text(stringResource(R.string.glow_summary_unit_bpm_now), color = ink, style = GlowType.noteSmall)
                     }
                 }
-                if (shown.size >= 2) DropLine(shown, a.end)
+                if (shown.size >= 2) DropLine(shown, a.end, after = if (beats) Color.White else DropTealInk)
             }
         }
     }
@@ -278,10 +308,11 @@ private val DropTealInk = MetricColors.readinessPale
 
 /**
  * The heart rate from a minute before the [end] to two after, small (board HaloSummaryRun: 120 by 52): the workout's
- * last minute dim, the drop bright, a hairline mark at the end. Gaps of more than five seconds break the line.
+ * last minute dim, the drop bright ([after]: white on the lit card, teal on the grey one, so it stays apart from the
+ * Load card under it), a hairline mark at the end. Gaps of more than five seconds break the line.
  */
 @Composable
-private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modifier = Modifier) {
+private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, after: Color, modifier: Modifier = Modifier) {
     val first = end - BeforeS
     val span = (BeforeS + WorkoutSession.CALM_S).toFloat()
     val lo = readings.minOf { it.second } - 5f
@@ -301,22 +332,30 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
             drawPath(path, color, style = Stroke(width, cap = StrokeCap.Round))
         }
         stroke(readings.filter { it.first <= end }, Ink.Tertiary, 2.dp.toPx())
-        stroke(readings.filter { it.first >= end }, Color.White, 2.4.dp.toPx())
+        stroke(readings.filter { it.first >= end }, after, 2.4.dp.toPx())
     }
 }
 
 /** The corner of the map inside a card (board HaloSummaryRun: 18 across the card's 36, so half). */
 
-/** The kept route in its zones' colours on the map's own near black; nothing without a route that goes somewhere. */
+/**
+ * The kept route in its zones' colours on the map's own near black, along the roads when chosen ([rememberRouteLine]);
+ * nothing without a route that goes somewhere. A tap opens the route map page ([RouteMapPage]).
+ */
 @Composable
 internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
-    val heartZones = LocalHeartZones.current
     if (!Route.mappable(summary.route)) return
-    val stretches = remember(summary, heartZones) {
-        Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate, heartZones)
-    }
+    val line = rememberRouteLine(summary)
+    val model = routeMapModel()
+    val open = stringResource(R.string.glow_route_map_open)
     Box(modifier.fillMaxWidth().height(170.dp).clip(Corner.Inner).background(Greys.Card)) {
-        WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
+        WorkoutMap(line.stretches, routeOnly = false, Modifier.fillMaxSize())
+        // The map takes touches itself, so a layer above it catches the tap: the card's map is a preview.
+        if (model != null) Box(
+            Modifier.matchParentSize()
+                .clickable(onClickLabel = open) { model.open(summary.analysis.workout.start) }
+                .semantics { contentDescription = open },
+        )
     }
 }
 
@@ -335,6 +374,17 @@ internal fun splitRowsOf(summary: PhoneSummary, liveRoute: List<Route.Point>): L
 }
 
 /**
+ * [summary]'s laps worth listing beside its [rows] (splits): none when there is only one lap, and none when the laps cut
+ * the route where the splits do, which would list the same distances twice. Only manual laps show beside splits.
+ */
+internal fun manualLaps(summary: PhoneSummary, rows: List<SplitRow>): List<org.openstrap.app.data.WorkoutRecorder.Lap> {
+    val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
+    val same = rows.isNotEmpty() && laps.size == rows.size &&
+        laps.indices.all { kotlin.math.abs((laps[it].end - laps[it].start) - rows[it].seconds) <= 1 }
+    return if (same) emptyList() else laps
+}
+
+/**
  * Laps without GPS, and sets for strength, as a list (a past workout whose kind's own section doesn't show them).
  * Nothing without any of them. Returns whether it showed anything.
  */
@@ -344,7 +394,7 @@ internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>): Bo
     val a = summary.analysis
     val maxHr = a.maxHeartRate
     val rows = remember(summary, liveRoute) { splitRowsOf(summary, liveRoute) }
-    val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
+    val laps = manualLaps(summary, rows)
     val sets = summary.sets.filter { it.end != null }
     // Each row's heart takes the zone its average heart rate sat in.
     fun dot(bpm: Int?) = bpm?.let { zoneColor(it, maxHr, heartZones) } ?: EdgeNeutral

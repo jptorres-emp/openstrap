@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import kotlin.math.roundToInt
+import org.openstrap.app.presentation.Units
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.BasicTextField
@@ -134,10 +136,16 @@ private val RING_RADIUS = 16.dp
 /** A typed count, held to [range]; null when it isn't a number. */
 internal fun typedCount(text: String, range: IntRange): Int? = text.trim().toIntOrNull()?.coerceIn(range)
 
-/** A typed distance in km, to the nearest 100 m and held to [maxKm]; null when it isn't a number above 0. */
-internal fun typedMeters(text: String, maxKm: Int): Int? =
-    text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
-        ?.let { (kotlin.math.round(it * TENTHS_PER_KM) * METERS_PER_TENTH).toInt().coerceIn(METERS_PER_TENTH, maxKm * METERS_PER_KM) }
+/**
+ * A typed distance in km, or miles in miles, to the nearest tenth and held to [maxMajor] of them, as metres; null when
+ * it isn't a number above 0.
+ */
+internal fun typedMeters(text: String, maxMajor: Int): Int? {
+    val unit = Units.majorMeters.toDouble()
+    return text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
+        ?.let { (kotlin.math.round(it * TENTHS_PER_UNIT) / TENTHS_PER_UNIT * unit).roundToInt() }
+        ?.coerceIn((unit / TENTHS_PER_UNIT).roundToInt(), (maxMajor * unit).roundToInt())
+}
 
 /** Typed minutes as seconds, held to 1 minute to [maxHours]; null when it isn't a whole number above 0. */
 internal fun typedSeconds(text: String, maxHours: Int): Long? =
@@ -147,8 +155,6 @@ internal fun typedSeconds(text: String, maxHours: Int): Long? =
 internal fun countInput(value: Int, range: IntRange, onValue: (Int) -> Unit) =
     HeroInput("$value", null, decimal = false) { t -> typedCount(t, range)?.let(onValue) }
 
-private const val TENTHS_PER_KM = 10.0
-private const val METERS_PER_TENTH = 100
-private const val METERS_PER_KM = 1000
+private const val TENTHS_PER_UNIT = 10.0
 private const val MINUTES_AN_HOUR = 60L
 private const val SECONDS_A_MINUTE = 60L

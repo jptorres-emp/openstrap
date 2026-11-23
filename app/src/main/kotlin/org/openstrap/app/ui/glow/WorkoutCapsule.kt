@@ -52,6 +52,7 @@ import org.openstrap.app.ui.workout.LiveGlance
 import org.openstrap.app.ui.workout.GlanceTint
 import org.openstrap.app.ui.workout.GlanceAction
 import org.openstrap.app.ui.workout.ZONE_COLORS
+import org.openstrap.app.ui.workout.sportFamilyColor
 import org.openstrap.app.ui.theme.MetricColors
 import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.draw.LightAngle
@@ -61,12 +62,15 @@ import org.openstrap.app.ui.theme.ControlSurface
 
 /* ------------------------------------- Rest of the app meanwhile ------------------------------------- */
 
-/** The colour a [LiveGlance] is lit in ([GlanceTint]). */
+/**
+ * The colour a [LiveGlance] is lit in ([GlanceTint]): the sport's own, as on its live screen, unless a state (rest,
+ * paused, asking) replaces it. The zone is never the light (workout-rules.md, Colour).
+ */
 internal fun glanceColor(g: LiveGlance): Color = when (g.tint) {
-    GlanceTint.Zone -> g.zone?.let { ZONE_COLORS[it] } ?: PausedColor
-    GlanceTint.Work -> MetricColors.heart
-    GlanceTint.Rest -> Color(WorkoutColors.REST_GREEN)
-    GlanceTint.Mind -> MetricColors.evening
+    GlanceTint.Zone -> g.sport?.let { sportFamilyColor(it) } ?: g.zone?.let { ZONE_COLORS[it] } ?: PausedColor
+    GlanceTint.Work -> g.sport?.let { sportFamilyColor(it) } ?: MetricColors.heart
+    GlanceTint.Rest -> Color(WorkoutColors.REST)
+    GlanceTint.Mind -> g.sport?.let { sportFamilyColor(it) } ?: MetricColors.evening
     GlanceTint.Paused -> PausedColor
     GlanceTint.Asking -> MetricColors.warn
 }
@@ -182,7 +186,11 @@ internal fun LiveHero(glance: LiveGlance, sportType: Int, clock: String, onOpen:
                 Text(clock, color = Color.White, style = GlowType.sentence.copy(fontFeatureSettings = "tnum"), maxLines = 1)
             }
             Spacer(Modifier.height(Space.S20))
-            if (glance.figure != null) HeroValue(glance.figure, glance.unit.orEmpty(), gap = Space.S8, unitStyle = GlowType.sentence)
+            // The zone is a chip beside the number, never the card's light (workout-rules.md, Colour).
+            if (glance.figure != null) Row(verticalAlignment = Alignment.Bottom) {
+                HeroValue(glance.figure, glance.unit.orEmpty(), Modifier.weight(1f), gap = Space.S8, unitStyle = GlowType.sentence)
+                glance.zone?.let { ZoneChip(it, Modifier.padding(start = Space.S8, bottom = Space.S4)) }
+            }
             else Row(verticalAlignment = Alignment.Bottom) {
                 WaitingDash(Modifier.padding(vertical = Space.S12))
                 glance.unit?.let {

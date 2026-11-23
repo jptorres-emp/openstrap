@@ -37,6 +37,7 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.openstrap.app.AppContainer
+import org.openstrap.app.BuildConfig
 import org.openstrap.app.PendingAction
 import org.openstrap.app.R
 import org.openstrap.app.data.HeartZones
@@ -321,7 +322,7 @@ private fun YouPageHost(
         updateWaiting = updateWaiting,
         onUpdates = { open(Page.Updates) },
         onDiagnostics = { open(Page.Diagnostics) },
-        onSampleData = if (SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
+        onSampleData = if (SampleData.AVAILABLE && isTestApp) ({ deviceVm.loadSampleData() }) else null,
         onBack = onBack,
         selected = selected?.row,
     )
@@ -333,6 +334,7 @@ private fun YouPageHost(
                 sleepGoalOpen = false
             },
             onDismiss = { sleepGoalOpen = false },
+            ageKnown = profile.age() != null,
         )
     }
 }
@@ -473,3 +475,6 @@ private fun UpdatesPageHost(container: AppContainer, rootVm: AppRootViewModel, p
         },
     )
 }
+
+/** The .dev and .demo apps install beside the real one with their own data, so made-up days can't reach a real history. */
+private val isTestApp = BuildConfig.APPLICATION_ID.endsWith(".dev") || BuildConfig.APPLICATION_ID.endsWith(".demo")

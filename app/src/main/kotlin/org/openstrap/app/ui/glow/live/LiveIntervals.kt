@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.ReadOnlyComposable
 import org.openstrap.app.ui.glow.HaloBigNumber
 import org.openstrap.app.ui.glow.BigNumber
@@ -56,7 +57,6 @@ import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.Raised
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PausedGrey
-import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.workoutClock
 import org.openstrap.app.ui.glow.dotClock
@@ -72,12 +72,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
-/** Work is HIIT's red, rest the teal of every rest (workout-rules.md, Colour). */
-private val RestGreen = RestTeal
-
 /**
  * HIIT (workout-rules.md, HIIT; boards HaloLiveHiitWork and HaloLiveHiitRest): the phase's hero lit red for work and
- * teal for rest, with the round N of M and a bar of the rounds in it, the seconds left as the one dotted number and
+ * lilac for rest, with the round N of M and a bar of the rounds in it, the seconds left as the one dotted number and
  * what's next in its line. Work then has the heart rate in a solid card, rest each round's peak; the plain figures
  * row is Rounds, Peak bpm and Active kcal. Skip (Done, every minute) is the left action of work, +10 s of rest, with Skip
  * rest on the hero's title row. A warm up waits on Start rounds, which is then the white tap. With [split] the heart
@@ -108,19 +105,22 @@ internal fun LiveIntervalsScreen(
     if (r.structure == null || phase == null) return
     val color = when {
         r.paused -> PausedGrey
-        phase is Phase.Rest -> RestGreen
+        phase is Phase.Rest -> RestColor
         else -> liveColor(r)
     }
     // Parsed once with the recording, not on each recomposition.
     val structure = r.structure
-    val plan = structure?.let { StartCopy.structureName(it) }
+    val plan = structure?.let { StartCopy.planName(it) }
     val active = activeSecondsState(r)
     val warmUp = phase == Phase.WarmUp
     LiveFrame(
         r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent,
         lap = phaseLap(r, phase, onSkip, onAddRest),
         pauseWhite = !warmUp,
-        paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, roundFigures(r, kcal)) },
+        paused = {
+            LivePaused(r, liveHeartRate.takeIf { connected }, readings, roundFigures(r, kcal), pausedDetail(r, now.value))
+        },
         fill = true,
         title = listOfNotNull(org.openstrap.app.data.Workouts.sportName(r.workout.sportType), plan).joinToString(", "),
     ) {
@@ -168,13 +168,28 @@ private fun phaseLap(r: WorkoutState.Recording, phase: Phase, onSkip: () -> Unit
     }
 }
 
+/** Where a paused round workout stopped: "Round 3 of 8, 12 s of work left", or without the time where none is counted. */
+@Composable
+@ReadOnlyComposable
+private fun pausedDetail(r: WorkoutState.Recording, now: Long): String? {
+    val m = intervalMoment(r, now, null, emptyList(), emptyList())?.takeUnless { it.phase == Phase.WarmUp || it.phase == Phase.Done }
+    val left = m?.left
+    return when {
+        m == null -> null
+        left == null -> stringResource(R.string.workout_live_round_of, m.round, m.rounds)
+        m.phase is Phase.Rest -> stringResource(R.string.workout_live_paused_round_rest, m.round, m.rounds, left)
+        else -> stringResource(R.string.workout_live_paused_round_work, m.round, m.rounds, left)
+    }
+}
+
 /** Rounds, Peak bpm and Active kcal (workout-rules.md, section 5), the figures row of both phases and of the paused view. */
 @Composable
 @ReadOnlyComposable
 private fun roundFigures(r: WorkoutState.Recording, kcal: WorkoutRecorder.Kcal?): List<Pair<String?, String>> = listOf(
-    "${org.openstrap.app.data.Phases.roundsDone(r.rounds)}" to stringResource(R.string.workout_live_figure_rounds),
-    r.rounds.mapNotNull { it.peakBpm }.maxOrNull()?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
-    kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+    "${r.roundsCounted}" to stringResource(R.string.workout_live_figure_rounds),
+    (r.rounds.mapNotNull { it.peakBpm }.maxOrNull() ?: r.workout.maxHeartRate)?.toString() to
+        stringResource(R.string.workout_live_figure_peak_bpm),
+    kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
 )
 
 /** The phase's hero (boards HaloLiveHiitWork and HaloLiveHiitRest): its word, the rounds, the seconds and what is next. */
@@ -185,7 +200,7 @@ private fun PhaseHero(m: IntervalMoment, color: Color, angle: Float, bpm: Int?, 
         val (title, note) = phaseTitle(m)
         HeroTitle(title, note, tint)
         RoundBar(m)
-        val seconds = m.left?.let { dotFormat("%02d", it) }
+        val seconds = m.left?.let { dotFormat("%d", it) }
         if (seconds != null) HaloBigNumber(seconds, BigNumber.Live, unit = stringResource(secondsUnit(m)), unitColor = tint)
         HeroLine(phaseLine(m, bpm), tint)
         if (m.phase is Phase.Rest) HaloButton(
@@ -257,7 +272,7 @@ private fun RoundPeaks(rounds: List<AppWorkoutRound>, total: Int) {
 
 /**
  * A run rep (workouts spec 2.5, board HaloLiveRunReps), in place of the Pace card: the hero lit in the run's lime, or
- * the rest's teal, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
+ * the rest's lilac, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
  * number, and the reps done with their times in its line.
  */
 // The route and readings arrive whole with each update and never change in place.
@@ -267,7 +282,7 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
     val now = nowTicking()
     val m = intervalMoment(r, now, bpm, readings, route) ?: return
     val resting = m.phase is Phase.Rest
-    val color = if (resting) RestGreen else liveColor(r)
+    val color = if (resting) RestColor else liveColor(r)
     val tint = heroTint(color)
     LiveHero(color, liveAngle(r)) {
         val pace = if (m.phase is Phase.Work) org.openstrap.app.presentation.Pace.clock(Route.currentPace(route)) else null
@@ -278,7 +293,7 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
                 Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
                 Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
             },
-            pace?.let { stringResource(R.string.workout_live_pace_now, it) }, tint,
+            pace?.let { stringResource(Units.res(R.string.workout_live_pace_now, R.string.workout_live_pace_now_mi), it) }, tint,
         )
         val (value, unit) = when {
             m.metersLeft != null && m.phase is Phase.Work -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)

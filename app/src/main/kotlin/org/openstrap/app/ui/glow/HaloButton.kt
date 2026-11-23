@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -234,7 +235,8 @@ internal fun HaloIconButton(
     clickLabel: String = contentDescription,
     tint: Color = variant.ink,
 ) {
-    Box(modifier.size(size.size)) {
+    // The circle is drawn at [size], the touch area is at least 48 (spec: every tappable gets 48 dp).
+    Box(modifier.minimumInteractiveComponentSize().size(size.size)) {
         HaloIconSurface(
             Modifier.matchParentSize().alpha(if (enabled) 1f else ButtonSpec.DISABLED)
                 .pressClickable(onClick, Corner.Pill, enabled = enabled, onClickLabel = clickLabel, role = Role.Button),

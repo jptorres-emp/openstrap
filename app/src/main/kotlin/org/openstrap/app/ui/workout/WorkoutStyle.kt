@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import org.openstrap.app.presentation.WorkoutColors
 import org.openstrap.app.presentation.WorkoutWords
 import org.openstrap.app.ui.theme.Ink
-import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportColors
 
 /** Zone 1 (easy) to 5 (max), cool to hot ([WorkoutColors.ZONES]); during a workout the app takes on the current one. */
@@ -59,9 +58,6 @@ internal fun colorFamily(
     } else {
         family
     }
-
-/** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
-internal val RestTeal = MetricColors.readiness
 
 /** A paused workout's hero (workout-rules.md, Tokens). */
 internal val PausedGrey = Ink.Paused

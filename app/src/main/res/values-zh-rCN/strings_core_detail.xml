@@ -34,8 +34,11 @@
     </plurals>
     <string name="core_detail_label_bpm_now">当前 bpm</string>
     <string name="core_detail_label_bpm_latest">bpm，最近一次</string>
-    <string name="core_detail_label_bpm_resting">bpm 静息</string>
-    <string name="core_detail_label_bpm_resting_estimated">bpm 静息，估算</string>
+    <string name="core_detail_label_bpm_resting">bpm，昨晚</string>
+    <string name="core_detail_label_bpm_resting_that_night">bpm，当晚</string>
+    <string name="core_detail_label_bpm_resting_estimated">bpm，昨晚，估算</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">bpm，当晚，估算</string>
+    <string name="core_detail_label_bpm_up_to">bpm，截至 %1$s</string>
     <string name="core_detail_label_steps_today">步，今日目前</string>
     <string name="core_detail_label_steps">步</string>
     <string name="core_detail_label_breathing">br/min，睡眠期间</string>
@@ -106,8 +109,14 @@
     <plurals name="core_detail_inside_days_month">
         <item quantity="other">过去 30 天内，%2$d 天中有 %1$d 天在你的常态范围内。</item>
     </plurals>
-    <string name="core_detail_year_unit">过去 12 个月内，周平均值在 %1$s 到 %2$s %3$s 之间。</string>
-    <string name="core_detail_year">过去 12 个月内，周平均值在 %1$s 到 %2$s 之间。</string>
+    <string name="core_detail_year_unit">%4$s内，周平均值在 %1$s 到 %2$s %3$s 之间。</string>
+    <string name="core_detail_year">%3$s内，周平均值在 %1$s 到 %2$s 之间。</string>
+    <plurals name="core_detail_year_span_weeks">
+        <item quantity="other">过去 %1$d 周</item>
+    </plurals>
+    <plurals name="core_detail_year_span_months">
+        <item quantity="other">过去 %1$d 个月</item>
+    </plurals>
     <string name="core_detail_score_week_one">过去 7 天目前仅有 1 次评分。</string>
     <string name="core_detail_score_week">过去 7 天平均为 %1$d，范围在 %2$d 到 %3$d 之间。</string>
     <string name="core_detail_charge_started">当天开始时为 %1$d，结束时为 %2$d。</string>

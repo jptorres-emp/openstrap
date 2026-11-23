@@ -33,8 +33,6 @@ import java.time.ZoneId
 import org.openstrap.app.R
 import org.openstrap.app.data.DetailRoutes
 import org.openstrap.app.data.WidgetKind
-import org.openstrap.app.ui.glow.draw.EdgeKind
-import org.openstrap.app.ui.glow.draw.GlowMood
 import org.openstrap.app.ui.glow.draw.drawStageBar
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.stageColor
@@ -77,21 +75,19 @@ class SleepWidgetReceiver : PlacedWidgetReceiver() {
 /* Layout                                                                                            */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Sleep's ink, as the Sleep tab and Today's Last night card. */
-private val Hue = MetricColors.sleepDeep
 
 /** The legend's labels: Caption size and weight, at Secondary's 72% (the mockup's). */
 private val LegendStyle = WidgetType.caption.copy(color = ColorProvider(Ink.Secondary))
 
 /**
- * The widget at the size Glance lays out, lit from the top in the night mood whatever the moment ([EdgeKind.Sleep],
- * spec 2.2). A night opens its Sleep score; while waiting, the Sleep screen.
+ * The widget at the size Glance lays out, an unlit Halo card. A night opens its Sleep score; while waiting, the
+ * Sleep screen.
  */
 @Composable
 private fun SleepContent(m: SleepWidgetModel) {
     val context = LocalContext.current
     val open = if (m.date != null) openMetric(context, DetailRoutes.SLEEP_SCORE, m.date) else openMetric(context, DetailRoutes.SLEEP, null)
-    PictureWidget(Hue, null, GlowMood.Night, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(open, BITMAP_EXTRA) { frame ->
         when {
             m.waiting != null -> WaitingContent(m.title, m.waiting, frame)
             frame.bucket == WidgetSizes.Small -> SmallContent(m, frame)
@@ -105,12 +101,11 @@ private fun SleepContent(m: SleepWidgetModel) {
 @Composable
 private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
+    TopRowView(m.title, null, fit.top, f, 0f)
     Gap()
-    ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
+    ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density, attentionWords(f))
     if (fit.lines.isNotEmpty() || fit.bar) {
-        Gap()
+        Flex()
         // One child of the column, its rows inside: Glance drops a column's children past ten.
         Column(GlanceModifier.fillMaxWidth()) {
             fit.lines.forEachIndexed { i, line ->
@@ -123,42 +118,36 @@ private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
             }
         }
     }
-    Edge(fit.spread, f)
 }
 
 /** Wide: the top row with bedtime to waking, the score with time asleep, the stage bar with its legend. */
 @Composable
 private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
+    TopRowView(m.title, m.note, fit.top, f, 0f)
     Gap()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     if (fit.bar) {
-        Gap()
+        Flex()
         Stages(m, fit.legendRows, f)
     }
-    Edge(fit.spread, f)
 }
 
 /** Large: the top row, the tab's sentence, the score with how often you woke, then the time in each stage. */
 @Composable
 private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    val spread = SleepLayout.largeSpread(fit, m.stages.size, f.fontScale)
-    Edge(spread, f)
-    TopRowView(m.title, m.note, fit.top, f, spread.edge(f.drawContentHeight))
-    if (fit.sentenceLines > 0 && m.sentence != null) {
-        Gap()
-        Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)
-    }
+    TopRowView(m.title, m.note, fit.top, f, 0f)
     Gap()
+    if (fit.sentenceLines > 0 && m.sentence != null) {
+        Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)
+        Gap()
+    }
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     when {
-        fit.stages -> { Gap(); StageRows(m.stages, f) }
-        fit.bar -> { Gap(); StageBar(m, SleepLayout.BAR_DP, f) }
+        fit.stages -> { Flex(); StageRows(m.stages, f) }
+        fit.bar -> { Flex(); StageBar(m, SleepLayout.BAR_DP, f) }
     }
-    Edge(spread, f)
 }
 
 /**
@@ -166,7 +155,7 @@ private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
  * words saying so in its place.
  */
 @Composable
-private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Float, density: Float) {
+private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Float, density: Float, attention: String? = null) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         val score = m.score
         if (row.dot > 0f && score != null) {
@@ -176,6 +165,9 @@ private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Fl
                 Text(it, style = WidgetType.word, maxLines = 1)
             }
             Spacer(GlanceModifier.defaultWeight())
+        } else if (attention != null && score == null) {
+            // A Small with no night says what the strap needs, as the status button's words, where the top row has no room.
+            AttentionText(attention)
         } else row.word?.let {
             Text(it, style = WidgetType.word, maxLines = row.wordLines, modifier = GlanceModifier.defaultWeight())
         }

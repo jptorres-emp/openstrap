@@ -48,7 +48,7 @@
     <string name="day_pair_found">Found a strap nearby. Pick it to pair.</string>
     <string name="day_pair_connecting">Connecting to your strap. Keep it close.</string>
     <string name="day_pair_connected">Connected. The first sync starts now.</string>
-    <string name="day_pair_failed">Couldn\'t connect yet. Keep the strap on its charger, near the phone.</string>
+    <string name="day_pair_failed">Couldn\'t connect. If the Zepp app is open it may be holding the strap, so close it in your phone\'s app settings, then pair again.</string>
     <!-- The strap refused the pairing. The Strap page is where pairing starts. -->
     <string name="day_pair_key_rejected">The strap refused to pair. Open the Strap page to pair again.</string>
 
@@ -97,9 +97,12 @@
     <string name="day_data_on_strap">Your data is still on the strap.</string>
 
     <!-- The strap chip in the header: no strap paired. One or two words. -->
-    <string name="day_chip_not_paired">Not paired</string>
+    <string name="day_chip_not_paired">No strap</string>
     <!-- Read out by a screen reader for the chip. -->
     <string name="day_chip_not_paired_description">No strap paired</string>
+    <!-- The chip while connecting, and when connected before the battery is known. One word. -->
+    <string name="day_chip_connecting">Connecting</string>
+    <string name="day_chip_connected">Connected</string>
     <!-- Read out for the chip while connecting. -->
     <string name="day_chip_connecting_description">Connecting to the strap</string>
     <!-- Read out for the chip when the strap is gone: "Just now", "18 min ago", "3 h ago" or "2 days ago". -->

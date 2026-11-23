@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="workout_glance_unit_km">km</string>
     <string name="workout_glance_unit_bpm">bpm</string>
     <string name="workout_glance_unit_in_set">本组用时</string>
     <string name="workout_glance_unit_left">剩余</string>
@@ -11,11 +10,13 @@
     <string name="workout_glance_unit_s_left">剩余秒数</string>
     <string name="workout_glance_unit_s_rest">休息秒数</string>
     <string name="workout_glance_figure_pace">配速 /km</string>
-    <string name="workout_glance_figure_bpm_zone">bpm，%1$d 区</string>
+    <string name="workout_glance_figure_pace_mi">配速 /英里</string>
     <string name="workout_glance_figure_bpm">bpm</string>
     <string name="workout_glance_figure_active_kcal">活动千卡</string>
     <string name="workout_glance_figure_km">km</string>
+    <string name="workout_glance_figure_mi">英里</string>
     <string name="workout_glance_figure_km_from_steps">步数估算 km</string>
+    <string name="workout_glance_figure_mi_from_steps">步数估算英里</string>
     <string name="workout_glance_figure_average_bpm">平均 bpm</string>
     <string name="workout_glance_figure_effort">强度</string>
     <string name="workout_glance_effort_of_5">%1$d / 5</string>
@@ -77,6 +78,7 @@
     </plurals>
     <string name="workout_glance_join">%1$s，%2$s</string>
     <string name="workout_glance_fastest_was">目前最快为第 %1$d 公里</string>
+    <string name="workout_glance_fastest_was_mile">目前最快为第 %1$d 英里</string>
     <string name="workout_glance_fastest_this">目前最快的一公里</string>
     <string name="workout_glance_split_average">平均 %1$d bpm</string>
     <string name="workout_glance_target">目标 %1$s</string>
@@ -88,5 +90,4 @@
     <string name="workout_glance_under_a_minute">剩余不足 1 分钟</string>
     <string name="workout_glance_kcal_to_go">还剩 %1$d kcal</string>
     <string name="workout_glance_to_go">还差 %1$s</string>
-    <string name="workout_glance_meters">%1$d m</string>
 </resources>

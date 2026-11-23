@@ -27,7 +27,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +47,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -121,7 +121,8 @@ import org.openstrap.app.update.UpdateState
 
 /**
  * The line under the strap's name on the Strap page: what it's doing and when it was last heard from ("Connected.
- * Synced 2 min ago", "Last seen 18 min ago"). [lastSeen] and [now] are epoch seconds.
+ * Synced 2 min ago", "Not connected, last seen 18 min ago", "Can't connect, last seen 18 min ago"). [lastSeen] and [now]
+ * are epoch seconds.
  */
 internal fun strapStateLine(
     connection: ConnectionState,
@@ -144,8 +145,11 @@ internal fun strapStateLine(
     }
     ConnectionState.BluetoothOff -> strings.get(R.string.you_strap_state_bluetooth_off)
     ConnectionState.Connecting, ConnectionState.Authenticating -> strings.get(R.string.you_strap_state_connecting)
-    is ConnectionState.Failed ->
-        strings.get(if (connection.keyRejected) R.string.you_strap_state_key_rejected else R.string.you_strap_state_cant_connect)
+    is ConnectionState.Failed -> when {
+        connection.keyRejected -> strings.get(R.string.you_strap_state_key_rejected)
+        lastSeen != null -> strings.format(R.string.you_strap_state_cant_connect_seen, agoText(now - lastSeen).lowercase())
+        else -> strings.get(R.string.you_strap_state_cant_connect)
+    }
     ConnectionState.NotPaired -> strings.get(R.string.you_strap_state_not_paired)
     ConnectionState.Disconnected ->
         lastSeen?.let { strings.format(R.string.you_strap_state_last_seen, agoText(now - it).lowercase()) }
@@ -281,15 +285,17 @@ fun DeviceScreen(
                 HaloNote(rejected.reason, variant = NoteVariant.Footnote)
                 HaloNote(stringResource(R.string.you_strap_key_rejected_note), variant = NoteVariant.Footnote)
             }
-        } else if (connection is ConnectionState.Disconnected) item {
+        } else if (connection is ConnectionState.Disconnected || failed != null) item {
             HaloNote(stringResource(R.string.you_strap_away_note), variant = NoteVariant.Footnote)
         }
         val connected = connection is ConnectionState.Connected
+        // "As last read" only says something where a row has a value read from the strap.
+        val anyRead = alarmsSummary(alarms) != null || healthAlertsSummary(alarms) != null
         val firmware = info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware
         if (!keyRejected) item {
             PageGroup(
                 heading = stringResource(R.string.you_strap_group_on_strap),
-                footnote = if (connected) null else stringResource(R.string.you_strap_last_read),
+                footnote = if (connected || !anyRead) null else stringResource(R.string.you_strap_last_read),
             ) {
                 NavRow(
                     stringResource(R.string.you_strap_row_alarms), alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false,
@@ -305,7 +311,7 @@ fun DeviceScreen(
                 )
                 SwitchRow(
                     stringResource(R.string.you_strap_row_off_body), stringResource(R.string.you_strap_row_off_body_note),
-                    wearReminder, vm::setWearReminder, icon = AppIcons.HandPalm,
+                    wearReminder, vm::setWearReminder,
                 )
                 KeepConnectedRow(vm, keepConnected, device.address)
             }
@@ -657,14 +663,15 @@ internal val StrapGlow = org.openstrap.app.ui.glow.draw.heroStyle(org.openstrap.
 fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
+    val label = stringResource(R.string.you_diagnostics_clip_label)
+    val copy = {
+        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(label, lines.joinToString("\n")))
+    }
     HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        // Copy is an icon in the header so the title keeps its room at every font size; the labelled button is under the log.
         item {
-            val label = stringResource(R.string.you_diagnostics_clip_label)
             HaloPageHeader(stringResource(R.string.you_diagnostics_title), onBack) {
-                HaloButton(stringResource(R.string.you_diagnostics_copy), {
-                    context.getSystemService(ClipboardManager::class.java)
-                        .setPrimaryClip(ClipData.newPlainText(label, lines.joinToString("\n")))
-                }, Modifier.height(40.dp), icon = AppIcons.Copy)
+                HaloIconButton(AppIcons.Copy, stringResource(R.string.you_diagnostics_copy), copy)
             }
         }
         item {
@@ -676,11 +683,11 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                         color = GlowType.noteColor, style = GlowType.secondary,
                     )
                 }
-                // The log is a black block in a panel, in monospace at 11.5 (the board's).
+                // The log is a black block in a panel, in monospace at 11.5 (the board's). Long lines wrap, so none runs past the edge.
                 HaloCard {
                     Box(
                         Modifier.fillMaxWidth().heightIn(max = 520.dp).clip(GlowLayout.TileShape).background(Color.Black)
-                            .verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(Space.S12),
+                            .verticalScroll(rememberScrollState()).padding(Space.S12),
                     ) {
                         Text(
                             if (lines.isEmpty()) stringResource(R.string.you_diagnostics_empty) else lines.joinToString("\n"),
@@ -689,6 +696,10 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                         )
                     }
                 }
+                HaloButton(
+                    stringResource(R.string.you_diagnostics_copy), copy, Modifier.fillMaxWidth().minimumInteractiveComponentSize(),
+                    icon = AppIcons.Copy,
+                )
                 HaloNote(stringResource(R.string.you_diagnostics_note), variant = NoteVariant.Footnote)
             }
         }

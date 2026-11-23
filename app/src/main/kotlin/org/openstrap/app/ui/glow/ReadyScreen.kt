@@ -213,13 +213,13 @@ fun GlowWorkoutReadyScreen(
                     onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
                 ) { name, reps -> onSaveIntervals(name, reps.code) }
                 Workouts.Family.Strength -> StrengthGoal(
-                    type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
+                    sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
                     nowMillis, last, look,
                 )
-                Workouts.Family.Intervals -> HiitGoal(type, rounds, { structureCode = it?.code }, settings.structure, last, look)
-                Workouts.Family.MindBody -> MindGoal(type, draft, { draft = it }, nowMillis, last, look)
+                Workouts.Family.Intervals -> HiitGoal(rounds, { structureCode = it?.code }, settings.structure, last, look)
+                Workouts.Family.MindBody -> MindGoal(draft, { draft = it }, nowMillis, last, look)
                 Workouts.Family.Games -> GamesGoal(
-                    type, rounds as? Structure.Periods, { structureCode = it?.code }, settings.structure, last, look,
+                    rounds as? Structure.Periods, { structureCode = it?.code }, settings.structure, last, look,
                 )
             }
             // With no goal the hero is last time already.

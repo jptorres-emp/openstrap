@@ -61,7 +61,7 @@
     <!-- A value against your usual range: below it. -->
     <string name="core_today_normal_below">Below your normal</string>
     <!-- A value against your usual range: within it. -->
-    <string name="core_today_normal_usual">Usual</string>
+    <string name="core_today_normal_usual">Your normal</string>
 
     <!-- What a Recovery score means for the day, when overnight signals are off your normal. -->
     <string name="core_today_meaning_alert">Some overnight signals are off your normal. An easy day may help.</string>
@@ -122,12 +122,6 @@
 
     <!-- The Energy hero before the first night. -->
     <string name="core_today_energy_first_night">Energy starts after your first night. Sleep is what fills it.</string>
-    <!-- The Energy hero before noon: how much Energy the morning used. A sentence follows. -->
-    <string name="core_today_energy_morning_drained">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>.</string>
-    <!-- The Energy hero after noon: how much Energy the day used so far. A sentence follows. -->
-    <string name="core_today_energy_day_drained">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far.</string>
-    <!-- The Energy hero when nothing was used since waking. A sentence follows. -->
-    <string name="core_today_energy_nothing_drained">Nothing drained since waking.</string>
     <!-- The Energy hero with 50 or more left. -->
     <string name="core_today_energy_plenty">Plenty left for this evening.</string>
     <!-- The Energy hero with 25 to 49 left. -->
@@ -136,7 +130,7 @@
     <string name="core_today_energy_low">Running low. An early night helps.</string>
 
     <!-- The workout time hero's title before there is a Recovery score. -->
-    <string name="core_today_window_title_usual">Your usual workout time</string>
+    <string name="core_today_window_title_usual">Workout time</string>
     <!-- The workout time hero's title with a good Recovery score. -->
     <string name="core_today_window_title_ready">Ready for effort</string>
     <!-- The workout time hero's title with a middling Recovery score. -->
@@ -231,14 +225,16 @@
     <string name="core_today_list_and"><xliff:g id="first" example="a run, 13,860 steps">%1$s</xliff:g> and <xliff:g id="last" example="a Load above your usual">%2$s</xliff:g></string>
 
     <!-- The day's steps against the step goal, an item of the evening list: at or past it. Lower case. -->
-    <string name="core_today_goal_past">past your step goal</string>
+    <string name="core_today_goal_past">steps past your goal</string>
     <!-- The same, from 80% of the goal. -->
-    <string name="core_today_goal_close">close to your step goal</string>
+    <string name="core_today_goal_close">steps close to your goal</string>
     <!-- The same, from half the goal. -->
-    <string name="core_today_goal_short">short of your step goal</string>
+    <string name="core_today_goal_short">steps short of your goal</string>
     <!-- The same, under half the goal. -->
-    <string name="core_today_goal_well_short">well short of your step goal</string>
+    <string name="core_today_goal_well_short">steps well short of your goal</string>
 
+    <!-- The evening hero when nothing at all was recorded today: no verdict on the day. -->
+    <string name="core_today_evening_nothing">Nothing recorded yet today.</string>
     <!-- Until your usual bedtime. The time is "1 h 10", "1 h" or "30 min". -->
     <string name="core_today_bedtime_in">Bedtime in <xliff:g id="duration" example="1 h 10">%1$s</xliff:g></string>
 
@@ -277,7 +273,7 @@
     <!-- The line under Load today's number, before the evening. -->
     <string name="core_today_load_line_so_far">Load so far today</string>
     <!-- A small card's word for Load before there is a usual Load. One word. -->
-    <string name="core_today_load_word_learning">Learning</string>
+    <string name="core_today_load_word_learning">Learning usual</string>
 
     <!-- Under Your week before there is a week to compare with. The day is the week's first, "Monday" or "Sunday". -->
     <string name="core_today_week_first">Week-on-week comparisons start next <xliff:g id="weekday" example="Monday">%1$s</xliff:g>.</string>
@@ -303,4 +299,46 @@
     <string name="core_today_heart_average_from"><xliff:g id="minutes" example="10">%1$d</xliff:g> min average from <xliff:g id="time" example="20:52">%2$s</xliff:g></string>
     <!-- The heart rate card's line before any reading. Short. -->
     <string name="core_today_heart_waiting">Waiting for the strap</string>
+    <!-- The night hero's first sentence when nothing was recorded today. -->
+    <string name="core_today_night_wind_down">Time to wind down.</string>
+    <!-- The night hero: a wind-down line, then the day in a sentence ("A steady day. A run and steps past your goal."). -->
+    <!-- The night hero after the day: one idea to a sentence, the day's list as in the evening's. -->
+    <string name="core_today_night_full">Time to wind down after a full day. <xliff:g id="list" example="A run and steps past your goal">%1$s</xliff:g>.</string>
+    <string name="core_today_night_quiet">Time to wind down after a quiet day. <xliff:g id="list" example="2,100 steps">%1$s</xliff:g>.</string>
+    <string name="core_today_night_steady">Time to wind down after a steady day. <xliff:g id="list" example="A workout and 6,000 steps">%1$s</xliff:g>.</string>
+    <!-- The workout window hero's sentence before a first night, when there is no Recovery or Energy to say. -->
+    <string name="core_today_window_first_night">Recovery and Energy start after your first night.</string>
+
+    <!-- The Energy hero's two sentences as one string each: what the morning or the day drained, then what is left. -->
+    <string name="core_today_energy_morning_plenty">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Plenty left for this evening.</string>
+    <string name="core_today_energy_morning_enough">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Enough left for an easy evening.</string>
+    <string name="core_today_energy_morning_low">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Running low. An early night helps.</string>
+    <string name="core_today_energy_day_plenty">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Plenty left for this evening.</string>
+    <string name="core_today_energy_day_enough">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Enough left for an easy evening.</string>
+    <string name="core_today_energy_day_low">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Running low. An early night helps.</string>
+    <string name="core_today_energy_nothing_plenty">Nothing drained since waking. Plenty left for this evening.</string>
+    <string name="core_today_energy_nothing_enough">Nothing drained since waking. Enough left for an easy evening.</string>
+    <string name="core_today_energy_nothing_low">Nothing drained since waking. Running low. An early night helps.</string>
+    <!-- The workout time hero as one string each: what Recovery says about effort, then Energy left. The number is Energy. -->
+    <string name="core_today_window_say_ready_plenty">Recovered and ready for effort. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_ready_enough">Recovered and ready for effort. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_ready_low">Recovered and ready for effort. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <string name="core_today_window_say_steady_plenty">Fine for a steady session. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_steady_enough">Fine for a steady session. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_steady_low">Fine for a steady session. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <string name="core_today_window_say_easy_plenty">An easy session suits today. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_easy_enough">An easy session suits today. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_easy_low">An easy session suits today. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <!-- What the wearer usually does around now, as a verb, for the sentences below. -->
+    <string name="core_today_window_verb_run">run</string>
+    <string name="core_today_window_verb_walk">walk</string>
+    <string name="core_today_window_verb_ride">ride</string>
+    <string name="core_today_window_verb_swim">swim</string>
+    <string name="core_today_window_verb_hike">hike</string>
+    <string name="core_today_window_verb_row">row</string>
+    <string name="core_today_window_verb_workout">work out</string>
+    <!-- The workout time hero when a usual sport and Energy are both known: one sentence of what you usually do, then Energy left. The first is a verb above, the number is Energy. -->
+    <string name="core_today_window_usually_energy_plenty">You usually %1$s around now. Energy is %2$d, plenty left.</string>
+    <string name="core_today_window_usually_energy_enough">You usually %1$s around now. Energy is %2$d, enough for something easy.</string>
+    <string name="core_today_window_usually_energy_low">You usually %1$s around now. Energy is %2$d, running low.</string>
 </resources>

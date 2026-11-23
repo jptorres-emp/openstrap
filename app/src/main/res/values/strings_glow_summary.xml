@@ -12,8 +12,6 @@
 
     <!-- Unit beside a workout's length in the hero's dots when it was under a minute: seconds. Very short. -->
     <string name="glow_summary_unit_s">s</string>
-    <!-- Unit beside a distance under a kilometre in the hero's dots: metres. Very short. -->
-    <string name="glow_summary_unit_m">m</string>
     <!-- Unit beside an indoor workout's average heart rate in the hero's dots. Short. -->
     <string name="glow_summary_unit_avg_bpm">avg bpm</string>
     <!-- Unit beside the kilograms a strength workout lifted in all, in the hero's dots. Short. -->
@@ -85,7 +83,7 @@
     <!-- Title of the card and the list with each set of a strength workout. One word. -->
     <string name="glow_summary_sets_title">Sets</string>
     <!-- Beside the sets card's title: each bar is the set's peak heart rate. Short. -->
-    <string name="glow_summary_peak_heart_rate">Peak heart rate</string>
+    <string name="glow_summary_peak_heart_rate">Peak bpm</string>
     <!-- A set's peak heart rate on its row, in a narrow column. -->
 
     <!-- Title of the cards with the time in each heart rate zone. -->
@@ -127,7 +125,7 @@
     <!-- Spoken name of the (i) button on the Load card, for screen readers. -->
     <string name="glow_summary_load_about">About Load and training effect</string>
     <!-- On the Load card when the workout had too little heart rate for a Load. -->
-    <string name="glow_summary_load_none">Not enough heart rate to calculate Load.</string>
+    <string name="glow_summary_load_none">There is not enough heart rate to calculate Load.</string>
 
     <!-- Title of the list of each kilometre's time. One word. -->
     <string name="glow_summary_splits">Splits</string>
@@ -169,6 +167,8 @@
     <!-- Beside the sets card's exercise name: the kilograms lifted in it, as "2,620 kg". -->
     <string name="glow_summary_exercise_total"><xliff:g id="kg" example="2,620">%1$s</xliff:g> kg</string>
     <!-- Beside the rest card's title: the average rest between sets, as "Average 1:38". -->
+    <!-- The Rest card's line when rest ended on the clock, with no heart rate level to report on. -->
+    <string name="glow_summary_rest_on_time">Rest ended when the time was up.</string>
     <string name="glow_summary_rest_average">Average <xliff:g id="time" example="1:38">%1$s</xliff:g></string>
     <!-- Beside the recovery title on a round card: where in the round it is read. Short. -->
     <string name="glow_summary_in_each_rest">In each rest</string>
@@ -185,8 +185,28 @@
     <string name="glow_summary_route_zones">Route coloured by heart zone</string>
     <!-- Beside the Splits title on a run's card. Short. -->
     <string name="glow_summary_splits_note">Pace per km</string>
+    <!-- Beside the Splits title, in miles. -->
+    <string name="glow_summary_splits_note_mi">Pace per mile</string>
     <!-- Under the round columns: what the rounds were set up as, as "20 s work, 10 s rest". -->
     <string name="glow_summary_work_rest"><xliff:g id="work" example="20">%1$d</xliff:g> s work, <xliff:g id="rest" example="10">%2$d</xliff:g> s rest</string>
     <!-- Beside a game's halves title: each bar is the period's average heart rate. Short. -->
     <string name="glow_summary_period_note">Average bpm</string>
+    <!-- The route map page (boards HaloRouteMap to HaloRouteMapNotOnRoads). -->
+    <string name="glow_route_map_open">Open the route map</string>
+    <string name="glow_route_map_fit">Fit route</string>
+    <string name="glow_route_map_gpx">GPX</string>
+    <string name="glow_route_map_gpx_failed">Couldn\'t write the route file</string>
+    <string name="glow_route_map_pick_hint">Tap one to show it</string>
+    <string name="glow_route_map_unpick_hint">Tap it again to show the whole route</string>
+    <string name="glow_route_map_split_in"><xliff:g id="split" example="Km 3">%1$s</xliff:g> in <xliff:g id="time" example="6:02">%2$s</xliff:g></string>
+    <string name="glow_route_map_split_heart"><xliff:g id="bpm" example="151">%1$d</xliff:g> bpm, <xliff:g id="zone" example="Zone 3">%2$s</xliff:g></string>
+    <string name="glow_map_credit">© OpenStreetMap</string>
+    <string name="glow_route_map_line">Line</string>
+    <string name="glow_route_map_roads">Roads</string>
+    <string name="glow_route_map_gps">GPS</string>
+    <string name="glow_route_map_note_roads">Drawn along the streets you took. Distance and pace stay as recorded.</string>
+    <string name="glow_route_map_note_not_on_roads">Most of this route isn\'t on mapped roads, so it\'s drawn as recorded.</string>
+    <string name="glow_route_map_note_offline">The roads couldn\'t be loaded, so it\'s drawn as recorded.</string>
+    <string name="glow_route_map_note_matching">Matching the route to the roads</string>
+    <string name="glow_route_map_note_gps">Drawn as GPS recorded it.</string>
 </resources>

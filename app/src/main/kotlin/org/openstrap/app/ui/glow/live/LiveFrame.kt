@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -38,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -163,13 +163,11 @@ internal fun LiveFrame(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BackHandler(onBack = controls.onMinimize)
-    // The screens built for each sport label their buttons; the older one says to hold the square under them.
-    val labelled = time != null
     val landscape = LocalLiveLandscape.current
     // On its side the screen keeps a wider column than a page's, so the content and the controls fit side by side.
     CompositionLocalProvider(LocalPageColumn provides if (landscape) GlowLayout.MaxContentWidth else LocalPageColumn.current) {
         HaloPageColumn(contentPadding, scroll = false) {
-            LiveTopBar(r, connected, controls, title, time, status, battery, labelled, quiet)
+            LiveTopBar(r, connected, controls, title, time, status, battery, quiet)
             if (landscape) {
                 LandscapePanes(
                     r, connected, controls, bottomRoom != null, paused,
@@ -285,9 +283,9 @@ private fun ColumnScope.FrameControls(
 ) {
     // One controls row on every screen, paused too: Resume takes Pause's place as the white tap (board HaloLivePaused).
     if (quiet && tapHint && !r.paused) ControlsHint(stringResource(R.string.workout_live_tap_to_light), alpha = 1f)
-    ControlsRow(r, controls, lap, true, Modifier.align(Alignment.CenterHorizontally), pauseWhite)
-    // A little room under the controls, so they sit up off the screen's edge.
-    Spacer(Modifier.height(Space.S8))
+    // 8 under the row on top of the page's 16, so the row stands 24 from the bottom, where [LiveBottomBar] puts it: a
+    // padding rather than a spacer, which the page's gap would push a further 12.
+    ControlsRow(r, controls, lap, true, Modifier.align(Alignment.CenterHorizontally).padding(bottom = Space.S8), pauseWhite)
 }
 
 /** A line under the controls saying how to use them, centred. Quieter on the dimmed mind screen ([alpha]). */
@@ -319,6 +317,7 @@ internal fun ControlsRow(
             variant = if (white) HaloIconVariant.Primary else HaloIconVariant.Control, size = HaloIconSize.Pause,
         )
         Spacer(Modifier.weight(1f))
+        // The label may be wider than the button at a large font: it centres on it and runs over the gutter, never cut.
         Box(Modifier.width(72.dp), contentAlignment = Alignment.TopCenter) {
             Labelled(stringResource(R.string.workout_live_hold_to_end), labelled) { HoldToEnd(controls.onEnd) }
         }
@@ -331,7 +330,10 @@ private fun Labelled(label: String, show: Boolean, button: @Composable () -> Uni
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         // The side buttons are 60 tall, centred on Pause's 88 so the row reads as one line.
         Box(Modifier.height(88.dp), contentAlignment = Alignment.Center) { button() }
-        if (show) Text(label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
+        if (show) Text(
+            label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false,
+            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally, unbounded = true),
+        )
     }
 }
 
@@ -356,9 +358,9 @@ private val HintInk = Ink.Disabled
 /** The total time under the sport's name, read in its own scope so only it is composed again each second. */
 @Composable
 private fun TotalTime(time: () -> Long, paused: Boolean) {
-    val suffix = if (paused) ", " + stringResource(R.string.workout_live_status_paused).lowercase() else ""
+    val clock = workoutClock(time())
     Text(
-        workoutClock(time()) + suffix, color = GlowType.noteColor,
+        if (paused) stringResource(R.string.workout_live_total_paused, clock) else clock, color = GlowType.noteColor,
         style = GlowType.secondary.copy(fontFeatureSettings = "tnum"), maxLines = 1,
     )
 }
@@ -370,9 +372,9 @@ private fun TotalTime(time: () -> Long, paused: Boolean) {
  */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-private fun LiveTopBar(
+internal fun LiveTopBar(
     r: WorkoutState.Recording, connected: Boolean, controls: LiveControls, title: String?, time: (() -> Long)?,
-    status: List<Pair<String, Color>>, battery: Int?, labelled: Boolean, quiet: Boolean,
+    status: List<Pair<String, Color>>, battery: Int?, quiet: Boolean,
 ) {
     val color = liveColor(r)
     HaloPageHeader(
@@ -396,7 +398,7 @@ private fun LiveTopBar(
             if (quiet) return@Column
             val strap = when {
                 !connected -> WorkoutWords.STRAP_GONE
-                battery != null && labelled -> stringResource(R.string.workout_live_status_strap_battery, battery)
+                battery != null -> stringResource(R.string.workout_live_status_strap_battery, battery)
                 else -> stringResource(R.string.workout_live_status_strap)
             }
             Text(strap, color = if (connected) GlowType.noteColor else TrendBad, style = GlowType.noteSmall, maxLines = 1)
@@ -445,7 +447,7 @@ internal fun LiveBottomBar(
         Column(
             Modifier.fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())
                 .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
-                .padding(start = side, end = side, bottom = Space.S20),
+                .padding(start = side, end = side, bottom = Space.S24),
             verticalArrangement = Arrangement.spacedBy(Space.S12),
             content = items,
         )
@@ -460,6 +462,7 @@ internal fun LiveBottomBar(
 internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelect: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         repeat(count) { i ->
+            val described = stringResource(R.string.workout_live_view_dot, i + 1, count)
             Box(
                 // 48 dp square to tap, laid out as tall as before so the live screens keep their height: the 10 dp above
                 // and below reach into the bottom bar's 14 dp gaps, never over the controls.
@@ -467,7 +470,9 @@ internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelec
                     val tap = measurable.measure(constraints)
                     val row = DotsRowHeight.roundToPx()
                     layout(tap.width, row) { tap.place(0, (row - tap.height) / 2) }
-                }.size(DotTap).clip(CircleShape).pressClickable({ onSelect(i) }, CircleShape),
+                }.size(DotTap).clip(CircleShape)
+                    .pressClickable({ onSelect(i) }, CircleShape, role = androidx.compose.ui.semantics.Role.Button)
+                    .semantics { contentDescription = described },
                 contentAlignment = Alignment.Center,
             ) {
                 val lit = if (position != null) (1f - kotlin.math.abs(position - i)).coerceIn(0f, 1f) else if (i == current) 1f else 0f
@@ -485,16 +490,12 @@ private val DotOff = Greys.Line
 private val DotTap = 48.dp
 private val DotsRowHeight = 28.dp
 
-/** A distance for a live figure: "4.02 km", the unit after the number. */
-@Composable
-@ReadOnlyComposable
-internal fun km(meters: Float): String =
-    Units.km(meters, Units.Precision.Workout) + " " + stringResource(R.string.workout_live_unit_km)
+/** A distance for a live figure: "4.02 km" or "2.50 mi", the unit after the number. */
+internal fun liveDistance(meters: Float): String =
+    Units.major(meters, Units.Precision.Workout) + " " + Units.majorUnit()
 
 /** A speed for a live figure: "24.5 km/h", or null while there is none. */
-@Composable
-@ReadOnlyComposable
-internal fun kmh(speed: String?): String? = speed?.let { it + " " + stringResource(R.string.workout_live_unit_kmh) }
+internal fun liveSpeed(speed: String?): String? = speed?.let { it + " " + Units.speedUnit() }
 
 /** End was tried and couldn't save: the workout records on, and Try again runs End again. */
 @Composable
@@ -595,11 +596,12 @@ internal fun nowTickingState(): androidx.compose.runtime.State<Long> = produceSt
 }
 
 /**
- * The live heart rate over the map (board HaloLiveMap): a dark see-through pill with the heart in its zone's [color],
- * the bpm in Display Light 18 and "bpm, Zone 3" in grey. Paused or without a reading, it says so.
+ * The live heart rate over the map (board HaloLiveMap): a dark see-through pill with a white heart, the bpm in Display
+ * Light 18, "bpm" in grey and the zone's chip (workout-rules.md, Colour). Paused or
+ * without a reading, it says so.
  */
 @Composable
-internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean, height: Dp, modifier: Modifier = Modifier) {
+internal fun LitHeartPill(bpm: Int?, maxHr: Int?, paused: Boolean, height: Dp, modifier: Modifier = Modifier) {
     val heartZones = LocalHeartZones.current
     Row(
         modifier.height(height).clip(CircleShape).background(OverMapSurface).padding(horizontal = Space.S16),
@@ -610,14 +612,11 @@ internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean,
             Text(WorkoutCopy.noHeartRate(paused), color = GlowType.noteColor, style = GlowType.secondary)
             return@Row
         }
-        Icon(AppIcons.Heartbeat, null, tint = color, modifier = Modifier.size(IconSize.GlyphS))
+        Icon(AppIcons.Heartbeat, null, tint = Color.White, modifier = Modifier.size(IconSize.GlyphS))
         Text("$bpm", color = Color.White, style = GlowType.figureInline)
         val zone = maxHr?.let { WorkoutRecorder.liveZone(bpm, it, heartZones) }
-        val unit = stringResource(R.string.workout_live_unit_bpm)
-        Text(
-            if (zone != null) "$unit, ${WorkoutCopy.zoneTitle(zone).first}" else unit,
-            color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
-        )
+        Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+        zone?.let { org.openstrap.app.ui.glow.ZoneChip(it) }
     }
 }
 

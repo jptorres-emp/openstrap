@@ -92,7 +92,7 @@ class TodayLooksTest {
         assertEquals(expected.keys, seen)
         // Last night is its stage bar as a card, words alone as a strip.
         assertEquals(look(Tier.Picture, Hue.Sleep, PictureKind.StageBar), today(Moment.Waking, TodayFacts()).first { it.card == LastNight }.look)
-        assertEquals(look(Tier.Picture, Hue.Sleep, PictureKind.StageBar, Shape.Small), today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look)
+        assertEquals(look(Tier.Glow, Hue.Sleep, PictureKind.StageBar, Shape.Small), today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look)
         assertEquals(look(Tier.Strip, Hue.Sleep, PictureKind.None, Shape.Strip), today(Moment.Evening, TodayFacts()).first { it.card == LastNight }.look)
         // No picture kind is drawn twice on one Today.
         for (m in Moment.entries) {
@@ -107,22 +107,40 @@ class TodayLooksTest {
         assertEquals(look(Tier.Glow, Hue.Charge, PictureKind.Curve), window[1].look)
         assertEquals(true, window[1].secondGlow)
         assertFalse(window[0].look!!.sameDesign(window[1].look))
-        // After a workout, in the evening and at night it is a plain picture card with its curve, and the hero is the only glow.
+        // After a workout, in the evening and at night it is a plain picture card with its curve. The hero is the only glow,
+        // except where Last night is a lit Small (after a workout), the one other lit card.
         for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
             val out = today(m, TodayFacts(workout = true))
             assertEquals("$m", Tier.Picture, out.first { it.card == TodayCard.Charge }.look?.tier)
-            assertEquals("$m", 1, out.count { it.look?.tier == Tier.Glow })
+            val lastNightLit = out.any { it.card == LastNight && it.look?.tier == Tier.Glow }
+            assertEquals("$m", if (lastNightLit) 2 else 1, out.count { it.look?.tier == Tier.Glow })
         }
+        assertEquals(2, today(Moment.After, TodayFacts(workout = true)).count { it.look?.tier == Tier.Glow })
         // After a run the hero is Recovery teal: red is for effort.
         assertEquals(Hue.Recovery, today(Moment.After, TodayFacts(workout = true)).first().look?.hue)
     }
 
-    @Test fun `no moment has more than one glow besides the hero, whatever is pinned`() {
+    @Test fun `no two lit cards touch under the hero, whatever is pinned, in every layout`() {
         val pinnable = TodayCard.entries.filter { it.pinnable }
-        for (m in Moment.entries) for (a in pinnable) for (b in pinnable.filter { it != a } + listOf(null)) {
-            val out = today(m, allFacts, TodayEdits(pinned = listOfNotNull(a, b)))
-            assertTrue("$m $a $b", out.count { it.card != Hero && it.look?.tier == Tier.Glow } <= 1)
+        for (m in Moment.entries) for (a in pinnable) for (b in pinnable.filter { it != a } + listOf(null)) for ((wide, across) in layouts) {
+            val out = today(m, allFacts, TodayEdits(pinned = listOfNotNull(a, b)), wide = wide, across = across)
+            assertEquals("$m $a $b wide=$wide", emptyList<Pair<Int, Int>>(), litClashes(out, wide, m, across))
         }
+    }
+
+    @Test fun `every moment's own plan has no two lit cards touching, and Last night is lit where it is a Small`() {
+        for (m in Moment.entries) for (facts in listOf(TodayFacts(), allFacts, TodayFacts(workout = true))) for ((wide, across) in layouts) {
+            val out = today(m, facts, wide = wide, across = across)
+            assertEquals("$m $facts wide=$wide", emptyList<Pair<Int, Int>>(), litClashes(out, wide, m, across))
+            out.filter { it.card == LoadToday }.forEach { assertEquals("$m Load is grey", Tier.Picture, it.look?.tier) }
+        }
+        assertEquals(Tier.Glow, today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look?.tier)
+        // Two lit cards that would touch: the later steps down to grey.
+        val lit = listOf(
+            TodaySlot(Hero, CardSize.Large), TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true, pinned = true),
+            TodaySlot(Recovery, CardSize.Small), TodaySlot(LastNight, CardSize.Small), TodaySlot(EditToday, CardSize.Strip),
+        )
+        assertTrue(litClashes(varyLooks(lit, Moment.During), false, Moment.During).isEmpty())
     }
 
     @Test fun `a Small is its own design, but two Smalls side by side are neighbours`() {

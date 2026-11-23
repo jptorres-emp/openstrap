@@ -6,6 +6,8 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.openstrap.app.ble.BleScanner
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.db.OpenStrapDatabase
@@ -37,6 +39,15 @@ class AppContainer(val app: Application) {
     )
     val database = OpenStrapDatabase.create(app)
     val settings = SettingsStore(app)
+
+    init {
+        // The profile sets the distance system as it is read. Reading it once here puts that in place before the first
+        // widget or notification is written, which would otherwise be in kilometres for a moment on an imperial phone.
+        // A small file, but this is the main thread at start, so the wait is capped: past it the collector below catches up.
+        kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(PROFILE_WAIT_MS) { settings.profile.first() } }
+        // Keeps the distance system on the profile's choice for the app's life, whether or not a screen is reading it.
+        appScope.launch { settings.profile.collect { } }
+    }
     val health = HealthRepository(database.healthDao())
     /** The max heart rate every zone goes by: `maxHeartRates.current` to follow it, `maxHeartRates.now()` to read it once. */
     val maxHeartRates = org.openstrap.app.data.MaxHeartRates(database.healthDao(), settings.profile)
@@ -59,6 +70,10 @@ class AppContainer(val app: Application) {
     )
     val updater = org.openstrap.app.update.AppUpdater(
         app, settings, recording = { workout.state.value is org.openstrap.app.device.WorkoutState.Recording }, scope = appScope,
+    )
+    /** A GPS workout's route along the roads, for the route card; the road tiles it reads are kept in the cache dir. */
+    val routeSnapper = org.openstrap.app.maps.RouteSnapper(
+        org.openstrap.app.maps.RoadTiles(java.io.File(app.cacheDir, "road-tiles"), "unstrap/${BuildConfig.VERSION_NAME}"),
     )
     /** Save a copy, Restore and automatic backup's zip. What a restore couldn't do goes to Diagnostics. */
     val backups: org.openstrap.app.data.BackupRepository =
@@ -87,6 +102,12 @@ class AppContainer(val app: Application) {
         location = { org.openstrap.app.device.locationAvailable(app) },
         placed = { org.openstrap.app.widget.placedWidgets(app) },
         bluetoothOff = { strap.connection.value == org.openstrap.app.device.ConnectionState.BluetoothOff },
+        liveHeartRate = {
+            strap.liveHeartRate.value.takeIf { strap.connection.value is org.openstrap.app.device.ConnectionState.Connected }
+        },
+        liveWorkout = {
+            org.openstrap.app.widget.LiveWorkoutFigures(workout.kcal.value?.active, workout.stats.value?.average, workout.stats.value?.max)
+        },
     )
 
     /** The moment as the Moment widget reads it, for the strap's notification: its name, lead and Today's sentence. */
@@ -131,3 +152,6 @@ class OpenStrapApp : Application(), androidx.work.Configuration.Provider {
         org.openstrap.app.device.WeeklyRecap.schedule(this)
     }
 }
+
+/** How long the start waits for the profile's distance system before going on without it. */
+private const val PROFILE_WAIT_MS = 300L

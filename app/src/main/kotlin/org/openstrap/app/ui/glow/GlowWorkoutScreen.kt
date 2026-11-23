@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.FamilySummary
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.Pace
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
@@ -139,7 +140,7 @@ fun GlowWorkoutDetailScreen(
                 // The summary's hero with the length in dots: a strap workout has no kind of its own to show.
                 val sentence = WorkoutDetailCopy.sentence(w.sportType, shown.activeSeconds, w.trainingLoad, usual, zones)
                 val title = stringResource(R.string.glow_summary_figure_time)
-                val hero = SummaryHero(dotClock(shown.activeSeconds), "", sentence = sentence, title = title)
+                val hero = SummaryHero(Units.length(shown.activeSeconds, Units.DOT_LOCALE), "", sentence = sentence, title = title)
                 SummaryHeroCard(
                     hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(shown.shownStart, shown.end),
                 )
@@ -196,7 +197,7 @@ private fun PastSummary(
     val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
     val usual = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
     val family = org.openstrap.app.ui.workout.FamilySummary.familyOf(w.sportType, summary.structure)
-    val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
+    val weekStarts = remember(workouts) { workoutDayStarts(workouts) }
     val trim = rememberWorkoutTrim(summary, onTrim, onUndoTrim)
     // Share opens the share screen in the page's place, as after the workout (board HaloPastWorkout); close comes back.
     var sharing by rememberSaveable { mutableStateOf(false) }
@@ -207,6 +208,11 @@ private fun PastSummary(
             summary, shareHero, emptyList(), emptyList(),
             androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues(), onClose = { sharing = false },
         )
+        return
+    }
+    val routeMap = routeMapModel()
+    if (routeMap?.isOpen(w.start) == true) {
+        RouteMapPage(summary, routeMap, androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues())
         return
     }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
@@ -231,10 +237,7 @@ private fun PastSummary(
                         ZoneSeconds(WorkoutRecorder.liveZoneSeconds(shown, a.maxHeartRate, heartZones).toList())
                     }
                     // The page's sentence ("An easy 40 min walk") where the kind has none of its own.
-                    val hero = summaryHero(family, summary, usual).let { h ->
-                        if (h.sentence != null) h
-                        else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line, h.pace, h.title)
-                    }
+                    val hero = pastHero(summaryHero(family, summary, usual), a, usual, zones)
                     SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
                     FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false, figures = hero.figures)
                     // Always there, even before any heart rate, since it holds Trim.
@@ -531,3 +534,12 @@ private fun ListSegment(first: Boolean, last: Boolean, content: @Composable Colu
         content = content,
     )
 }
+
+/** The past workout's hero, with the page's sentence ("An easy 40 min walk") where its kind has none of its own. */
+private fun pastHero(h: SummaryHero, a: WorkoutAnalysis, usual: Float?, zones: ZoneSeconds): SummaryHero =
+    if (h.sentence != null) h
+    else SummaryHero(
+        h.value, h.unit, h.figures,
+        WorkoutDetailCopy.sentence(a.workout.sportType, a.activeSeconds, a.workout.trainingLoad, usual, zones.toList()),
+        h.line, h.pace, h.title,
+    )

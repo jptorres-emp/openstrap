@@ -12,6 +12,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -35,16 +36,15 @@ import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.glow.ActivityDetailContext
 import org.openstrap.app.ui.glow.GlowHealthspanScreen
 import org.openstrap.app.ui.glow.GlowMetricDetailScreen
-import org.openstrap.app.ui.glow.GlowRecoveryScreen
 import org.openstrap.app.ui.glow.GlowScoreDetailScreen
-import org.openstrap.app.ui.glow.GlowSleepScreen
 import org.openstrap.app.ui.glow.GlowWorkoutDetailScreen
 import org.openstrap.app.ui.glow.GlowWorkoutsScreen
+import org.openstrap.app.ui.glow.DetailDay
+import org.openstrap.app.ui.glow.LocalDetailDay
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.SleepEditing
 import org.openstrap.app.ui.glow.WeekDetail
-import org.openstrap.app.ui.glow.dayName
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.OpenedWorkout
 import org.openstrap.app.ui.workout.WorkoutsViewModel
@@ -67,7 +67,6 @@ internal fun DetailHost(
     profile: UserProfile,
     padding: PaddingValues,
     onOpenProfile: () -> Unit,
-    seeHabitAge: () -> Unit,
 ) {
     val day = shown.day
     val pop: () -> Unit = { nav.pop(tab) }
@@ -75,21 +74,27 @@ internal fun DetailHost(
     val onSwitch: (Detail) -> Unit = { nav.replaceTop(tab, it) }
     val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
     val activity = shown.activity
-    when (detail) {
-        // A night signal's detail is always the night's, as its rows read it (SleepCopy.NIGHT_SIGNALS). Blood oxygen's
-        // is the night's only when the Sleep or Recovery tab opened it, so it comes with its own scope.
-        is Detail.OfMetric -> GlowMetricDetailScreen(
-            detail.metric, detail.night || detail.metric in SleepCopy.NIGHT_SIGNALS, day, histories.daily, live.bpm, live.canUse,
-            push, onSwitch, dayVm::select, padding, pop, recovery = shown.recovery,
-        )
-        is Detail.OfScore -> GlowScoreDetailScreen(
-            detail.score, day, shown.recovery, shown.strapScore, histories.daily,
+    // One day-change model for every detail: the pill follows the day picked at once, and the page dims while it still
+    // shows the last day's figures ([LocalDetailDay]).
+    val picked by dayVm.screen.collectAsStateWithLifecycle()
+    val scoreDetail: @Composable (Score) -> Unit = { score ->
+        GlowScoreDetailScreen(
+            score, day, shown.recovery, shown.strapScore, histories.daily,
             onOpen = push, onSwitch = onSwitch, onSelectDay = dayVm::select,
             contentPadding = padding, onBack = pop,
             workouts = workouts, activity = activity, onEditProfile = onOpenProfile,
             sleepEditing = SleepEditing(dayVm::setSleepTimes, dayVm::deleteSleep, dayVm::restoreSleep),
             recoveryFailure = shown.recoveryFailure,
         )
+    }
+    CompositionLocalProvider(LocalDetailDay provides DetailDay(picked.date, shown.pending)) { when (detail) {
+        // A night signal's detail is always the night's, as its rows read it (SleepCopy.NIGHT_SIGNALS). Blood oxygen's
+        // is the night's only when the Sleep or Recovery tab opened it, so it comes with its own scope.
+        is Detail.OfMetric -> GlowMetricDetailScreen(
+            detail.metric, detail.night || detail.metric in SleepCopy.NIGHT_SIGNALS, day, histories.daily, live.bpm, live.canUse,
+            push, onSwitch, dayVm::select, padding, pop, recovery = shown.recovery,
+        )
+        is Detail.OfScore -> scoreDetail(detail.score)
         Detail.Week -> WeekDetail(
             ActivityDetailContext(
                 day, shown.recovery, workouts, activity, histories.daily, onOpen = push, onSwitch = {},
@@ -113,27 +118,10 @@ internal fun DetailHost(
         }
         Detail.AllWorkouts -> GlowWorkoutsScreen(workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop)
         Detail.Healthspan -> GlowHealthspanScreen(shown.healthspan, padding, onBack = pop)
-        // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
-        Detail.Recovery -> {
-            BackHandler(onBack = pop)
-            GlowRecoveryScreen(
-                day, shown.recovery,
-                header = { HaloPageHeader(stringResource(R.string.day_tab_recovery), pop, subtitle = dayName(day.date)) },
-                contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it, night = it in SleepCopy.NIGHT_FIGURES)) },
-                onOpenScore = { push(Detail.OfScore(it)) }, strapScore = shown.strapScore,
-                healthspan = shown.healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = onOpenProfile,
-                recoveryFailure = shown.recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
-                wear = shown.wear, firstScore = shown.firstScore,
-            )
-        }
-        Detail.Sleep -> {
-            BackHandler(onBack = pop)
-            GlowSleepScreen(
-                day, header = { HaloPageHeader(stringResource(R.string.day_tab_sleep), pop, subtitle = dayName(day.date)) },
-                contentPadding = padding, onOpen = push, recovery = shown.recovery, onRestore = dayVm::restoreSleep,
-            )
-        }
-    }
+        // A card about Recovery or Sleep opens that score's detail page, on the same template as every detail, not the tab's cards.
+        Detail.Recovery -> scoreDetail(Score.Recovery)
+        Detail.Sleep -> scoreDetail(Score.Sleep)
+    } }
 }
 
 /**

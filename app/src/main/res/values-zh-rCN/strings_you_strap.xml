@@ -8,6 +8,7 @@
     <string name="you_strap_state_connecting">正在连接</string>
     <string name="you_strap_state_key_rejected">密钥被拒绝</string>
     <string name="you_strap_state_cant_connect">无法连接</string>
+    <string name="you_strap_state_cant_connect_seen">无法连接，上次连接 %1$s</string>
     <string name="you_strap_state_not_paired">未配对手环</string>
     <string name="you_strap_state_last_seen">未连接，上次连接于 %1$s</string>
     <string name="you_strap_state_not_connected">未连接</string>
@@ -43,7 +44,7 @@
     <string name="you_strap_row_forget">忽略此手环</string>
     <string name="you_strap_row_background">后台连接</string>
     <string name="you_strap_battery_settings_failed">无法打开本手机的电池设置。</string>
-    <string name="you_strap_retrying">仍在尝试。请让手环留在充电座上并靠近手机，同时关闭 Zepp 应用。</string>
+    <string name="you_strap_retrying">仍在自动尝试。点连接可立即重试。</string>
     <string name="you_strap_sync_stopped">同步已停止。%1$s</string>
     <string name="you_strap_sync_retry">%1$s 它会自动重试。</string>
     <string name="you_pair_title">配对你的 Helio Strap</string>

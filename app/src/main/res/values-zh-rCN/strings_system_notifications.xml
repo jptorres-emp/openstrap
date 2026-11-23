@@ -8,7 +8,7 @@
     <string name="system_channel_saved">运动已保存</string>
     <string name="system_channel_workout">运动</string>
     <string name="system_channel_wear">佩戴提醒</string>
-    <string name="system_channel_recap">每周小结</string>
+    <string name="system_channel_recap">你的一周</string>
     <string name="system_auto_detected_title">监测到%1$s，%2$s</string>
     <string name="system_auto_detected_text">手环已为你记录</string>
     <string name="system_alert_high_heart_rate_title">心率偏高</string>

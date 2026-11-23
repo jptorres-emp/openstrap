@@ -24,7 +24,7 @@ class DetailCopyTest {
 
     @Test fun `the status word says where a value sits against your normal`() {
         assertEquals("Above your normal", DetailCopy.statusWord(1))
-        assertEquals("Usual", DetailCopy.statusWord(0))
+        assertEquals("Your normal", DetailCopy.statusWord(0))
         assertEquals("Below your normal", DetailCopy.statusWord(-1))
         assertNull(DetailCopy.statusWord(null))
     }
@@ -123,8 +123,8 @@ class DetailCopyTest {
         // Stress has no unit: its longer ranges stay averages.
         assertEquals("Normal, latest at 14:05", DetailCopy.valueLabel(Metric.Stress, Range.Day, latest = Latest("14:05", level = StressLevel.Normal)))
         assertEquals("Average of the last 30 days", DetailCopy.valueLabel(Metric.Stress, Range.Month, latest = Latest("14:05", level = StressLevel.High)))
-        assertEquals("bpm resting", DetailCopy.valueLabel(Metric.RestingHr, Range.Day))
-        assertEquals("bpm resting, estimated", DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true))
+        assertEquals("bpm, last night", DetailCopy.valueLabel(Metric.RestingHr, Range.Day))
+        assertEquals("bpm, last night, estimated", DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true))
         assertEquals("steps a day, last 7 days", DetailCopy.valueLabel(Metric.Steps, Range.Week))
         assertEquals("ms, average of the last 30 days", DetailCopy.valueLabel(Metric.Hrv, Range.Month))
     }
@@ -170,5 +170,21 @@ class DetailCopyTest {
             DetailCopy.charge(1, 2, 1, true, false, 3), DetailCopy.learningNormal(1, true), DetailCopy.bandLabel(normal) { it.toString() },
         ) + Metric.entries.flatMap { m -> Range.entries.map { DetailCopy.valueLabel(m, it) } }
         lines.forEach { assertTrue(it, it.none { c -> c == '·' || c == ';' || c == '—' }) }
+    }
+
+    @Test fun `recovery's resting heart rate and sleep rows read the day's figures, the score keeps the night's`() {
+        val rhr = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.RestingHr, 60, org.openstrap.app.data.Recovery.Detail.RestingHr(47, 0f),
+        )
+        val sleep = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.Sleep, 83, org.openstrap.app.data.Recovery.Detail.Asleep(481),
+        )
+        val figures = DetailCopy.DriverFigures(restingBpm = 59, restingNormal = 59.4f, asleepSeconds = 477 * 60L)
+        assertEquals("59 bpm, your normal 59", DetailCopy.driverReading(rhr, figures))
+        assertEquals(0.5f, DetailCopy.driverPlace(rhr, figures), 0.03f)
+        assertTrue(DetailCopy.driverReading(sleep, figures)!!.contains("7 h 57"))
+        // Without a normal the reading stands alone; without figures it's the model's.
+        assertEquals("59 bpm", DetailCopy.driverReading(rhr, figures.copy(restingNormal = null)))
+        assertEquals("47 bpm, your normal 47", DetailCopy.driverReading(rhr))
     }
 }

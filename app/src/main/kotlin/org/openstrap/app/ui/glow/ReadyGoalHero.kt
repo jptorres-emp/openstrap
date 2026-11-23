@@ -85,7 +85,7 @@ class LastHero(val number: String, val unit: String?, val line: String?)
 internal fun readyLast(a: WorkoutAnalysis, today: LocalDate, zone: ZoneId, strings: Strings = Strings.app): ReadyLast? {
     val w = a.workout
     val family = Workouts.family(w.sportType)
-    val clock = Units.workoutClock(a.activeSeconds)
+    val clock = Units.length(a.activeSeconds)
     val time = clock to strings.get(R.string.glow_ready_last_time)
     val avg = w.averageHeartRate?.let { "$it" to strings.get(R.string.glow_ready_last_avg_bpm) }
     val peak = w.maxHeartRate?.let { "$it" to strings.get(R.string.glow_ready_last_peak_bpm) }
@@ -126,20 +126,23 @@ private fun lastHero(
     strings: Strings,
 ): LastHero = when {
     family == Workouts.Family.Distance && distance != null -> {
-        val km = distance >= METERS_PER_KM
+        val figure = Units.figure(distance, Units.Precision.Day, Units.DOT_LOCALE, strings)
         LastHero(
-            if (km) Units.km(distance, Units.Precision.Day, Units.DOT_LOCALE) else "${distance.toInt()}",
-            strings.get(if (km) R.string.workout_start_unit_km else R.string.workout_start_unit_m),
-            pace?.let { strings.format(R.string.ready_last_pace_line, clock, it) } ?: clock,
+            figure?.number.orEmpty(), figure?.unit,
+            pace?.let { strings.format(Units.res(R.string.ready_last_pace_line, R.string.ready_last_pace_line_mi), clock, it) } ?: clock,
         )
     }
     family == Workouts.Family.Strength && a.sets != null && a.sets > 0 -> LastHero(
         "${a.sets}", strings.plural(R.plurals.ready_hero_sets, a.sets), strings.format(R.string.ready_hero_in_all, clock),
     )
-    else -> LastHero(
-        "${(a.activeSeconds / READY_S_PER_MIN).coerceAtLeast(1)}", strings.get(R.string.workout_start_unit_min),
-        rest.joinToString(", ") { "${it.first} ${it.second.lowercase()}" }.ifEmpty { null },
-    )
+    else -> {
+        // Load keeps its capital, as it is written everywhere else.
+        val load = strings.get(R.string.glow_ready_last_load)
+        LastHero(
+            "${(a.activeSeconds / READY_S_PER_MIN).coerceAtLeast(1)}", strings.get(R.string.workout_start_unit_min),
+            rest.joinToString(", ") { "${it.first} ${if (it.second == load) it.second else it.second.lowercase()}" }.ifEmpty { null },
+        )
+    }
 }
 
 /** "Last time, Tue" over last time's figures, plain, no card (workout-rules.md, section 2). Nothing without [last]. */
@@ -177,4 +180,3 @@ internal fun rememberNowMillis(): androidx.compose.runtime.State<Long> = android
 private const val NOW_REFRESH_MS = 30_000L
 private const val MS_PER_S = 1000L
 internal const val READY_S_PER_MIN = 60L
-private const val METERS_PER_KM = 1000f

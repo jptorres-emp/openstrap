@@ -68,14 +68,13 @@ internal fun LiveIndoorScreen(
     // Board HaloLiveIndoor: the average and the peak heart rate and the active kcal. A treadmill or a sport counted in
     // steps has a distance, which takes the peak's place ("2.14 km" from steps, or metres under a kilometre).
     val distance = r.workout.distanceMeters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let { m ->
-        val shown = if (m >= Units.METERS_PER_KM) km(m)
-        else Units.count(m.toLong()) + " " + stringResource(R.string.workout_live_unit_m)
+        val shown = if (Units.isMajor(m)) liveDistance(m) else Units.minor(m) + " " + Units.minorUnit()
         shown to stringResource(
             if (r.workout.distanceFromSteps) R.string.workout_live_figure_from_steps else R.string.workout_live_figure_distance,
         )
     }
     val average = stats?.average?.toString() to stringResource(R.string.workout_live_figure_avg_bpm)
-    val activeKcal = kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal)
+    val activeKcal = kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null)
     val figures = if (distance != null) listOf(distance, average, activeKcal)
     else listOf(average, stats?.max?.toString() to stringResource(R.string.workout_live_figure_peak_bpm), activeKcal)
     LiveFrame(

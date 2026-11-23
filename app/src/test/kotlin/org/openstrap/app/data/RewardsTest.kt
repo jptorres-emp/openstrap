@@ -119,6 +119,15 @@ class RewardsTest {
     }
 
     @Test
+    fun aWorkoutUnderTheMinimumNeverSetsTheLongestBest() {
+        val tiny = workout("2026-10-27", 7, minutes = 1)
+        assertTrue(Rewards.bests(listOf(tiny), emptyList(), utc).none { it.kind == Rewards.Kind.LONGEST_WORKOUT })
+        val real = workout("2026-10-28", 7, minutes = 30)
+        val best = Rewards.bests(listOf(tiny, real), emptyList(), utc).single { it.kind == Rewards.Kind.LONGEST_WORKOUT }
+        assertEquals(real.start, best.workoutStart)
+    }
+
+    @Test
     fun aNewBestBeatsAnOldOneAndAFirstRecordIsNotOne() {
         fun lift(date: String, kg: Float) = workout(date, 7).let { w -> w.copy(sets = listOf(AppWorkoutSet(w.start, 0, w.start, w.start + 60, null, "Bench press", 10, kg))) }
         val first = lift("2026-10-20", 60f)

@@ -1,9 +1,11 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.Dp
@@ -12,13 +14,19 @@ import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.theme.FunnelDisplay
 import org.openstrap.app.ui.theme.FunnelSans
 import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.TypeScale
 
 /**
- * The type roles of the design system (spec 2.3): Funnel Display for display roles, Funnel Sans for the rest. Every
+ * The type roles of the design system (spec 2.3): Funnel Display for display roles, Funnel Sans for the rest. The
+ * roles the widgets share take their sizes from [TypeScale] (board HaloTypeScale). Every
  * text in the app should use one of these, so a role changes in one place. Colours are the caller's, except the
  * roles drawn dimmed, which name their alpha.
  */
 object GlowType {
+    /** A shared [TypeScale] token in [family]: [weight] is a CSS weight, [size] and [line] sp. */
+    private fun token(family: FontFamily, weight: Int, size: Float, line: Float) =
+        TextStyle(fontFamily = family, fontWeight = FontWeight(weight), fontSize = size.sp, lineHeight = line.sp)
+
     /**
      * The title in a page's top bar and in a sheet's header, centred (boards HaloProfile, HaloQuietHoursSheet,
      * HaloDetailSteps): Display 600, 17 on 22.
@@ -62,37 +70,43 @@ object GlowType {
      * Every card's title on every tier, and list titles (boards HaloRecovery, HaloDetailRecovery, HaloAllBadges): Sans
      * 600, 15 on 20. One style, so a lit card and the solid card beside it read as one family.
      */
-    val cardTitle = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp)
+    val cardTitle = token(FunnelSans, TypeScale.CARD_TITLE_WEIGHT, TypeScale.CARD_TITLE_SP, TypeScale.CARD_TITLE_LINE_SP)
 
     /** The title row of a hero card, a size up from [cardTitle] (boards HaloRecovery, HaloLiveRun, HaloReadyRun): Sans 600, 16 on 20. */
-    val heroTitle = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp)
+    val heroTitle = token(FunnelSans, TypeScale.HERO_TITLE_WEIGHT, TypeScale.HERO_TITLE_SP, TypeScale.HERO_TITLE_LINE_SP)
 
     /**
      * The sentence that leads a hero (board HaloRecovery, "A quiet morning. ..."): Display 300, 21 on 26.9, three lines
      * at most. Display against the title's Sans, so title and sentence don't run together.
      */
-    val sentence = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 21.sp, lineHeight = 26.9.sp)
+    val sentence = token(FunnelDisplay, TypeScale.SENTENCE_WEIGHT, TypeScale.SENTENCE_SP, TypeScale.SENTENCE_LINE_SP)
 
     /** The sentence under a detail's verdict (boards HaloDetailRecovery, HaloDetailSteps): Display 300, 19 on 25.7. */
     val detailSentence = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 19.sp, lineHeight = 25.7.sp)
 
     /** Row names, buttons, a sentence on an edge card, the word after a number: Sans 400, 15 on 20. */
-    val body = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp)
+    val body = token(FunnelSans, TypeScale.BODY_WEIGHT, TypeScale.BODY_SP, TypeScale.BODY_LINE_SP)
 
     /**
      * Section labels over a panel, status lines, notes (boards HaloProfile, HaloRecovery, HaloLiveRun): Sans 400, 13 on 18,
      * drawn in [Ink.Secondary] unless coloured. The boards' grey is [noteColor].
      */
-    val secondary = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
+    val secondary = token(FunnelSans, TypeScale.SECONDARY_WEIGHT, TypeScale.SECONDARY_SP, TypeScale.SECONDARY_LINE_SP).copy(fontFeatureSettings = "tnum")
 
     /** The grey of every note, label and axis on the boards: [Ink.Secondary]. */
     val noteColor = Ink.Secondary
+
+    /** [noteColor] on a grey card, the card's own [LitInk] on a lit one: what a note, label or unit takes in a component. */
+    val noteInk: Color @Composable @ReadOnlyComposable get() = LocalLitInk.current ?: noteColor
+
+    /** [footnoteColor] on a grey card, [LitInk] on a lit one. */
+    val footnoteInk: Color @Composable @ReadOnlyComposable get() = LocalLitInk.current ?: footnoteColor
 
     /** The dimmest grey on the boards, for footnotes and chevrons: [Ink.Tertiary]. */
     val footnoteColor = Ink.Tertiary
 
     /** A smaller note, and a badge's name and line (boards HaloRecovery, HaloAllBadges): Sans 400, 12 on 15.6. */
-    val noteSmall = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 15.6.sp)
+    val noteSmall = token(FunnelSans, TypeScale.NOTE_SMALL_WEIGHT, TypeScale.NOTE_SMALL_SP, TypeScale.NOTE_SMALL_LINE_SP).copy(fontFeatureSettings = "tnum")
 
     /** The small print at the foot of a page (board HaloProfile): Sans 400, 12 on 17.4, in [footnoteColor]. */
     val footnote = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.4.sp)
@@ -107,7 +121,7 @@ object GlowType {
     val buttonSmall = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp)
 
     /** The 36 high button's label (a pill beside content, Save in a row): Sans 600, 13 on 18. */
-    val buttonMini = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp)
+    val buttonMini = token(FunnelSans, TypeScale.BUTTON_MINI_WEIGHT, TypeScale.BUTTON_MINI_SP, TypeScale.BUTTON_MINI_LINE_SP)
 
     /** A chip's label (HaloComponents board): Sans 400, 14 on 18. */
     val chip = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 18.sp)
@@ -119,7 +133,7 @@ object GlowType {
      * Axes, times, tags (boards HaloLiveRun, HaloDetailRecovery): Sans 400, 11 on 14, tabular so times line up, drawn
      * in [Ink.Secondary].
      */
-    val caption = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp, fontFeatureSettings = "tnum")
+    val caption = token(FunnelSans, TypeScale.CAPTION_WEIGHT, TypeScale.CAPTION_SP, TypeScale.CAPTION_LINE_SP).copy(fontFeatureSettings = "tnum")
 
     /**
      * A list row's value, beside its [body] name (boards HaloProfile, HaloDetailRecovery): Sans 400, 15 on 20, tabular
@@ -149,7 +163,10 @@ object GlowType {
     val wheelNear = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 32.sp, lineHeight = 38.4.sp, fontFeatureSettings = "tnum")
 
     /** The chosen row of a time wheel: Display 300, 48 on 57.6, white. */
-    val wheelChosen = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 48.sp, lineHeight = 57.6.sp, fontFeatureSettings = "tnum")
+    val wheelChosen = token(FunnelDisplay, TypeScale.CLOCK_WEIGHT, TypeScale.CLOCK_SP, WHEEL_LINE_EM * TypeScale.CLOCK_SP).copy(fontFeatureSettings = "tnum")
+
+    /** A time wheel row's line, as a share of its size. */
+    private const val WHEEL_LINE_EM = 1.2f
 
     /** White for [wheelFar] text. */
     const val WHEEL_FAR_ALPHA = 0.18f

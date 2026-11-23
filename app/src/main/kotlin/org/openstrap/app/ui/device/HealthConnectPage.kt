@@ -68,7 +68,7 @@ fun HealthConnectPage(
             val now = System.currentTimeMillis() / 1000
             val line = healthConnectLine(auto, now, java.time.ZoneId.systemDefault(), availability = availability)
             PageGroup(footnote = if (caloriesMissing) stringResource(R.string.you_hc_calories_note) else null) {
-                SwitchRow(stringResource(R.string.you_hc_auto), line, auto.on, onAuto, divider = false, icon = AppIcons.Refresh04)
+                SwitchRow(stringResource(R.string.you_hc_auto), line, auto.on, onAuto, divider = false)
             }
         }
         if (caloriesMissing) item {

@@ -99,6 +99,8 @@ internal data class WeekDotsGeometry(val xs: List<Float>, val ys: List<Float?>, 
 
 /** The dots' radius as a share of the picture's height, and the latest's. */
 private const val DOT_R = 3.5f / 40f
+private const val KIT_DOT_DP = 4
+private const val KIT_TODAY_DP = 6
 private const val TODAY_R = 5f / 40f
 
 /**
@@ -169,7 +171,8 @@ fun WeekOfDots(values: List<Float?>, usual: ClosedFloatingPointRange<Float>?, in
             val y = g.ys[i] ?: return@forEachIndexed
             val inBand = usual == null || usual.holds(v!!)
             val alpha = if (i == last || !inBand) 1f else DIM_ALPHA
-            val r = (if (i == last) TODAY_R else DOT_R) * h
+            // Never under the chart kit's dot (4 dp, today's 6): a short picture would draw them a pixel wide.
+            val r = max((if (i == last) TODAY_R else DOT_R) * h, (if (i == last) KIT_TODAY_DP else KIT_DOT_DP).dp.toPx())
             drawCircle(ink.copy(alpha = alpha), r, Offset(g.xs[i] * w, y * h))
         }
     }
@@ -449,17 +452,21 @@ internal fun weekRingsGeometry(width: Float, height: Float, stroke: Float, count
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 fun WeekRings(shares: List<Float?>, ink: Color, size: PictureSize, modifier: Modifier = Modifier, today: Int = -1) {
-    Canvas(modifier) {
-        val stroke = (if (size == PictureSize.Small) 3.dp else 4.dp).toPx()
-        val g = weekRingsGeometry(this.size.width, this.size.height, stroke, shares.size)
-        val cy = this.size.height / 2
-        // Sixteen dots a ring, the share of them lit (HaloCharts, Your week).
-        val dotR = max(g.radius * 0.12f, 1.4.dp.toPx())
-        shares.forEachIndexed { i, s ->
-            val lit = if (s == null) 0 else (s.coerceIn(0f, 1f) * WEEK_RING_DOTS).roundToInt()
-            // Only today's ring is in colour; the days before it are light grey (board HaloTodayEvening, Your week).
-            dotRing(Offset(g.centres[i], cy), g.radius, WEEK_RING_DOTS, lit, if (today < 0 || i == today) ink else WeekPast, dotR, DotTrack)
-        }
+    Canvas(modifier) { drawWeekRingDots(shares, ink, (if (size == PictureSize.Small) 3.dp else 4.dp).toPx(), today) }
+}
+
+/**
+ * [WeekRings]' drawing, across the whole draw area with rings of [stroke] px: sixteen dots a ring, the share of them
+ * lit (HaloCharts, Your week), only [today]'s ring in [ink] (all of them for -1). The home screen widget draws it too.
+ */
+fun DrawScope.drawWeekRingDots(shares: List<Float?>, ink: Color, stroke: Float, today: Int = -1) {
+    val g = weekRingsGeometry(size.width, size.height, stroke, shares.size)
+    val cy = size.height / 2
+    val dotR = max(g.radius * 0.12f, 1.4.dp.toPx())
+    shares.forEachIndexed { i, s ->
+        val lit = if (s == null) 0 else (s.coerceIn(0f, 1f) * WEEK_RING_DOTS).roundToInt()
+        // Only today's ring is in colour; the days before it are light grey (board HaloTodayEvening, Your week).
+        dotRing(Offset(g.centres[i], cy), g.radius, WEEK_RING_DOTS, lit, if (today < 0 || i == today) ink else WeekPast, dotR, DotTrack)
     }
 }
 

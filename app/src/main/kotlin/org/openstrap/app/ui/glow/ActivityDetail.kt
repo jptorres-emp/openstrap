@@ -143,7 +143,7 @@ private fun stepsStrip(ctx: ActivityDetailContext, metric: DailyMetric = DailyMe
 @Composable
 private fun HeartPointsDetail(ctx: ActivityDetailContext) {
     val date = ctx.state.date
-    val color = MetricColors.heart
+    val color = ActivityLime
     val ranges = listOf(Range.Week, Range.Month)
     var rangeIndex by rememberSaveable { mutableIntStateOf(0) }
     val range = ranges[rangeIndex.coerceIn(ranges.indices)]
@@ -177,30 +177,21 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
         contentPadding = ctx.contentPadding, headline = headline, strip = strip, onDay = ctx.onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) }, scrubbed = { scrub },
     ) {
-        if (range == Range.Week) {
-            item {
-                if (daily.all { it == null }) DetailEmpty(stringResource(R.string.glow_activity_no_heart_points_week))
-                else StackedBars(
-                    remember(daily) { dayOnDay(daily.map { it ?: 0f }) }, dayOnDayColor(color, daily.lastIndex),
-                    ActivityCopy.HEART_POINTS_TARGET.toFloat(), week.map { DayWords.weekdayShort(it) }, spread = false,
-                    Modifier.padding(top = Space.S8), widest = Dp.Infinity,
-                ) { i ->
-                    scrub = i?.let {
-                        DetailHeadline(Math.round(daily[it] ?: 0f).toString(), ActivityCopy.earnedLabel(DayWords.short(week[it])), null)
+        // The picture crossfades between ranges while the header stays put, as the metric detail's does.
+        item {
+            RangeCrossfade(range) { shown ->
+                if (shown == Range.Week) {
+                    if (daily.all { it == null }) DetailEmpty(stringResource(R.string.glow_activity_no_heart_points_week))
+                    else StackedBars(
+                        remember(daily) { dayOnDay(daily.map { it ?: 0f }) }, dayOnDayColor(color, daily.lastIndex),
+                        ActivityCopy.HEART_POINTS_TARGET.toFloat(), week.map { DayWords.weekdayShort(it) }, spread = false,
+                        Modifier.padding(top = Space.S8), widest = Dp.Infinity,
+                    ) { i ->
+                        scrub = i?.let {
+                            DetailHeadline(Math.round(daily[it] ?: 0f).toString(), ActivityCopy.earnedLabel(DayWords.short(week[it])), null)
+                        }
                     }
-                }
-            }
-            if (total != null) item {
-                Column {
-                    DetailSentence(ActivityCopy.heartPointsWeek(total))
-                    if (ctx.isToday) ActivityCopy.dropsOff(week.first(), Math.round(daily.first() ?: 0f))?.let {
-                        HaloNote(it, variant = NoteVariant.Caveat, dot = color)
-                    }
-                }
-            }
-        } else {
-            item {
-                if (totals.all { it == null }) DetailEmpty(stringResource(R.string.glow_activity_no_heart_points_month))
+                } else if (totals.all { it == null }) DetailEmpty(stringResource(R.string.glow_activity_no_heart_points_month))
                 else {
                     val values = totals.map { it?.toFloat() }
                     DetailColumns(
@@ -215,6 +206,17 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
                     )
                 }
             }
+        }
+        if (range == Range.Week) {
+            if (total != null) item {
+                Column {
+                    DetailSentence(ActivityCopy.heartPointsWeek(total))
+                    if (ctx.isToday) ActivityCopy.dropsOff(week.first(), Math.round(daily.first() ?: 0f))?.let {
+                        HaloNote(it, variant = NoteVariant.Caveat, dot = color)
+                    }
+                }
+            }
+        } else {
             ActivityCopy.heartPointsMonth(totals)?.let { item { DetailSentence(it) } }
         }
         item { ActivityRelated(Score.HeartPoints, ctx, total) }
@@ -254,7 +256,7 @@ private const val OLDEST_SHADE = 0.35f
 @Composable
 private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
     val date = ctx.state.date
-    val color = MetricColors.steps
+    val color = ActivityLime
     val a = ctx.r?.activity
     // TODO(step 6): Month and Year need each day's active minutes further back; the engine works them out from the
     // minutes for only the 14 days ending on the day shown.
@@ -374,21 +376,43 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         // The figures are the held day's ([ActivityDetailContext.stripDate]), so they move when it does.
         headlineDay = ctx.state.date,
     ) {
-        if (r != null && range == Range.Day) {
-            // The last 7 days as columns, the day shown white, your usual band behind them as a range (rules, Week picture).
-            item {
-                val last7 = (WEEK_DAYS - 1 downTo 0).map { date.minusDays(it.toLong()) }
-                val loads = last7.map { byDay[it] }
-                DetailColumns(
-                    loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = Space.S8),
-                    band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
-                    onScrub = { i ->
-                        scrub = i?.let { loads[it] }?.let { v ->
-                            DetailHeadline(Math.round(v).toString(), DayWords.short(last7[i]), loadWordOf(v, usual))
-                        }
-                    },
-                )
+        // The picture crossfades between ranges while the header stays put, as the metric detail's does.
+        if (r != null) item {
+            RangeCrossfade(range) { shown ->
+                if (shown == Range.Day) {
+                    // The last 7 days as columns, the day shown white, your usual band behind them as a range (rules, Week picture).
+                    val last7 = (WEEK_DAYS - 1 downTo 0).map { date.minusDays(it.toLong()) }
+                    val loads = last7.map { byDay[it] }
+                    DetailColumns(
+                        loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = Space.S8),
+                        band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
+                        onScrub = { i ->
+                            scrub = i?.let { loads[it] }?.let { v ->
+                                DetailHeadline(Math.round(v).toString(), DayWords.short(last7[i]), loadWordOf(v, usual))
+                            }
+                        },
+                    )
+                } else {
+                    val shownDays = (shown.days - 1 downTo 0).map { date.minusDays(it.toLong()) }
+                    val shownValues = shownDays.map { byDay[it] }
+                    if (shownValues.none { it != null }) {
+                        DetailEmpty(pluralStringResource(R.plurals.glow_activity_no_load, shown.days, shown.days))
+                    }
+                    else DetailColumns(
+                        shownValues, color,
+                        if (shown == Range.Week) shownDays.map { DayWords.weekdayShort(it) }
+                        else listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(shownDays[((shownDays.size - 1) * it).toInt()]) },
+                        band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
+                        onScrub = { i ->
+                            scrub = i?.let { shownValues[it] }?.let { v ->
+                                DetailHeadline(Math.round(v).toString(), DayWords.short(shownDays[i]), loadWordOf(v, usual))
+                            }
+                        },
+                    )
+                }
             }
+        }
+        if (r != null && range == Range.Day) {
             item {
                 Column(Modifier.padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
                     HaloFigures(
@@ -403,20 +427,6 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
                 }
             }
         } else if (r != null) {
-            item {
-                if (known.isEmpty()) DetailEmpty(pluralStringResource(R.plurals.glow_activity_no_load, range.days, range.days))
-                else DetailColumns(
-                    values, color,
-                    if (range == Range.Week) days.map { DayWords.weekdayShort(it) }
-                    else listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(days[((days.size - 1) * it).toInt()]) },
-                    band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
-                    onScrub = { i ->
-                        scrub = i?.let { values[it] }?.let { v ->
-                            DetailHeadline(Math.round(v).toString(), DayWords.short(days[i]), loadWordOf(v, usual))
-                        }
-                    },
-                )
-            }
             val sentence = if (range == Range.Week) ActivityCopy.balance(balance) ?: ActivityCopy.loadSpan(levels(values, band), range)
             else ActivityCopy.loadSpan(levels(values, band), range)
             sentence?.let { item { DetailSentence(it) } }
@@ -666,28 +676,39 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
         contentPadding = ctx.contentPadding, headline = headline, strip = stepsStrip(ctx, DailyMetric.HeartRate), onDay = ctx.onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) }, scrubbed = { scrub },
     ) {
+        // The picture crossfades between ranges while the header stays put, as the metric detail's does.
+        if (e != null && active != null) item {
+            RangeCrossfade(range) { shown ->
+                if (shown == Range.Day) {
+                    // The day toward the goal: the bar filled to its share, "102 to your goal of 450" under it, then the hours.
+                    Column(Modifier.padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
+                        Column {
+                            FillBar(CaloriesCopy.share(active, goal), color)
+                            Text(
+                                CaloriesCopy.toGoal(active, goal), color = Ink.Secondary,
+                                style = GlowType.secondary, modifier = Modifier.padding(top = Space.S8),
+                            )
+                        }
+                        HourlyKcal(e, color) { h ->
+                            scrub = h?.let {
+                                val kcal = Units.count(Math.round(e.hourly.total[it]), Units.DOT_LOCALE)
+                                DetailHeadline(kcal, CaloriesCopy.hourLabel(it), null)
+                            }
+                        }
+                    }
+                } else when {
+                    rows == null -> DetailEmpty(stringResource(R.string.glow_loading))
+                    summary == null || rows.keys.none { it in start..date } ->
+                        DetailEmpty(stringResource(R.string.glow_activity_no_calories))
+                    else -> RangeKcal(rows, shown, start, date, goal, color) { scrub = it }
+                }
+            }
+        }
         if (e == null || active == null) {
             if (ctx.r != null) item {
                 DetailPanel(Modifier.padding(top = Space.S8)) { NavRow(ADD_PROFILE, onClick = ctx.onEditProfile, divider = false) }
             }
         } else if (range == Range.Day) {
-            // The day toward the goal: the bar filled to its share, "102 to your goal of 450" under it.
-            item {
-                Column(Modifier.padding(top = Space.S8)) {
-                    FillBar(CaloriesCopy.share(active, goal), color)
-                    Text(
-                        CaloriesCopy.toGoal(active, goal), color = Ink.Secondary,
-                        style = GlowType.secondary, modifier = Modifier.padding(top = Space.S8),
-                    )
-                }
-            }
-            item {
-                HourlyKcal(e, color) { h ->
-                    scrub = h?.let {
-                        DetailHeadline(Units.count(Math.round(e.hourly.total[it]), Units.DOT_LOCALE), CaloriesCopy.hourLabel(it), null)
-                    }
-                }
-            }
             item {
                 Column {
                     // So far today both are; the activity level only means something for a whole day, in the goal's place.
@@ -726,14 +747,6 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
                 }
             }
         } else {
-            item {
-                when {
-                    rows == null -> DetailEmpty(stringResource(R.string.glow_loading))
-                    summary == null || rows.keys.none { it in start..date } ->
-                        DetailEmpty(stringResource(R.string.glow_activity_no_calories))
-                    else -> RangeKcal(rows, range, start, date, goal, color) { scrub = it }
-                }
-            }
             if (summary != null && summary.days > 0) {
                 item {
                     HaloFigures(
@@ -890,7 +903,7 @@ private fun DistanceDetail(ctx: ActivityDetailContext) {
     // TODO(step 6): Week and longer need each day's distance, which the engine works out only for the day shown.
     val ours = ctx.r?.activity?.distanceMeters
     val meters = ours ?: ctx.state.distanceMeters?.toFloat()
-    val km = meters?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) }
+    val km = meters?.let { Units.major(it, Units.Precision.Day, Units.DOT_LOCALE) }
     val headline = if (km != null) DetailHeadline(km, ActivityCopy.distanceSource(ours != null), null)
     else DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
     DetailTemplate(
@@ -925,12 +938,12 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
             icon = Metric.Steps.rowIcon(),
         )
         if (current != Score.ActiveMinutes) MetricRow(
-            Score.ActiveMinutes.title, MetricColors.steps, a?.weekEquivalent?.toString(),
+            Score.ActiveMinutes.title, ActivityLime, a?.weekEquivalent?.toString(),
             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(), icon = Score.ActiveMinutes.rowIcon(),
         )
         if (current != Score.HeartPoints) MetricRow(
-            Score.HeartPoints.title, MetricColors.heart, points?.toString(),
+            Score.HeartPoints.title, ActivityLime, points?.toString(),
             points?.let { TabCopy.heartPoints(it, ActivityCopy.HEART_POINTS_TARGET) } ?: AFTER_NEXT_SYNC,
             onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(), icon = Score.HeartPoints.rowIcon(),
         )

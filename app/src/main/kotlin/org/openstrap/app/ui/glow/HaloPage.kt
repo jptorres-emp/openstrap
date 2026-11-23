@@ -43,10 +43,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
@@ -81,6 +88,9 @@ internal object PageSpec {
     val HeaderHeight = 48.dp
     val TabHeaderHeight = 60.dp
     val HeaderSide = 96.dp
+
+    /** A detail's side columns: its back and (i), 44 dp each, and a gap, so a long metric name keeps its room. */
+    val HeaderSideDetail = 52.dp
 
     /** The header's side buttons, 44 across. */
     val HeaderButton = IconSize.TileM
@@ -168,8 +178,10 @@ internal fun HaloPageColumn(
         // The live screen fits the screen instead (scroll = false): its controls never move. A scrolling page ends at
         // the keyboard, so what's typed can scroll above it.
         Column(
-            Modifier.fillMaxSize().then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier)
-                .statusBarsPadding()
+            // The status bar's inset sits outside the scroll, so the page's content is clipped at it and never draws
+            // under the system clock.
+            Modifier.fillMaxSize().statusBarsPadding()
+                .then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier)
                 .padding(contentPadding).padding(start = side, end = side, top = PageSpec.WorkoutTop, bottom = end)
                 // At least the screen's height, so the controls sit at the bottom without the page scrolling.
                 .then(if (scroll) Modifier.heightIn(min = (maxHeight - padTop - padBottom - end).coerceAtLeast(0.dp)) else Modifier),
@@ -212,7 +224,11 @@ internal fun HaloPageHeader(
     end: @Composable BoxScope.() -> Unit = {},
 ) {
     val side =
-        if (variant == HeaderVariant.Workout) Modifier.widthIn(min = PageSpec.HeaderSide) else Modifier.width(PageSpec.HeaderSide)
+        when (variant) {
+            HeaderVariant.Workout -> Modifier.widthIn(min = PageSpec.HeaderSide)
+            HeaderVariant.Detail -> Modifier.width(PageSpec.HeaderSideDetail)
+            HeaderVariant.Page -> Modifier.width(PageSpec.HeaderSide)
+        }
     Row(modifier.fillMaxWidth().height(PageSpec.HeaderHeight), verticalAlignment = Alignment.CenterVertically) {
         Box(side, contentAlignment = Alignment.CenterStart, content = start)
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center, content = centre)
@@ -222,9 +238,10 @@ internal fun HaloPageHeader(
 
 /**
  * The header of a page or a detail (HaloProfile, HaloAlarms and HaloDetailRecovery boards): back at the left, the
- * [title] centred in Page title type (over [subtitle] in Secondary), and [trailing] at the right (a detail's (i), or the
- * Save pill while the page has unsaved edits). [onTitle] makes the title a button with a caret (a detail's switcher).
- * [titleSuffix] follows the title on its line (a workout's Indoor tag).
+ * [title] centred on the screen in Page title type whatever the caret or the trailing action (one line, ending in an
+ * ellipsis when it is too long), over [subtitle] in Secondary. [onTitle] makes the title a button with a caret (a
+ * detail's switcher). [titleSuffix] follows the title on its line (a workout's Indoor tag). [trailing] is last, so a
+ * trailing lambda at a call site lands at the right edge: a detail's (i), Copy, or the Save pill while there are edits.
  */
 @Composable
 internal fun HaloPageHeader(
@@ -235,8 +252,8 @@ internal fun HaloPageHeader(
     backEnabled: Boolean = true,
     subtitle: String? = null,
     onTitle: (() -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null,
     titleSuffix: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val switchLabel = stringResource(R.string.glow_page_switch)
     HaloPageHeader(
@@ -255,10 +272,9 @@ internal fun HaloPageHeader(
                         },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        title, color = Color.White, style = GlowType.pageTitle, maxLines = 1,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                    // The caret's room is kept at both sides, so the words sit in the middle with or without it.
+                    if (onTitle != null) Spacer(Modifier.width(PageSpec.Caret + PageSpec.CaretGap))
+                    FittedTitle(title, Modifier.weight(1f, fill = false))
                     if (onTitle != null) {
                         Spacer(Modifier.width(PageSpec.CaretGap))
                         Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
@@ -268,9 +284,53 @@ internal fun HaloPageHeader(
                         titleSuffix()
                     }
                 }
-                if (subtitle != null) Text(subtitle, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
+                if (subtitle != null) FittedSubtitle(subtitle)
             }
         },
         end = { trailing?.invoke() },
     )
+}
+
+/**
+ * [title] in Page title type when it fits whole in the width it is given, else a size down at a time (Card title, then
+ * Secondary semibold), and only at the smallest with an ellipsis, so "Resting heart rate" shows in full at font 1.3. A
+ * plain [Layout] that measures each size and places one: a header is often the first item of a lazy list, where a
+ * BoxWithConstraints subcomposes and made detail pages open scrolled.
+ */
+@Composable
+private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
+    val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
+    FittedText(
+        title, TextSteps(steps), Color.White,
+        modifier.clearAndSetSemantics {
+            contentDescription = title
+            heading()
+        },
+    )
+}
+
+/** The subtitle under a title, a size down (Secondary, then the small note) before it ends in an ellipsis, as the title does. */
+@Composable
+private fun FittedSubtitle(subtitle: String) = FittedText(
+    subtitle, TextSteps(listOf(GlowType.secondary, GlowType.noteSmall)), Ink.Secondary,
+)
+
+/** The sizes a text steps down through, stable for compose. */
+@androidx.compose.runtime.Immutable
+private class TextSteps(val styles: List<androidx.compose.ui.text.TextStyle>)
+
+/** [text] in the first of [steps] that fits whole in the width it is given, else in the last with an ellipsis. */
+@Composable
+private fun FittedText(text: String, steps: TextSteps, color: Color, modifier: Modifier = Modifier) {
+    Layout(
+        content = {
+            steps.styles.forEach { Text(text, color = color, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
+        val placeable = fits?.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+            ?: measurables.last().measure(constraints.copy(minWidth = 0))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
 }

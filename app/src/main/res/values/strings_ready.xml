@@ -23,8 +23,6 @@
 
     <!-- Under a distance goal: how long it takes at last time's pace. -->
     <string name="ready_hero_pace_about">About <xliff:g id="minutes" example="31">%1$d</xliff:g> min at your pace</string>
-    <!-- Under a distance goal indoors, where the distance is counted from steps. -->
-    <string name="ready_hero_from_steps">Distance from your steps</string>
     <!-- Under a zone goal: the heart rates to keep between. -->
     <string name="ready_hero_zone_keep">Keep <xliff:g id="low" example="120">%1$d</xliff:g> to <xliff:g id="high" example="155">%2$d</xliff:g> bpm</string>
     <!-- Under a zone goal of the top zone: the heart rate to stay above. -->
@@ -63,12 +61,16 @@
     <!-- Under a game's periods: about how long the periods and breaks take. -->
     <string name="ready_hero_periods_about">About <xliff:g id="minutes" example="70">%1$d</xliff:g> min with breaks</string>
 
-    <!-- The hero with no goal: what it says over last time's figures, "No goal. Last walk, Wed". -->
-    <string name="ready_last_no_goal">No goal. Last <xliff:g id="sport" example="walk">%1$s</xliff:g>, <xliff:g id="day" example="Wed">%2$s</xliff:g></string>
-    <!-- The hero with no plan: what it says over last time's figures, "No plan. Last session, Sat". -->
-    <string name="ready_last_no_plan">No plan. Last session, <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
+    <!-- The hero with no goal: what it says over last time's figures, "No goal, last session Wed". -->
+    <string name="ready_last_no_goal">No goal, last session <xliff:g id="day" example="Wed">%1$s</xliff:g></string>
+    <!-- The hero with no plan: what it says over last time's figures, "No plan, last session Sat". -->
+    <string name="ready_last_no_plan">No plan, last session <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
+    <!-- The no-goal hero's line: last time's figure and the rest, "5.2 km, 28 min at 5:40 per km". -->
+    <string name="ready_last_time_line">Last time <xliff:g id="last" example="5.2 km, 28 min at 5:40 per km">%1$s</xliff:g></string>
     <!-- Under last time's distance in the hero: its time and pace, "28:10 at 11:44 per km". -->
     <string name="ready_last_pace_line"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="11:44">%2$s</xliff:g> per km</string>
+    <!-- Under last time's distance in the hero, in miles: its time and pace, "28:10 at 8:40 per mile". -->
+    <string name="ready_last_pace_line_mi"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="8:40">%2$s</xliff:g> per mile</string>
     <!-- The hero with no goal and no workout of the sport yet. Very short. -->
     <string name="ready_no_goal">No goal</string>
     <!-- The hero with no plan and no workout of the sport yet. Very short. -->
@@ -88,10 +90,10 @@
 
     <!-- The switch for a sport with an indoor side. One word. -->
     <string name="ready_outdoor">Outdoor</string>
-    <!-- Under Outdoor when on and GPS has a fix: "GPS for distance and a map, ready to 6 m". -->
-    <string name="ready_outdoor_gps_ready">GPS for distance and a map, ready to <xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
+    <!-- Under Outdoor when on and GPS has a fix: "GPS for distance and a map, accurate to 6 m". -->
+    <string name="ready_outdoor_gps_ready">GPS for distance and a map, accurate to <xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
     <!-- Under Outdoor when on and GPS has a fix that isn't close enough yet. -->
-    <string name="ready_outdoor_gps_close">GPS for distance and a map, <xliff:g id="meters" example="40">%1$d</xliff:g> m so far</string>
+    <string name="ready_outdoor_gps_close">GPS for distance and a map, accurate to <xliff:g id="meters" example="40">%1$d</xliff:g> m for now</string>
     <!-- Under Outdoor when on and GPS has no fix yet. -->
     <string name="ready_outdoor_gps_finding">GPS for distance and a map, finding you</string>
     <!-- Under Outdoor when off, for a sport on foot. -->

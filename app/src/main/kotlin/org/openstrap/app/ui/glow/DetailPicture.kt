@@ -64,6 +64,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
+import org.openstrap.app.ui.components.Motion
 import org.openstrap.app.ui.components.rememberAnimationsOn
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
@@ -89,6 +90,24 @@ internal fun DetailPicture(modifier: Modifier = Modifier, height: Dp = DetailPic
 /** How tall a card's picture stands on its page, a little over a Wide's 52 dp on Today. */
 internal val DetailPictureHeight = 64.dp
 
+/** Heart points and active minutes share this lime (rules, metric colours), apart from Steps' own. */
+internal val ActivityLime = org.openstrap.app.ui.theme.MetricColors.activityLime
+
+/** How tall a detail's chart stands, whatever its data: an empty one keeps it too ([DetailEmpty]), so nothing below moves. */
+internal val DetailChartHeight = 200.dp
+
+/**
+ * A detail's picture for [range], crossfading to the next range's in [Motion.QUICK] while the header and the figures stay
+ * put. With the system's animations off it cuts.
+ */
+@Composable
+internal fun <T> RangeCrossfade(range: T, content: @Composable (T) -> Unit) {
+    val animate = rememberAnimationsOn()
+    androidx.compose.animation.Crossfade(
+        range, animationSpec = if (animate) tween(Motion.QUICK) else androidx.compose.animation.core.snap(), label = "range picture",
+    ) { content(it) }
+}
+
 /* ------------------------------------------- Ink and type ------------------------------------------- */
 
 
@@ -101,6 +120,10 @@ private val DetailBandInk = Ink.Faint
 
 /** A chart's value labels sit in this gutter on the right, which data never enters (rules, picture). */
 private val DetailGutter = 30.dp
+
+/** A value label's gap to the chart's right edge, and the room the latest reading's ring takes beside the plot, in dp. */
+private const val GUTTER_LABEL_EDGE = 2
+private const val GUTTER_RING = 8
 
 /** A chart's axis text (boards: 11 px #6E7480). */
 private val DetailAxisText = GlowType.caption.copy(color = DetailAxisInk)
@@ -223,16 +246,21 @@ internal fun DetailChart(
     tickText: (Float) -> String,
     xLabels: List<String>,
     modifier: Modifier = Modifier,
-    height: Dp = 200.dp,
+    height: Dp = DetailChartHeight,
     perColumn: Boolean = false,
     pick: (Float) -> Int? = { f -> if (values.isEmpty()) null else (f * values.size).toInt().coerceIn(0, values.size - 1) },
     onScrub: ((Int?) -> Unit)? = null,
     draw: DrawScope.(DetailPlot, Int?) -> Unit,
 ) {
     val m = rememberTextMeasurer()
-    var touchX by remember { mutableStateOf<Float?>(null) }
+    // The finger's line belongs to the data it was laid on: other data (another day) starts with none.
+    var touchX by remember(values) { mutableStateOf<Float?>(null) }
     var width by remember { mutableFloatStateOf(0f) }
-    val gutter = with(LocalDensity.current) { DetailGutter.toPx() }
+    // The gutter holds the widest value label and the latest reading's ring beside it, whatever the font size: no label under a ring.
+    val gutter = with(LocalDensity.current) {
+        val widest = ticks.maxOfOrNull { m.measure(tickText(it), DetailAxisText).size.width } ?: 0
+        maxOf(DetailGutter.toPx(), widest + GUTTER_LABEL_EDGE.dp.toPx() + GUTTER_RING.dp.toPx())
+    }
     val tick = rememberScrubHaptics()
     val currentPick by rememberUpdatedState(pick)
     val currentScrub by rememberUpdatedState(onScrub)
@@ -264,7 +292,7 @@ internal fun DetailChart(
             val y = plot.y(t)
             drawLine(Greys.Raised, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
             val r = m.measure(tickText(t), DetailAxisText)
-            drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, y - 4.dp.toPx() - r.size.height))
+            drawText(r, topLeft = Offset(size.width - GUTTER_LABEL_EDGE.dp.toPx() - r.size.width, y - 4.dp.toPx() - r.size.height))
         }
         val picked = touchX?.let { tx -> pick((tx / plot.plotRight.coerceAtLeast(1f)).coerceIn(0f, 1f)) }
         draw(plot, picked)
@@ -299,19 +327,24 @@ internal fun DetailLineChart(
     color: Color,
     xLabels: List<String>,
     modifier: Modifier = Modifier,
-    height: Dp = 200.dp,
+    height: Dp = DetailChartHeight,
     yRange: ClosedFloatingPointRange<Float>? = null,
     band: ClosedFloatingPointRange<Float>? = null,
     shade: IntRange? = null,
+    shadeLabel: String? = null,
+    spread: List<ClosedFloatingPointRange<Float>?>? = null,
     hourBands: Boolean = false,
     format: (Float) -> String = { Math.round(it).toString() },
     onScrub: ((Int?) -> Unit)? = null,
 ) {
     val known = values.filterNotNull()
     if (known.isEmpty()) return
-    val lo0 = listOfNotNull(known.min(), band?.start, yRange?.start).min()
-    val hi0 = listOfNotNull(known.max(), band?.endInclusive, yRange?.endInclusive).max()
+    val lo0 = listOfNotNull(known.min(), band?.start, yRange?.start, spread?.mapNotNull { it?.start }?.minOrNull()).min()
+    val hi0 = listOfNotNull(
+        known.max(), band?.endInclusive, yRange?.endInclusive, spread?.mapNotNull { it?.endInclusive }?.maxOrNull(),
+    ).max()
     val (scale, ticks) = remember(lo0, hi0) { niceScale(lo0, hi0) }
+    val m = rememberTextMeasurer()
     val last = values.indexOfLast { it != null }
     DetailChart(
         values, scale, ticks, format, xLabels, modifier, height,
@@ -325,12 +358,24 @@ internal fun DetailLineChart(
         }
         shade?.let { s ->
             drawRect(DetailBandInk, Offset(xOf(s.first), plot.top), Size(xOf(s.last) - xOf(s.first), plot.bottom - plot.top))
+            // Said, so the block is not a mystery.
+            if (shadeLabel != null) {
+                val labelAt = Offset(xOf(s.first) + 4.dp.toPx(), plot.top + 2.dp.toPx())
+                drawText(m.measure(shadeLabel, DetailAxisText), topLeft = labelAt)
+            }
         }
         if (hourBands) {
             val pitch = plot.plotRight / HOURS_IN_DAY
             val per = n / HOURS_IN_DAY.toFloat()
             repeat(HOURS_IN_DAY) { h ->
-                val slice = values.subList((h * per).toInt().coerceAtMost(n), ((h + 1) * per).toInt().coerceIn(0, n)).filterNotNull()
+                val from = (h * per).toInt().coerceAtMost(n)
+                val upTo = ((h + 1) * per).toInt().coerceIn(0, n)
+                // The hour's own readings when it has them (their lowest and highest), else the line's averages.
+                val slice = values.subList(from, upTo).filterNotNull() +
+                    (
+                        spread?.subList(from, upTo.coerceAtMost(spread.size))?.filterNotNull()
+                            ?.flatMap { listOf(it.start, it.endInclusive) }.orEmpty()
+                        )
                 if (slice.isEmpty()) return@repeat
                 val y0 = plot.y(slice.max())
                 val y1 = plot.y(slice.min())
@@ -387,7 +432,7 @@ internal fun DetailColumns(
     color: Color,
     xLabels: List<String>,
     modifier: Modifier = Modifier,
-    height: Dp = 200.dp,
+    height: Dp = DetailChartHeight,
     highlight: Int? = values.indexOfLast { it != null }.takeIf { it >= 0 },
     alpha: Float = 0.55f,
     baseline: Float? = null,
@@ -415,20 +460,37 @@ internal fun DetailColumns(
     ) { plot, picked ->
         val n = values.size
         val pitch = plot.plotRight / n
+        val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
         band?.let { b ->
             drawRect(DetailBandInk, Offset(0f, plot.y(b.endInclusive)), Size(plot.plotRight, plot.y(b.start) - plot.y(b.endInclusive)))
             if (few && bandLabel != null) {
                 val r = m.measure(bandLabel, DetailAxisText)
-                drawText(r, topLeft = Offset(2.dp.toPx(), plot.y(b.start) + 3.dp.toPx()))
+                // Where the label touches no column and no axis label: under the band, over it, else in the strip above the plot.
+                fun clear(y: Float): Boolean {
+                    val x0 = 2.dp.toPx()
+                    if (y < 0f || y + r.size.height > plot.bottom) return false
+                    return values.indices.none { i ->
+                        val v = values[i] ?: return@none false
+                        val bx = pitch * i + (pitch - barW) / 2f
+                        val (by0, by1) = plot.y(v).let { yv -> minOf(yv, plot.y(floor)) to maxOf(yv, plot.y(floor)) }
+                        bx < x0 + r.size.width && bx + barW > x0 && by0 < y + r.size.height && by1 > y
+                    }
+                }
+                val under = plot.y(b.start) + 3.dp.toPx()
+                val over = plot.y(b.endInclusive) - 3.dp.toPx() - r.size.height
+                val y = listOf(under, over).firstOrNull(::clear) ?: 0f
+                drawText(r, topLeft = Offset(2.dp.toPx(), y))
             }
         }
         if (baseline != null) {
             drawLine(Ink.Disabled, Offset(0f, plot.y(baseline)), Offset(plot.plotRight, plot.y(baseline)), 1.dp.toPx())
-            val r = m.measure(format(baseline), DetailAxisText)
-            drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, plot.y(baseline) - r.size.height / 2f))
+            // Its value in the gutter, unless a tick's label already stands there (two labels one above the other).
+            if (ticks.none { abs(plot.y(it) - plot.y(baseline)) < 12.dp.toPx() }) {
+                val r = m.measure(format(baseline), DetailAxisText)
+                drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, plot.y(baseline) - r.size.height / 2f))
+            }
         }
         goal?.let { g -> dashedGoalLine(plot.y(g), plot.plotRight) }
-        val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
         val radius = if (few) 9.dp.toPx().coerceAtMost(barW / 2f) else minOf(3.dp.toPx(), barW / 2f)
         val on = picked ?: highlight
         values.forEachIndexed { i, v ->
@@ -447,6 +509,51 @@ internal fun DetailColumns(
         }
     }
 }
+
+/**
+ * A longer range of a Signal (rules 2): a capsule per day from its low to its high at 0.35 in the metric's [color], the
+ * average a white tick across it, the one shown white. [days] hold each day's low, average and high (null for a gap);
+ * scrubbing reports the day's index.
+ */
+@Composable
+internal fun DetailRanges(
+    days: List<org.openstrap.app.data.DayStat?>,
+    color: Color,
+    xLabels: List<String>,
+    modifier: Modifier = Modifier,
+    format: (Float) -> String = { Math.round(it).toString() },
+    onScrub: ((Int?) -> Unit)? = null,
+) {
+    val known = days.filterNotNull()
+    if (known.isEmpty()) {
+        DetailEmpty(androidx.compose.ui.res.stringResource(org.openstrap.app.R.string.glow_metrics_none_in_range))
+        return
+    }
+    val (scale, ticks) = remember(days) { niceScale(known.minOf { it.min }, known.maxOf { it.max }) }
+    val highlight = days.indexOfLast { it != null }
+    DetailChart(
+        days.map { it?.value }, scale, ticks, format, xLabels, modifier, perColumn = xLabels.size == days.size, onScrub = onScrub,
+    ) { plot, picked ->
+        val pitch = plot.plotRight / days.size
+        val few = days.size <= FEW_COLUMNS
+        val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
+        val on = picked ?: highlight
+        days.forEachIndexed { i, d ->
+            if (d == null) return@forEachIndexed
+            val x = pitch * i + (pitch - barW) / 2f
+            val top = plot.y(d.max)
+            val h = (plot.y(d.min) - top).coerceAtLeast(barW)
+            drawRoundRect(
+                if (i == on) Ink.Primary.copy(alpha = RANGE_ALPHA + 0.2f) else color.copy(alpha = RANGE_ALPHA),
+                Offset(x, top), Size(barW, h), CornerRadius(barW / 2f),
+            )
+            drawRoundRect(Color.White, Offset(x, plot.y(d.value) - 1.5.dp.toPx()), Size(barW, 3.dp.toPx()), CornerRadius(1.5.dp.toPx()))
+        }
+    }
+}
+
+/** A range capsule's fill (rules: the low to high bar at 0.35). */
+private const val RANGE_ALPHA = 0.35f
 
 /** A column chart standing on the axis leaves this much room above its tallest column. */
 private const val HEADROOM = 1.05f

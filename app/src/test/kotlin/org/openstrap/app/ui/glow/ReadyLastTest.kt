@@ -25,14 +25,14 @@ class ReadyLastTest {
         val hero = readyLast(analysis(3, 28 * 60 + 10, meters = 2400f), today, ZoneOffset.UTC)!!.hero!!
         assertEquals("2.4", hero.number)
         assertEquals("km", hero.unit)
-        assertEquals("28:10 at 11:44 per km", hero.line)
+        assertEquals("28 min 10 at 11:44 per km", hero.line)
     }
 
     @Test fun `strength shows its sets and its time`() {
         val hero = readyLast(analysis(52, 43 * 60 + 5, sets = 15), today, ZoneOffset.UTC)!!.hero!!
         assertEquals("15", hero.number)
         assertEquals("sets", hero.unit)
-        assertEquals("43:05 in all", hero.line)
+        assertEquals("43 min 05 in all", hero.line)
     }
 
     @Test fun `anything else shows its minutes`() {

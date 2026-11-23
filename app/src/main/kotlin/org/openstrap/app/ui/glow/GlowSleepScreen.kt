@@ -41,6 +41,8 @@ import org.openstrap.app.ui.dashboard.InfoCopy
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.LocalGoals
+import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.presentation.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.SleepCard
@@ -107,7 +109,8 @@ fun GlowSleepScreen(
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }, LocalGlowMood provides GlowMood.Night) {
         GlowScreenList(contentPadding, list) {
             full { header() }
-            // With naps and a breathing summary the two are a Small pair; alone, either is a Wide.
+            // With naps and a breathing summary the two are a Small pair; alone, either is a Wide, which grows past its
+            // height when a tag and a large font need more room, as every grid card does.
             val pair = (breathing != null || firstNights) && state.naps.isNotEmpty()
             tabCards(slots) { card, m ->
                 when (card) {
@@ -115,11 +118,11 @@ fun GlowSleepScreen(
                     SleepCard.Vitals -> VitalsList(state, firstNights) { onOpen(Detail.OfMetric(it, night = true)) }
                     SleepCard.Regularity -> RegularityCard(state, rec?.regularity, firstNights) { onOpen(Detail.OfScore(Score.Regularity)) }
                     SleepCard.Breathing -> BreathingCard(
-                        rec, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+                        rec, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().gridSize(CardSize.Wide),
                         onInfo = if (breathing != null) ({ breathingInfo = true }) else null,
                     )
                     SleepCard.Naps -> NapsCard(
-                        state, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+                        state, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().gridSize(CardSize.Wide),
                     ) { onOpen(Detail.OfScore(Score.Naps)) }
                 }
             }
@@ -144,7 +147,9 @@ internal val SleepGlow = org.openstrap.app.ui.glow.draw.heroStyle(MetricColors.s
  */
 @Composable
 private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.openstrap.app.data.db.SleepSession) -> Unit, onOpen: () -> Unit) {
-    val session = state.sleep
+    // One time asleep, time awake and wake count for the night, from its stage rows ([ShownNight]).
+    val night = remember(state.sleep, state.sleepStages) { state.shownNight() }
+    val session = night?.session
     val isToday = state.date == LocalDate.now()
     HaloCard(Modifier.fillMaxWidth().gridSize(CardSize.Wide), tone = CardTone.lit(SleepGlow), onClick = onOpen) {
         Column {
@@ -164,7 +169,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                 }
                 return@Column
             }
-            val asleep = state.asleepSeconds ?: (session.end - session.start)
+            val asleep = night.asleep
             val others = SleepHistory.weekOthers(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date)
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(Space.S16))
@@ -178,11 +183,11 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                     TabCopy.woke(session.wakeCount),
                 ),
             )
-            if (state.sleepStages.isNotEmpty()) {
+            if (night.spans.isNotEmpty()) {
                 Spacer(Modifier.height(Space.S20))
-                GlowSleepStages(state.sleepStages, 96.dp)
+                GlowSleepStages(night.spans, 96.dp)
             }
-            state.sleepBreakdown?.let { b ->
+            night.breakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
                 val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {
@@ -251,11 +256,12 @@ internal val SleepRowColors: List<Color> = DayViewModel.SLEEP_STAGE_ROWS.let { r
 /** The vitals while asleep against your previous nights, each opening its metric scoped to the night. */
 @Composable
 private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric) -> Unit) {
-    ListPanel(title = stringResource(R.string.glow_sleep_vitals_title), note = stringResource(R.string.glow_sleep_vitals_note)) {
+    // No "against your normal" note: blood oxygen reads as a night average, so not every row compares (as Body signals).
+    ListPanel(title = stringResource(R.string.glow_sleep_vitals_title)) {
         nightVitals(state, firstNights).forEachIndexed { i, v ->
             val tag = org.openstrap.app.ui.dashboard.bodyTag(v.metric, v.direction)
             MetricRow(
-                v.label, v.color, v.value,
+                v.label, v.color, v.value?.let { DetailCopy.shownWithUnit(v.metric, it) },
                 // The tag already says which way it is off, so the plain word against your normal gives way to it.
                 v.status.takeUnless { tag != null && it == org.openstrap.app.presentation.TodayCopy.normalWord(v.direction) },
                 tag = tag, onClick = { onOpen(v.metric) }, divider = i > 0,
@@ -295,12 +301,24 @@ private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepR
         if (week != null) {
             Spacer(Modifier.height(Space.S12))
             BedWakeBars(week.first, week.second, MetricColors.sleepDeep, PictureSize.Wide, Modifier.fillMaxWidth().height(RegularityBarsHeight))
+            // A name under each night's bar, oldest first like the bars, so a late or early night can be told which.
+            Row(Modifier.fillMaxWidth().padding(top = Space.S8)) {
+                w.nights.forEach { n ->
+                    Text(
+                        DayWords.weekdayShort(n.date), Modifier.weight(1f), color = Ink.Tertiary, style = GlowType.caption,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1, overflow = TextOverflow.Clip,
+                    )
+                }
+            }
         }
     }
 }
 
 /** How tall regularity's bed and wake bars stand. */
 private val RegularityBarsHeight = 64.dp
+
+/** How tall Breathing disturbances' week of dots stands on a Wide, which has no room left over to give it. */
+private val BreathingDotsHeight = 48.dp
 
 /**
  * Breathing disturbances (spec 5.2): the strap's dips in blood oxygen an hour asleep, a week of dots through the band
@@ -321,6 +339,7 @@ private fun BreathingCard(rec: org.openstrap.app.data.RecoveryResult?, size: Pic
         value = b?.let { dotFormat("%.1f", it.perHour) }, unit = stringResource(R.string.glow_sleep_an_hour), tag = tag,
         status = if (b == null) stringResource(R.string.glow_sleep_after_a_night) else TabCopy.breathingShort(b),
         picture = if (values.none { it != null }) null else ({ m -> WeekOfDots(values, usual, MetricColors.sleepLight, size, m) }),
+        pictureHeight = BreathingDotsHeight.takeIf { size == PictureSize.Wide },
     )
 }
 
@@ -337,7 +356,7 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
     val pictured = naps.map { Nap(it.start, it.end, state.napStages[it.start].orEmpty()) }
     SleepPictureCard(
         MetricColors.sleepDeep, TabCopy.napsTitle(naps.size), null, onOpen, modifier = modifier,
-        value = clockDuration(naps.sumOf { it.end - it.start }), unit = stringResource(R.string.glow_sleep_unit_hours), tag = null,
+        value = clockDuration(naps.sumOf { it.end - it.start }), unit = null, tag = null,
         status = TabCopy.naps(naps.size, clock(naps.first().start)),
         picture = { m -> NapDay(pictured, span.first, span.last, MetricColors.sleepDeep, size, m) },
     )
@@ -351,14 +370,30 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
 // The ink and the rim stay so the screens placing it compile: a Halo card has no coloured rim (Halo System board).
 @Suppress("UnusedParameter")
 @Composable
-private fun SleepPictureCard(
+internal fun SleepPictureCard(
     ink: Color, title: String, rim: Rim?, onClick: (() -> Unit)?,
     value: String?, unit: String?, tag: NewsTag?, status: String?,
     picture: (@Composable (Modifier) -> Unit)?,
     modifier: Modifier = Modifier,
+    /** The picture's own height on a card that has no spare room to give it (a Wide); null takes what the card leaves. */
+    pictureHeight: Dp? = null,
 ) {
     HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
         HaloTitle(title)
+        if (picture != null && pictureHeight != null) {
+            // A Wide has no height to spare under its title, so the picture sits beside the number, as on Energy's Wide.
+            // The title keeps its gap when a tag and a large font grow the card.
+            Spacer(Modifier.height(Space.S12))
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
+                Column(Modifier.weight(1f)) {
+                    SleepNumber(value, unit, tag)
+                    status?.let { SleepStatus(it, Modifier.padding(top = Space.S4)) }
+                }
+                picture(Modifier.weight(1f).height(pictureHeight))
+            }
+            return@HaloCard
+        }
         if (picture != null) {
             Spacer(Modifier.height(Space.S12))
             picture(Modifier.fillMaxWidth().weight(1f))

@@ -119,6 +119,8 @@ fun GlowRecoveryScreen(
     wear: Wear? = null,
     /** The day's score is the first real one, marked once (E4). */
     firstScore: Boolean = false,
+    /** Daily history, for resting heart rate's normal in What drove it; null leaves the reading without one. */
+    history: org.openstrap.app.ui.dashboard.DailyHistory? = null,
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state)
@@ -149,7 +151,9 @@ fun GlowRecoveryScreen(
                             noSleep = isToday && state.loaded && state.asleepSeconds == null, deleted = state.deletedSleep != null, firstScore = firstScore,
                             shown = TodayCopy.recoveryShown(r?.readiness, strapScore, waiting),
                         )
-                    RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
+                    RecoveryCard.Drivers -> DriversList(
+                        r?.readiness, rememberDriverFigures(state, history), onAll = { onOpenScore(Score.Recovery) },
+                    )
                     // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".
                     RecoveryCard.Charge -> ChargeTall(
                         r?.charge, m, failed = failure != null, tag = partial, onOpen = { onOpenScore(Score.Energy) },
@@ -281,7 +285,7 @@ internal fun RecoveryFailedHero(
  * place when it's off usual (spec 5.1). Bars and words stay white: colour never says how it's going (spec 2.2).
  */
 @Composable
-private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
+private fun DriversList(ready: Recovery.Readiness?, resting: DetailCopy.DriverFigures?, onAll: () -> Unit) {
     val all = ready?.contributors.orEmpty()
     val top = TabCopy.topDrivers(all)
     // "All" and each row open the Recovery detail, which has every contributor.
@@ -297,11 +301,22 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
         top.forEachIndexed { i, c ->
             // The bar and the word stay grey: colour never says how it's going (spec 2.2); off usual the tag takes the word's place.
             ContributorRow(
-                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), c.score / 100f,
-                divider = i > 0, onClick = onAll, tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
+                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), DetailCopy.driverPlace(c, resting),
+                divider = i > 0, detail = DetailCopy.driverReading(c, resting), onClick = onAll,
+                tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
             )
         }
     }
+}
+
+/**
+ * The day's resting heart rate and time asleep as Today shows them ([DetailCopy.DriverFigures]), for Recovery's
+ * drivers.
+ */
+@Composable
+internal fun rememberDriverFigures(state: DayUiState, history: org.openstrap.app.ui.dashboard.DailyHistory?): DetailCopy.DriverFigures {
+    val normal = rememberNormal(Metric.RestingHr, state.date, history)
+    return DetailCopy.DriverFigures(state.restingHeartRate, normal?.mean, state.asleepSeconds)
 }
 
 /** A contributor against usual: Above from Ready for more, Below under Ready, by the score's own bands. */
@@ -365,7 +380,10 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         else TabCopy.chargeAmount(it.drainedExercise + it.drainedStress + it.drainedLiving, -1)
     }
     // Recharged's night: from bedtime, or where the card's own figure says it started, to waking.
-    val night = c?.takeIf { ready && recharged }?.atWake?.let { wake -> (c.atBedtime ?: (wake - c.recharged)).coerceIn(0f, 100f) to wake }
+    // Ends at the waking figure the Energy card beside it shows, which cuts the decimals: 95.6 is "95" on both.
+    val night = c?.takeIf { ready && recharged }?.atWake?.let { wake ->
+        (c.atBedtime ?: (wake - c.recharged)).coerceIn(0f, 100f) to wake.toInt().toFloat()
+    }
     val parts = c?.takeIf { ready && !recharged }?.let { listOf(it.drainedExercise, it.drainedStress, it.drainedLiving) }
     val status = when {
         failed -> FAILED_SHORT
@@ -377,10 +395,13 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
     val title = stringResource(if (recharged) R.string.glow_recovery_recharged else R.string.glow_recovery_drained)
     HaloCard(modifier, verticalArrangement = Arrangement.Top) {
         HaloTitle(title)
-        // Tighter than a Small's 12 and 8: stacked beside the Tall it is 160 high, and its picture needs the room.
-        Spacer(Modifier.height(Space.S8))
+        // Tighter than a Small's 12 and 8: stacked beside the Tall it is 160 high, and its picture needs the room. At a
+        // large font size the words need it more (the status says two lines), so the picture gives way and keeps a gap.
+        val large = androidx.compose.ui.platform.LocalDensity.current.fontScale > PICTURE_MAX_FONT_SCALE
+        Spacer(Modifier.height(Space.S4))
         val picture = Modifier.fillMaxWidth().weight(1f)
         when {
+            large -> Spacer(picture)
             night != null -> RangeFill(night.first, night.second, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
             parts != null && parts.any { it > 0f } -> SplitBar(parts, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
             else -> Spacer(picture)
@@ -389,11 +410,13 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         if (value != null) Text(value, Modifier.cardNumber(value), color = Color.White, style = GlowType.smallValue, maxLines = 1)
         else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
         Text(
-            status, color = Ink.Secondary, style = GlowType.secondary,
-            modifier = Modifier.padding(top = Space.S4), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            status, color = Ink.Secondary, style = GlowType.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+/** Above this font scale Recharged and Drained drop their picture so the status keeps two lines. */
+private const val PICTURE_MAX_FONT_SCALE = 1.15f
 
 /** Recharged's and Drained's bar colours: Energy's orange and a deeper step of it (board HaloRecovery). */
 private val ChargeLight = MetricColors.charge
@@ -491,11 +514,11 @@ private fun rememberSignals(state: DayUiState): Signals {
     val nightAverage = stringResource(R.string.glow_today_spo2_night_average)
     return remember(state) {
         fun body(
-            metric: Metric, name: String, accent: Color, today: Float?, normal: History.Normal?, unit: String = "", line: String? = null,
+            metric: Metric, name: String, accent: Color, today: Float?, normal: History.Normal?, line: String? = null,
         ): BodySignal {
             val direction = History.status(today, normal)
             return BodySignal(
-                metric, name, accent, today?.let { metric.format(it) + unit }, direction, bodyTag(metric, direction),
+                metric, name, accent, today?.let { metric.formatWithUnit(it) }, direction, bodyTag(metric, direction),
                 SleepCopy.learning(state, metric), line,
             )
         }
@@ -512,7 +535,7 @@ private fun rememberSignals(state: DayUiState): Signals {
                 ),
                 body(
                     Metric.Spo2, spo2Name, MetricColors.spo2, SleepCopy.nightValue(state, Metric.Spo2),
-                    SleepCopy.nightNormal(state, Metric.Spo2), unit = "%", line = nightAverage,
+                    SleepCopy.nightNormal(state, Metric.Spo2), line = nightAverage,
                 ),
                 BodySignal(
                     Metric.Stress, stressName, MetricColors.stress, stressLatest?.let { Metric.Stress.format(it.y) },
@@ -529,10 +552,10 @@ private fun rememberSignals(state: DayUiState): Signals {
     }
 }
 
-/** Body signals against your normal, each opening its metric, its off tag after its line. [waiting] is what a row with no reading says. */
+/** Body signals, each opening its metric, its off tag after its line. [waiting] is what a row with no reading says. */
 @Composable
 private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Metric) -> Unit) {
-    ListPanel(title = stringResource(R.string.glow_recovery_body_signals), note = stringResource(R.string.glow_recovery_against_normal)) {
+    ListPanel(title = stringResource(R.string.glow_recovery_body_signals)) {
         signals.forEachIndexed { i, s ->
             MetricRow(
                 s.label, s.accent, s.value,

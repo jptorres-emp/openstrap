@@ -66,7 +66,7 @@
     <!-- The Energy card's status when the day has drained less than one point. -->
     <string name="glow_today_charge_steady">Steady since waking</string>
     <!-- Title of the small Load card: the Load score's name. -->
-    <string name="glow_today_load">Load</string>
+    <string name="glow_today_load">Load today</string>
     <!-- Title of the small card with the hours left to recover. The same name as in Edit Today. -->
     <string name="glow_today_to_recover">To recover</string>
     <!-- Unit beside the hours left to recover, hours. Very short. -->
@@ -203,4 +203,16 @@
     <string name="glow_today_hold_pin">Pin under the top card</string>
     <string name="glow_today_hold_unpin">Unpin</string>
     <string name="glow_today_hold_hide">Hide from Today</string>
+    <!-- Under the night hero's bedtime figure. -->
+    <string name="glow_today_usual_bedtime">Your usual bedtime</string>
+    <!-- The pairing hero's button after a failed pairing: it opens the Strap page, which says how to free the strap from Zepp. -->
+    <string name="glow_today_open_strap">Open Strap page</string>
+    <!-- Beside the title of the after-workout hero: how long since the workout ended. The time is "9 min". -->
+    <string name="glow_today_after_finished">Finished <xliff:g id="ago" example="9 min">%1$s</xliff:g> ago</string>
+    <!-- Under the after-workout hero's distance: how long the workout was active. The time is "1 min 22". -->
+    <string name="glow_today_after_active"><xliff:g id="time" example="1 min 22">%1$s</xliff:g> active</string>
+    <!-- Under the after-workout hero's dotted time: what that time is. -->
+    <string name="glow_today_after_active_time">Active time</string>
+    <!-- Under the after-workout hero's zone bar. -->
+    <string name="glow_today_after_zones">Time in zones</string>
 </resources>

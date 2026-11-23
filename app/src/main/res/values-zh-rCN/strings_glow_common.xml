@@ -11,7 +11,6 @@
     <string name="glow_loading">正在加载</string>
     <string name="glow_unit_bpm">bpm</string>
     <string name="glow_unit_min">分钟</string>
-    <string name="glow_unit_km">km</string>
     <string name="glow_no_value">无读数</string>
     <string name="glow_no_night_value">当晚无数据</string>
     <string name="glow_no_reading_yet">尚无读数</string>

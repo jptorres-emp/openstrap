@@ -14,6 +14,10 @@
     <string name="glow_recovery_yesterday">Yesterday</string>
     <!-- Title of the list of what raised or lowered Recovery. -->
     <string name="glow_recovery_what_drove">What drove it</string>
+    <!-- A driver's reading against its normal, on the Recovery tab: "56 ms, your normal 53". -->
+    <string name="glow_recovery_driver_hrv"><xliff:g id="ms" example="56">%1$d</xliff:g> ms, your normal <xliff:g id="usual" example="53">%2$d</xliff:g></string>
+    <string name="glow_recovery_driver_resting"><xliff:g id="bpm" example="59">%1$d</xliff:g> bpm, your normal <xliff:g id="usual" example="60">%2$d</xliff:g></string>
+    <string name="glow_recovery_driver_resting_alone"><xliff:g id="bpm" example="59">%1$d</xliff:g> bpm</string>
     <!-- A link on the drivers list's title row that opens all of them. The number is how many there are. -->
     <string name="glow_recovery_drivers_all">All <xliff:g id="count" example="7">%1$d</xliff:g></string>
     <!-- The drivers list's only row before the first night. -->
@@ -45,8 +49,6 @@
     <string name="glow_recovery_stress">Stress</string>
     <!-- Title of the body signals list. -->
     <string name="glow_recovery_body_signals">Body signals</string>
-    <!-- The note on the body signals' title row: each is compared with your normal. -->
-    <string name="glow_recovery_against_normal">Against your normal</string>
 
     <!-- Under the Recovery score in the week view. -->
     <string name="glow_recovery_week_average">Average of the last 7 days</string>
@@ -79,9 +81,9 @@
     <!-- Under a figure in the Energy detail: Energy when you woke. -->
     <string name="glow_recovery_at_waking">At waking</string>
     <!-- Under a figure in the Energy detail: the day's highest Energy. -->
-    <string name="glow_recovery_highest">Highest</string>
+    <string name="glow_recovery_highest">High</string>
     <!-- Under a figure in the Energy detail: the day's lowest Energy. -->
-    <string name="glow_recovery_lowest">Lowest</string>
+    <string name="glow_recovery_lowest">Low</string>
     <!-- A row under a score's detail that opens last night's sleep. -->
     <string name="glow_recovery_last_night">Last night</string>
     <!-- The Last night row when the strap recorded no sleep. -->

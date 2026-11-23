@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="glow_summary_join">%1$s，%2$s</string>
     <string name="glow_summary_unit_s">秒</string>
-    <string name="glow_summary_unit_m">米</string>
     <string name="glow_summary_unit_avg_bpm">平均 bpm</string>
     <string name="glow_summary_unit_kg_lifted">kg 负重</string>
     <plurals name="glow_summary_unit_sets">
@@ -66,6 +65,7 @@
     <string name="glow_summary_recover_label">恢复所需时间</string>
     <string name="glow_summary_zone_minutes">区间 %1$d，%2$d 分钟</string>
     <string name="glow_summary_exercise_total">%1$s 千克</string>
+    <string name="glow_summary_rest_on_time">休息在倒计时结束时结束。</string>
     <string name="glow_summary_rest_average">平均 %1$s</string>
     <string name="glow_summary_in_each_rest">每次休息中</string>
     <string name="glow_summary_rounds_span">第 %1$d 至 %2$d 回合</string>
@@ -75,6 +75,25 @@
     <string name="glow_summary_hero_reps">次数</string>
     <string name="glow_summary_route_zones">路线按心率区间着色</string>
     <string name="glow_summary_splits_note">每公里配速</string>
+    <string name="glow_summary_splits_note_mi">每英里配速</string>
     <string name="glow_summary_work_rest">运动 %1$d 秒，休息 %2$d 秒</string>
     <string name="glow_summary_period_note">平均心率</string>
+    <!-- The route map page (boards HaloRouteMap to HaloRouteMapNotOnRoads). -->
+    <string name="glow_route_map_open">打开路线地图</string>
+    <string name="glow_route_map_fit">显示整条路线</string>
+    <string name="glow_route_map_gpx">GPX</string>
+    <string name="glow_route_map_gpx_failed">无法写入路线文件</string>
+    <string name="glow_route_map_pick_hint">点击一段查看</string>
+    <string name="glow_route_map_unpick_hint">再点一次查看整条路线</string>
+    <string name="glow_route_map_split_in"><xliff:g id="split" example="Km 3">%1$s</xliff:g> 用时 <xliff:g id="time" example="6:02">%2$s</xliff:g></string>
+    <string name="glow_route_map_split_heart"><xliff:g id="bpm" example="151">%1$d</xliff:g> bpm，<xliff:g id="zone" example="3 区">%2$s</xliff:g></string>
+    <string name="glow_map_credit">© OpenStreetMap 贡献者</string>
+    <string name="glow_route_map_line">线路</string>
+    <string name="glow_route_map_roads">道路</string>
+    <string name="glow_route_map_gps">GPS</string>
+    <string name="glow_route_map_note_roads">沿你走过的街道绘制。距离和配速仍以记录为准。</string>
+    <string name="glow_route_map_note_not_on_roads">这条路线大部分不在地图上的道路上，所以按记录绘制。</string>
+    <string name="glow_route_map_note_offline">无法加载道路，所以按记录绘制。</string>
+    <string name="glow_route_map_note_matching">正在将路线匹配到道路</string>
+    <string name="glow_route_map_note_gps">按 GPS 记录绘制。</string>
 </resources>

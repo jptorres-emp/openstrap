@@ -126,7 +126,7 @@
     <string name="you_phone_quiet_to">To</string>
     <string name="you_phone_quiet_calls">Calls too</string>
     <string name="you_phone_quiet_calls_note">When off, the strap still buzzes for calls.</string>
-    <string name="you_phone_note">Follows Do Not Disturb and silent apps. Never reads what a notification says.</string>
+    <string name="you_phone_note">unstrap follows Do Not Disturb and silent apps. It never reads what a notification says.</string>
     <!-- The time sheet's title for each end of quiet hours. -->
     <string name="you_phone_quiet_from_title">Quiet from</string>
     <string name="you_phone_quiet_until_title">Quiet until</string>

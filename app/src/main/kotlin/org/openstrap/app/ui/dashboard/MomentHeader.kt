@@ -196,7 +196,7 @@ private fun DaySwitcher(
 
 @Composable
 private fun Peek(text: String) {
-    Text(text, Modifier.width(PeekWidth), color = Ink.Line, style = GlowType.body, maxLines = 1, softWrap = false)
+    Text(text, Modifier.width(PeekWidth), color = Ink.Tertiary, style = GlowType.body, maxLines = 1, softWrap = false)
 }
 
 // The avatar's surface when not glass; the header's buttons are the tab bar's glass ([RoundIconButton] glass).

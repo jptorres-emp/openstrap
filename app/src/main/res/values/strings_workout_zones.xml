@@ -9,7 +9,7 @@
     <!-- The heading over your max heart rate on the page. -->
     <string name="workout_zones_max_title">Your max heart rate</string>
     <!-- A button: type your max yourself. -->
-    <string name="workout_zones_set_it">Set it myself</string>
+    <string name="workout_zones_set_it">Set my max heart rate</string>
     <!-- A button: forget the max you set and learn it from workouts again. -->
     <string name="workout_zones_learn_it">Learn it again</string>
     <!-- Under the list of zones. Load is the app's name for how much a workout or a day asked of your body. -->
@@ -23,25 +23,25 @@
     <!-- The Profile page's row value when you set your max. -->
     <string name="workout_zones_profile_set"><xliff:g id="bpm" example="185">%1$d</xliff:g> bpm, set by you</string>
     <!-- The Profile page's row value when the app works your max out. -->
-    <string name="workout_zones_profile_worked_out">Worked out from age and workouts</string>
+    <string name="workout_zones_profile_worked_out">Worked out by unstrap</string>
     <!-- Under your max: you typed it. -->
     <string name="workout_zones_source_set">Set by you</string>
     <!-- Under your max: learned from workouts, with the day it was. The day is "3 Oct". -->
-    <string name="workout_zones_source_learned_on">Learned from hard efforts, <xliff:g id="v1" example="x">%1$s</xliff:g></string>
+    <string name="workout_zones_source_learned_on">Hard efforts, <xliff:g id="v1" example="x">%1$s</xliff:g></string>
     <!-- Under your max: learned from workouts, with no day kept. -->
-    <string name="workout_zones_source_learned">Learned from your hardest efforts</string>
+    <string name="workout_zones_source_learned">Your hardest efforts</string>
     <!-- Under your max: worked out from your age for now. -->
-    <string name="workout_zones_source_age">From your age, for now</string>
+    <string name="workout_zones_source_age">Your age, for now</string>
     <!-- Under your max: taken from the profile in the Zepp app for now. -->
-    <string name="workout_zones_source_strap">From your Zepp profile, for now</string>
+    <string name="workout_zones_source_strap">Your strap, until you add your age</string>
     <!-- Under your max: a guess with nothing to go on. -->
     <string name="workout_zones_source_guess">First guess, add your age or set it</string>
     <!-- A zone's name on the list. -->
     <string name="workout_zones_zone_name">Zone <xliff:g id="zone" example="2">%1$d</xliff:g></string>
     <!-- A zone's heart rates on the list, in bpm. Short, beside the zone's name. -->
-    <string name="workout_zones_bpm_range"><xliff:g id="from" example="115">%1$d</xliff:g> to <xliff:g id="to" example="133">%2$d</xliff:g></string>
+    <string name="workout_zones_bpm_range"><xliff:g id="from" example="115">%1$d</xliff:g> to <xliff:g id="to" example="133">%2$d</xliff:g> bpm</string>
     <!-- The top zone's heart rates on the list, in bpm: it has no end. Short. -->
-    <string name="workout_zones_bpm_up" tools:ignore="PluralsCandidate"><xliff:g id="from" example="172">%1$d</xliff:g> and up</string>
+    <string name="workout_zones_bpm_up" tools:ignore="PluralsCandidate"><xliff:g id="from" example="172">%1$d</xliff:g> bpm and up</string>
     <!-- A stepper in the sheet that moves a zone's edges: the zone's lowest heart rate. -->
     <string name="workout_zones_starts_at">Starts at</string>
     <!-- A stepper in the sheet that moves a zone's edges: the zone's highest heart rate. -->

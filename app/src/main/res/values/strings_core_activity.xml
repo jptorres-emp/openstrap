@@ -133,8 +133,12 @@
 
     <!-- Distance row's line and the detail's label: the kilometres were calculated from steps. Short. -->
     <string name="core_activity_distance_from_steps">km, from your steps</string>
+    <!-- Distance row's line and the detail's label, in miles: calculated from steps. Short. -->
+    <string name="core_activity_distance_from_steps_mi">mi, from your steps</string>
     <!-- Distance row's line and the detail's label: the strap measured the kilometres. Short. -->
     <string name="core_activity_distance_from_strap">km, from the strap</string>
+    <!-- Distance row's line and the detail's label, in miles: the strap measured them. Short. -->
+    <string name="core_activity_distance_from_strap_mi">mi, from the strap</string>
     <!-- Distance detail, under the kilometres: the steps they come from. The number has the phone's thousands mark. -->
     <string name="core_activity_distance_steps_today">Over <xliff:g id="steps" example="8,432">%1$s</xliff:g> steps so far today.</string>
     <string name="core_activity_distance_steps_day">Over <xliff:g id="steps" example="8,432">%1$s</xliff:g> steps that day.</string>

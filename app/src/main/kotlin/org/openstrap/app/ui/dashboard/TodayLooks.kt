@@ -5,9 +5,9 @@ import org.openstrap.app.ui.glow.CardSize
 import org.openstrap.app.ui.glow.Pane
 
 /*
- * How each Today card looks, and the rule that no two cards next to each other look the same (spec 2.5), with the
- * looks themselves in CardLooks.kt. Plain functions over the final list of cards, after Edit Today, so every moment
- * and every pin and hide is tested without a screen.
+ * How each Today card looks, and the rules that no two cards next to each other look the same and no two lit cards
+ * touch (spec 2.5), with the looks themselves in CardLooks.kt. Plain functions over the final list of cards, after
+ * Edit Today, so every moment and every pin and hide is tested without a screen.
  */
 
 private fun glow(h: Hue, p: PictureKind? = null) = CardLook(Tier.Glow, h, picture = p)
@@ -38,12 +38,19 @@ private fun heroHue(moment: Moment?): Hue = when (moment) {
 fun defaultLook(slot: TodaySlot, moment: Moment?, live: Boolean = false): CardLook =
     ownLook(slot, moment).copy(shape = Shape.of(slot.size))
 
+private fun lastNightLook(size: CardSize): CardLook = when (size) {
+    CardSize.Strip -> strip(Hue.Sleep)
+    // Lit in Sleep blue, so a run of grey cards has a break in it (boards HaloTodayMidday, HaloTodayAfter).
+    CardSize.Small -> glow(Hue.Sleep, PictureKind.StageBar)
+    else -> picture(Hue.Sleep, PictureKind.StageBar)
+}
+
 private fun ownLook(slot: TodaySlot, moment: Moment?): CardLook = when (slot.card) {
     TodayCard.Hero -> glow(heroHue(moment))
     TodayCard.Suggestion, TodayCard.Alerts -> strip(Hue.Heart)
     TodayCard.CheckIn, TodayCard.StartWorkout -> strip(Hue.Neutral)
     TodayCard.BodyMorning -> ListLook
-    TodayCard.LastNight -> if (slot.size == CardSize.Strip) strip(Hue.Sleep) else picture(Hue.Sleep, PictureKind.StageBar)
+    TodayCard.LastNight -> lastNightLook(slot.size)
     TodayCard.HeartRate -> picture(Hue.Heart, PictureKind.Line)
     TodayCard.Stress -> picture(Hue.Stress, PictureKind.DayStrip)
     TodayCard.Activity -> picture(Hue.Steps, PictureKind.HourlyBars)
@@ -64,9 +71,24 @@ private fun ownLook(slot: TodaySlot, moment: Moment?): CardLook = when (slot.car
  */
 private val ANSWER = setOf(TodayCard.Suggestion, TodayCard.Alerts, TodayCard.CheckIn)
 
-/** Whether [a] and [b], neighbours, look the same in [look]s: the same design, unless both are strips needing an answer. */
+/**
+ * Whether [slot] is a lit card in [look]: the glow tier. The hero is always lit and sits above everything, so the rule
+ * that no two lit cards touch is about the cards under it (boards HaloTodayMidday, HaloTodayWorkoutTime, where Energy's
+ * glow sits right under the hero's).
+ */
+private fun lit(slot: TodaySlot, look: (TodaySlot) -> CardLook): Boolean = slot.card != TodayCard.Hero && look(slot).tier == Tier.Glow
+
+/**
+ * Whether [a] and [b], neighbours, clash in [look]s: the same design, unless both are strips needing an answer, or both
+ * lit. Plain grey cards may run as long as they like, as long as they draw different pictures.
+ */
 private fun clash(a: TodaySlot, b: TodaySlot, look: (TodaySlot) -> CardLook): Boolean =
-    look(a).sameDesign(look(b)) && !(a.card in ANSWER && b.card in ANSWER)
+    (look(a).sameDesign(look(b)) && !(a.card in ANSWER && b.card in ANSWER)) || (lit(a, look) && lit(b, look))
+
+/** The pairs of lit cards (by index, earlier first) that sit next to each other in [slots]: none after [varyLooks]. */
+fun litClashes(slots: List<TodaySlot>, wide: Boolean, moment: Moment? = null, smallsAcross: Boolean = false): List<Pair<Int, Int>> =
+    neighbours(slots, wide, smallsAcross).filter { (a, b) -> lit(slots[a]) { it.lookOr(moment) } && lit(slots[b]) { it.lookOr(moment) } }
+        .sortedWith(compareBy({ it.second }, { it.first }))
 
 /** The look a slot ends up with: the one [varyLooks] gave it, or its own. */
 fun TodaySlot.lookOr(moment: Moment?, live: Boolean = false): CardLook = look ?: defaultLook(this, moment, live)
@@ -115,10 +137,13 @@ private fun rowStarts(slots: List<TodaySlot>): Set<Int> {
 /**
  * The other looks [s] may take (spec 2.5): another tier the spec gives the card. Energy as the second glow steps down
  * to its picture card. Last night as a card becomes a strip, and as a strip a card. A Last night Small stays in its
- * pair. Every other card has one look.
+ * pair, and goes grey from lit. Every other card has one look.
  */
 private fun options(s: TodaySlot): List<TodaySlot> = when {
     s.secondGlow -> listOf(s.copy(secondGlow = false)).map { it.copy(look = defaultLook(it, null)) }
+    // Lit Last night as a Small steps down to grey beside another lit card.
+    s.card == TodayCard.LastNight && s.size == CardSize.Small ->
+        listOf(s.copy(look = picture(Hue.Sleep, PictureKind.StageBar).copy(shape = Shape.Small)))
     s.card == TodayCard.LastNight && s.size == CardSize.Wide -> listOf(s.copy(size = CardSize.Strip)).map { it.copy(look = defaultLook(it, null)) }
     s.card == TodayCard.LastNight && s.size == CardSize.Strip -> listOf(s.copy(size = CardSize.Wide)).map { it.copy(look = defaultLook(it, null)) }
     else -> emptyList()

@@ -190,7 +190,8 @@ class RoomDayRepository(
             else combine(resolved.map { health.sleepStages(it) }) { st -> naps.zip(st) { n, s -> n.start to s }.toMap() }
             val asDetected = naps.zip(resolved) { n, r -> n.start to r.strap }.toMap()
             combine(strapStages, napStages, osa) { whole, ns, apnea ->
-                val st = if (main?.moved == true) SleepEdits.clip(whole, main.start, main.end) else whole
+                // Kept to the night shown with no two rows over the same time, so its totals add up honestly.
+                val st = if (main == null) whole else SleepEdits.clean(whole, main.start, main.end)
                 // A moved main sleep's totals and score come from its clipped stages, as everywhere else ([SleepSource]).
                 val session = main?.shown?.let { if (main.moved) SleepEdits.restage(it, main.strap, whole) else it }
                 SleepDay(

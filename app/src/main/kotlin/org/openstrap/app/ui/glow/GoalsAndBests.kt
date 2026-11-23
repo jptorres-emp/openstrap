@@ -105,7 +105,7 @@ private fun weekStory(view: RewardsView, first: LocalDate, strings: Strings = St
     val totals = if (mine.isEmpty()) emptyList() else listOfNotNull(
         StoryStat(Units.clockDuration(seconds), null, strings.get(R.string.glow_goals_hours)),
         meters.takeIf { it >= MIN_WEEK_METERS }?.let {
-            StoryStat(Units.km(it, Units.Precision.Day), strings.get(R.string.glow_unit_km), strings.get(R.string.glow_goals_distance))
+            StoryStat(Units.major(it, Units.Precision.Day), Units.majorUnit(strings), strings.get(R.string.glow_goals_distance))
         },
         kcal.takeIf { it > 0 }?.let { StoryStat(Units.count(it), null, strings.get(R.string.glow_goals_active_kcal)) },
     )
@@ -127,6 +127,19 @@ private fun weekStory(view: RewardsView, first: LocalDate, strings: Strings = St
         strings.format(R.string.glow_goals_story_goal, strings.plural(R.plurals.glow_goals_workouts_word, count), goal),
         weekDots(view, first), totals, chips,
     )
+}
+
+/** How the weekly goal, the bests and the badges are counted: the page's (i). */
+@Composable
+private fun BestsInfoSheet(onDismiss: () -> Unit) {
+    HaloSheet(
+        onDismiss, stringResource(R.string.glow_goals_title), variant = HaloSheetVariant.Info,
+        footer = { HaloButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth()) },
+    ) {
+        SheetSection(stringResource(R.string.glow_goals_weekly_goal), stringResource(R.string.glow_goals_about_goal))
+        SheetSection(stringResource(R.string.glow_goals_personal_bests), stringResource(R.string.glow_goals_about_bests))
+        SheetSection(stringResource(R.string.glow_goals_badges), stringResource(R.string.glow_goals_about_badges))
+    }
 }
 
 /**
@@ -190,8 +203,13 @@ fun GoalsAndBestsPage(
     BackHandler(onBack = onBack)
     var openBadge by rememberSaveable { mutableStateOf<String?>(null) }
     var openBest by rememberSaveable { mutableStateOf<String?>(null) }
+    var info by rememberSaveable { mutableStateOf(false) }
     HaloPageList(contentPadding, variant = PageVariant.Detail) {
-        item { HaloPageHeader(stringResource(R.string.glow_goals_title), onBack) }
+        item {
+            HaloPageHeader(stringResource(R.string.glow_goals_title), onBack, trailing = {
+                InfoButton(stringResource(R.string.glow_goals_about), { info = true })
+            })
+        }
         if (view == null) {
             item { HaloNote(stringResource(R.string.glow_goals_loading)) }
             return@HaloPageList
@@ -211,6 +229,7 @@ fun GoalsAndBestsPage(
         item { BadgesPanel(view, onOpen = { openBadge = it.id }) }
         item { WaysOn(view, celebrations, onAllBadges, onGoal, onRecap, onCelebrations) }
     }
+    if (info) BestsInfoSheet { info = false }
     if (view != null) {
         openBadge?.let(Rewards::badge)?.let { b -> BadgeSheet(b, view, onDismiss = { openBadge = null }) }
         openBest?.let { kind -> BestSheet(kind, view, onDismiss = { openBest = null }) }
@@ -290,7 +309,7 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
     BackHandler(onBack = onBack)
     var openBest by rememberSaveable { mutableStateOf<String?>(null) }
     HaloPageList(contentPadding, variant = PageVariant.Detail) {
-        item { HaloPageHeader(stringResource(R.string.glow_goals_your_week), onBack, subtitle = RewardsCopy.weekRange(first)) }
+        item { HaloPageHeader(stringResource(R.string.glow_goals_recap_title), onBack, subtitle = RewardsCopy.weekRange(first)) }
         if (view == null) return@HaloPageList
         val week = view.week(first)
         val count = week?.count ?: 0
@@ -344,17 +363,17 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
                 HaloFigures(
                     listOf(
                         Units.clockDuration(seconds) to stringResource(R.string.glow_goals_hours),
-                        Units.km(meters, Units.Precision.Day) to stringResource(R.string.glow_goals_distance),
+                        Units.major(meters, Units.Precision.Day) to stringResource(R.string.glow_goals_distance),
                         Units.count(Math.round(kcal)) to stringResource(R.string.glow_goals_active_kcal),
                     ),
-                    units = listOf(stringResource(R.string.you_unit_h), stringResource(R.string.glow_unit_km), null),
+                    units = listOf(null, Units.majorUnit(), null),
                 )
             }
         }
         item {
             HaloCard(fill = CardFill.Rows) {
                 NavRow(
-                    stringResource(R.string.glow_goals_next_week_goal),
+                    stringResource(R.string.glow_goals_weekly_goal),
                     pluralStringResource(R.plurals.you_goals_workouts_value, view.goal, view.goal),
                     onClick = onGoal, divider = false,
                 )

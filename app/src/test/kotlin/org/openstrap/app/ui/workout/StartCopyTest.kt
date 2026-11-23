@@ -29,6 +29,7 @@ class StartCopyTest {
         assertEquals("Just walk", StartCopy.noGoal(15))
         assertEquals("Just ride", StartCopy.noGoal(8))
         assertEquals("Just go", StartCopy.noGoal(9))
+        assertEquals("Just row", StartCopy.noGoal(23))
     }
 
     @Test fun `strength's rest note, defaults and rest text`() {
@@ -119,9 +120,9 @@ class StartCopyTest {
 
     @Test fun `the Outdoor switch says how close the GPS fix is, and what indoors gives`() {
         assertEquals("GPS for distance and a map, finding you", StartCopy.outdoorNote(null))
-        assertEquals("GPS for distance and a map, 48 m so far", StartCopy.outdoorNote(48f))
-        assertEquals("GPS for distance and a map, ready to 8 m", StartCopy.outdoorNote(8f))
-        assertEquals("GPS for distance and a map, ready to 6 m", StartCopy.outdoorNote(6.4f))
+        assertEquals("GPS for distance and a map, accurate to 48 m for now", StartCopy.outdoorNote(48f))
+        assertEquals("GPS for distance and a map, accurate to 8 m", StartCopy.outdoorNote(8f))
+        assertEquals("GPS for distance and a map, accurate to 6 m", StartCopy.outdoorNote(6.4f))
         assertEquals("Distance from your steps", StartCopy.indoorLine(2))
         assertEquals("No distance indoors", StartCopy.indoorLine(8))
     }
@@ -180,11 +181,11 @@ class StartCopyTest {
 
     @Test fun `the zones page says where your max comes from and each zone's heart rates`() {
         val d = LocalDate.of(2026, 10, 3)
-        assertEquals("Learned from hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
+        assertEquals("Hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
         assertEquals("Set by you", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(185, org.openstrap.app.data.MaxHeartRate.Source.Set)))
         val zones = org.openstrap.app.data.HeartZones.STANDARD
-        assertEquals("96 to 115", HeartZonesCopy.zoneBpm(zones, 0, 192))
-        assertEquals("173 and up", HeartZonesCopy.zoneBpm(zones, 4, 192))
+        assertEquals("96 to 115 bpm", HeartZonesCopy.zoneBpm(zones, 0, 192))
+        assertEquals("173 bpm and up", HeartZonesCopy.zoneBpm(zones, 4, 192))
         assertEquals("Zone 2", HeartZonesCopy.zoneName(1))
         assertEquals(185, HeartZonesCopy.parseMax("185"))
         assertEquals(null, HeartZonesCopy.parseMax("100"))

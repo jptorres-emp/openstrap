@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,9 +39,9 @@ import org.openstrap.app.ui.theme.Ink
 /**
  * The sleep goal on its own, in a sheet over the You page (board HaloSleepGoalSheet): the hours and the minutes on two
  * wheels with their units beside them, then the sleep need the goal is measured against ([needMinutes], from the profile
- * when it holds one, [fromProfile], else from your age), a note on what uses the goal, and Cancel and Save. It saves the
- * same goal the goals sheet does; Cancel, or pulling the sheet down, leaves it as it was. Minutes step by 5, or by 1 when
- * the goal isn't on a 5.
+ * when it holds one, [fromProfile], else from your age when the profile has one, [ageKnown], else a default), a note on
+ * what uses the goal, and Cancel and Save. It saves the same goal the goals sheet does. Cancel, or pulling the sheet
+ * down, leaves it as it was. Minutes step by 5, or by 1 when the goal isn't on a 5.
  */
 @Composable
 fun SleepGoalSheet(
@@ -50,6 +51,7 @@ fun SleepGoalSheet(
     onSave: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    ageKnown: Boolean = false,
 ) {
     var hours by rememberSaveable { mutableIntStateOf(goal / MINUTES_PER_HOUR) }
     var minutes by rememberSaveable { mutableIntStateOf(goal % MINUTES_PER_HOUR) }
@@ -82,9 +84,16 @@ fun SleepGoalSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(
                     stringResource(R.string.you_sleep_goal_need, Units.duration(MINUTES.toSeconds(needMinutes.toLong()))),
-                    Modifier.weight(1f), color = NeedInk, style = GlowType.secondary,
+                    color = NeedInk, style = GlowType.secondary, softWrap = false,
                 )
-                HaloNote(stringResource(if (fromProfile) R.string.you_sleep_goal_need_profile else R.string.you_sleep_goal_need_age))
+                // The need stays on one line, and the source after it takes what's left, wrapping when it's long.
+                HaloNote(modifier = Modifier.weight(1f), textAlign = TextAlign.End, text = stringResource(
+                        when {
+                            fromProfile -> R.string.you_sleep_goal_need_profile
+                            ageKnown -> R.string.you_sleep_goal_need_age
+                            else -> R.string.you_sleep_goal_need_default
+                        },
+                    ))
             }
         }
         Text(stringResource(R.string.you_sleep_goal_note), color = GlowType.noteColor, style = GlowType.footnote)

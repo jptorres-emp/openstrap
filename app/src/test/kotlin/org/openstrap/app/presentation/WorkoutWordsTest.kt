@@ -32,7 +32,7 @@ class WorkoutWordsTest {
     @Test
     fun zoneWords() {
         assertEquals("Zone 3, tempo", WorkoutWords.zoneLine(2))
-        assertEquals("Zone 3," to "tempo", WorkoutCopy.zoneTitle(2))
+        assertEquals("Zone 3" to "tempo", WorkoutCopy.zoneTitle(2))
         assertEquals("Under a minute in this zone", WorkoutWords.zoneTime(59))
         assertEquals("4 min in this zone", WorkoutWords.zoneTime(250))
         assertEquals("312 kcal", WorkoutWords.kcalText(312.7f))

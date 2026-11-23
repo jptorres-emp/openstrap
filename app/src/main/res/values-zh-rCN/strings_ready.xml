@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ready_goal">目标</string>
+    <string name="ready_goal_type">目标类型</string>
+    <string name="ready_goal_type_change">目标类型，%1$s。更改</string>
+    <string name="ready_tab_open">不限</string>
+    <string name="ready_tab_free">自由</string>
+    <string name="ready_tab_timed">计时</string>
+    <string name="ready_tab_periods">分节</string>
+    <string name="ready_hero_pace_about">按你的配速约 %1$d 分钟</string>
+    <string name="ready_hero_zone_keep">保持在 %1$d 到 %2$d bpm</string>
+    <string name="ready_hero_zone_keep_up">保持在 %1$d bpm 以上</string>
+    <plurals name="ready_hero_heart_zones">
+        <item quantity="other">心率区间</item>
+    </plurals>
+    <plurals name="ready_hero_reps_of">
+        <item quantity="other">次，每次 %1$s</item>
+    </plurals>
+    <string name="ready_hero_reps_about">含休息约 %1$d 分钟</string>
+    <plurals name="ready_hero_sets">
+        <item quantity="other">组</item>
+    </plurals>
+    <plurals name="ready_hero_rounds">
+        <item quantity="other">轮</item>
+    </plurals>
+    <plurals name="ready_hero_periods">
+        <item quantity="other">节</item>
+    </plurals>
+    <string name="ready_hero_in_all">共 %1$s</string>
+    <string name="ready_hero_every_in_all">共 %1$s，剩余时间即休息</string>
+    <string name="ready_hero_periods_about">含休息约 %1$d 分钟</string>
+    <string name="ready_last_no_goal">无目标，上次训练 %1$s</string>
+    <string name="ready_last_no_plan">无计划，上次训练 %1$s</string>
+    <string name="ready_last_time_line">上次 %1$s</string>
+    <string name="ready_last_pace_line">%1$s，配速 %2$s 每公里</string>
+    <string name="ready_last_pace_line_mi">%1$s，配速 %2$s 每英里</string>
+    <string name="ready_no_goal">无目标</string>
+    <string name="ready_no_plan">无计划</string>
+    <string name="ready_rest_between_sets">组间休息</string>
+    <string name="ready_work">运动</string>
+    <string name="ready_rest">休息</string>
+    <string name="ready_round_every">每轮开始间隔</string>
+    <string name="ready_each_rep">每次</string>
+    <string name="ready_each_period">每节</string>
+    <string name="ready_break">间歇</string>
+    <string name="ready_less">%1$s，减少</string>
+    <string name="ready_more">%1$s，增加</string>
+    <string name="ready_outdoor">户外</string>
+    <string name="ready_outdoor_gps_ready">GPS 记录距离和路线，精度 %1$d 米</string>
+    <string name="ready_outdoor_gps_close">GPS 记录距离和路线，目前精度 %1$d 米</string>
+    <string name="ready_outdoor_gps_finding">GPS 记录距离和路线，正在定位</string>
+    <string name="ready_outdoor_off_steps">距离按步数计算</string>
+    <string name="ready_outdoor_off">室内不记录距离</string>
+    <string name="ready_location_off">位置信息已关闭。</string>
+    <string name="ready_location_turn_on">开启</string>
+    <string name="ready_your_zones">你的心率区间</string>
+    <string name="ready_save_intervals">保存间歇</string>
+    <string name="ready_saved_intervals">已保存</string>
+    <string name="ready_save_note">在开始运动时即可找到。最多可保留 10 个。</string>
+    <string name="ready_name_hint">名称，如周二间歇</string>
+    <string name="ready_type_goal">输入目标</string>
+</resources>

@@ -72,6 +72,10 @@ data class UserProfile(
     val usesImperial: Boolean
         get() = imperial ?: (java.util.Locale.getDefault().country in IMPERIAL_REGIONS)
 
+    /** What distances, paces and speeds are written in: the same choice as weight and height. */
+    val unitSystem: UnitSystem
+        get() = if (usesImperial) UnitSystem.Imperial else UnitSystem.Metric
+
     companion object {
         /** Regions that use pounds and feet day to day. */
         val IMPERIAL_REGIONS = setOf("US", "LR", "MM")
@@ -252,6 +256,45 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
         store.edit { it[strapSessionsKey] = enabled }
     }
 
+    private val askEndOnKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ASK_END_ON)
+    private val askEndMostKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MOST_MINUTES)
+    private val askEndGamesKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_GAMES_MINUTES)
+    private val askEndMindBodyKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MIND_BODY_MINUTES)
+
+    /**
+     * "Ask to end when I stop" (the Workouts settings page): on, and each group's time, out of the box as [AskToEnd]'s
+     * defaults. A time is stored as minutes, [AskToEnd.OFF] for Off; nothing stored is the group's default.
+     */
+    val askToEnd: Flow<AskToEnd> = read { p ->
+        AskToEnd(
+            on = p[askEndOnKey] ?: true,
+            most = AskToEnd.read(p[askEndMostKey], AskToEndGroup.Most.defaultMinutes),
+            games = AskToEnd.read(p[askEndGamesKey], AskToEndGroup.Games.defaultMinutes),
+            mindBody = AskToEnd.read(p[askEndMindBodyKey], AskToEndGroup.MindBody.defaultMinutes),
+        )
+    }
+
+    suspend fun setAskToEnd(a: AskToEnd) {
+        store.edit {
+            it[askEndOnKey] = a.on
+            it[askEndMostKey] = a.most ?: AskToEnd.OFF
+            it[askEndGamesKey] = a.games ?: AskToEnd.OFF
+            it[askEndMindBodyKey] = a.mindBody ?: AskToEnd.OFF
+        }
+    }
+
+    private val routeRoadsKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ROUTE_ROADS)
+
+    /**
+     * The route card draws a GPS workout's route along the roads it took ([org.openstrap.app.maps.RouteSnapper]), the
+     * default, or as GPS recorded it. With GPS chosen no road tiles are fetched for it.
+     */
+    val routeRoads: Flow<Boolean> = read { it[routeRoadsKey] ?: true }
+
+    suspend fun setRouteRoads(on: Boolean) {
+        store.edit { it[routeRoadsKey] = on }
+    }
+
     private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.WORKOUT_LIVE_VIEW)
 
     /** The live view a GPS workout was left on, Heart (0) or Map (1); the next one opens on it. Heart by default. */
@@ -306,6 +349,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     private val betaBlocker = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_BETA_BLOCKER)
     private val pregnant = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_PREGNANT)
 
+    /** The profile; the distance system follows it as each value is read, before any collector sees it. */
     val profile: Flow<UserProfile> = read { prefs ->
         UserProfile(
             prefs[birthYear],
@@ -320,7 +364,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
             prefs[bodyAt],
             prefs[betaBlocker] == true,
             prefs[pregnant] == true,
-        )
+        ).also { UnitSetting.system = it.unitSystem }
     }
 
     suspend fun saveProfile(p: UserProfile) {
@@ -849,8 +893,13 @@ object SettingsKeys {
     const val AUTO_START_WORKOUTS = "auto_start_workouts"
     const val WEAR_REMINDER = "wear_reminder"
     const val STRAP_SESSIONS = "strap_sessions"
+    const val ROUTE_ROADS = "route_roads"
     const val WORKOUT_LIVE_VIEW = "workout_live_view"
     const val WORKOUT_SIDES = "workout_sides"
+    const val ASK_END_ON = "ask_end_on"
+    const val ASK_END_MOST_MINUTES = "ask_end_most_minutes"
+    const val ASK_END_GAMES_MINUTES = "ask_end_games_minutes"
+    const val ASK_END_MIND_BODY_MINUTES = "ask_end_mind_body_minutes"
     const val PROFILE_BIRTH_YEAR = "profile_birth_year"
     const val PROFILE_SEX = "profile_sex"
     const val PROFILE_WEIGHT_KG = "profile_weight_kg"

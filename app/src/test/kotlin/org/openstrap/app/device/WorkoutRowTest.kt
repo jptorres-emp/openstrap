@@ -34,10 +34,10 @@ class WorkoutRowTest {
         val was = ClockSetting.use24Hour
         try {
             ClockSetting.use24Hour = true
-            assertEquals("Outdoor run detected, 10:02 to 10:40", AutoDetectNotifier.title(w, ZoneOffset.UTC))
+            assertEquals("Run detected, 10:02 to 10:40", AutoDetectNotifier.title(w, ZoneOffset.UTC))
             // The phone's clock, as every other time in the app.
             ClockSetting.use24Hour = false
-            assertEquals("Outdoor run detected, 10:02 AM to 10:40 AM", AutoDetectNotifier.title(w, ZoneOffset.UTC))
+            assertEquals("Run detected, 10:02 AM to 10:40 AM", AutoDetectNotifier.title(w, ZoneOffset.UTC))
         } finally {
             ClockSetting.use24Hour = was
         }

@@ -25,7 +25,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.unit.ColorProvider
 import org.openstrap.app.MainActivity
@@ -44,13 +43,30 @@ import org.openstrap.app.ui.theme.SportIcons
  * its Start opens Ready with your usual sport. It refreshes at each moment's end and, while it counts minutes, every
  * five ([WidgetUpdater.scheduleMoment]).
  */
-class MomentWidget : LoadingWidget<MomentWidgetModel>(WidgetKind.Moment) {
-    override fun shown(data: WidgetData, context: Context): MomentWidgetModel = load(data, context.widgets)
+class MomentWidget : LoadingWidget<MomentWidget.Shown>(WidgetKind.Moment) {
+    override fun shown(data: WidgetData, context: Context): Shown {
+        val model = load(data, context.widgets)
+        // While a workout records, Moment shows Start's recording card, so the two never disagree (workout-rules.md,
+        // section 7, rule 1).
+        val recording = if (model.recording != null && data.start?.state is org.openstrap.app.device.WorkoutState.Recording) {
+            StartWidget.load(data)
+        } else null
+        return Shown(model, recording)
+    }
 
-    override fun sample(): MomentWidgetModel = java.time.ZoneId.systemDefault().let { WidgetSamples.moment(java.time.LocalDate.now(it), it) }
+    override fun sample(): Shown {
+        val model = java.time.ZoneId.systemDefault().let { WidgetSamples.moment(java.time.LocalDate.now(it), it) }
+        return Shown(model, StartWidget().sampleShown().takeIf { WidgetRefresh.recordingOverride })
+    }
 
     @Composable
-    override fun Content(data: MomentWidgetModel) = MomentContent(data)
+    override fun Content(data: Shown) {
+        val recording = data.recording
+        if (recording?.model?.recording != null) StartContent(recording) else MomentContent(data.model)
+    }
+
+    /** The moment, and the recording card in its place while a workout records. */
+    data class Shown(val model: MomentWidgetModel, val recording: StartWidget.Shown?)
 
     companion object {
         /**
@@ -89,11 +105,11 @@ internal fun openToday(context: Context): Intent =
 /** The moment's name: every widget's title (spec 3.1). */
 private val NameStyle = WidgetType.title
 
-/** The sport's name while recording: Body 500 on the Small, the hero's light type on the Wide and Large. */
-private val SportStyle = WidgetType.body.copy(fontWeight = FontWeight.Medium)
+/** The sport's name while recording: cardTitle on the Small, the hero's light type on the Wide and Large. */
+private val SportStyle = WidgetType.cardTitle
 
 /** Open's word, black on its white pill. */
-private val OpenStyle = WidgetType.body.copy(color = ColorProvider(Color.Black), fontWeight = FontWeight.Medium)
+private val OpenStyle = WidgetType.button
 
 /** Room for the dots, the chart, play and the tile beside the backgrounds, in the bitmap budget. */
 private const val BITMAP_EXTRA = 1.4
@@ -113,23 +129,18 @@ private fun MomentContent(m: MomentWidgetModel) {
     }
 }
 
-/** The half gap above and below at the cell's real height; the gaps between are weights and share the rest. */
-private fun edge(fit: MomentLayout.Fit, f: WidgetFrame): Float = fit.edgeGap(f.drawHeight - 2 * WidgetSizes.PADDING_DP)
-
 /** Small: the name, the number (with Start beside it in the workout window), its word; or the recording's. */
 @Composable
 private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
     val fit = MomentLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    val edge = edge(fit, f)
-    Spacer(GlanceModifier.height(edge.dp))
-    Top(fit, f, edge)
+    Top(fit, f, 0f)
+    if (m.recording == null) Gap() else Flex()
     val r = m.recording
     if (r != null) {
-        if (fit.tile > 0f) { Gap(); Tile(r, fit.tile, f) }
-        fit.sport?.let { Gap(); Text(it.text, style = SportStyle.copy(fontSize = it.sp.sp), maxLines = 1) }
-        fit.since?.let { Gap(); Since(it, f) }
+        if (fit.tile > 0f) { Tile(r, fit.tile, f); Gap() }
+        fit.sport?.let { Text(it.text, style = SportStyle.copy(fontSize = it.sp.sp), maxLines = 1) }
+        fit.since?.let { Gap(WidgetGrid.GAP_TIGHT_DP); Since(it, f) }
     } else if (fit.dot > 0f) {
-        Gap()
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             DotNumber(m.number.orEmpty(), fit.dot, f.density, m.numberDescription)
             if (fit.play) {
@@ -137,37 +148,45 @@ private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
                 Play(m, f)
             }
         }
-        fit.word?.let { Gap(); Text(it.text, style = WidgetType.word.copy(fontSize = it.sp.sp), maxLines = 1) }
+        fit.word?.let {
+            Gap(WidgetGrid.GAP_TIGHT_DP)
+            val style = WidgetType.word.copy(color = WidgetType.secondaryShown.color, fontSize = it.sp.sp)
+            Text(it.text, style = style, maxLines = 1)
+        }
     } else {
-        fit.waiting?.let { Gap(); Text(it.text, style = WidgetType.secondary.copy(fontSize = it.sp.sp), maxLines = 1) }
+        // With nothing to show the Small says what the strap needs, as the status button's words, where the top row has no room.
+        val attention = attentionWords(f)
+        if (attention != null) AttentionText(attention)
+        else fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
         if (fit.play) { Gap(); Play(m, f) }
     }
-    Spacer(GlanceModifier.height(edge.dp))
 }
 
 /** Wide and Large: the name, the sentence, the number row, the Large's chart; or the recording's. */
 @Composable
 private fun ColumnScope.WideContent(m: MomentWidgetModel, fit: MomentLayout.Fit, f: WidgetFrame) {
-    val edge = edge(fit, f)
-    Spacer(GlanceModifier.height(edge.dp))
     val r = m.recording
     if (r != null) {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(GlanceModifier.fillMaxWidth().height(WidgetGrid.TOP_ROW_DP.dp), verticalAlignment = Alignment.CenterVertically) {
             Name(fit.name)
             Spacer(GlanceModifier.defaultWeight())
             if (fit.open) OpenPill(f)
         }
-        if (fit.tile > 0f) { Gap(); Tile(r, fit.tile, f) }
-        fit.sport?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = 1) }
+        Flex()
+        if (fit.tile > 0f) { Tile(r, fit.tile, f); Gap() }
+        fit.sport?.let { Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = 1) }
         fit.since?.let { Gap(); Since(it, f) }
     } else {
-        Top(fit, f, edge)
-        fit.sentence?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES) }
-        fit.row?.let { Gap(); NumberRow(m, it, f) }
-        fit.waiting?.let { Gap(); Text(it.text, style = WidgetType.secondary.copy(fontSize = it.sp.sp), maxLines = 1) }
-        if (fit.chart > 0f) m.chart?.let { Gap(); Chart(it, fit.chart, f) }
+        Top(fit, f, 0f)
+        Gap()
+        fit.sentence?.let {
+            Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES)
+            Gap(WidgetGrid.GAP_WIDE_DP)
+        }
+        fit.row?.let { NumberRow(m, it, f) }
+        fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
+        if (fit.chart > 0f) m.chart?.let { Gap(WidgetGrid.GAP_WIDE_DP); Flex(); Chart(it, fit.chart, f) }
     }
-    Spacer(GlanceModifier.height(edge.dp))
 }
 
 @Composable
@@ -177,7 +196,14 @@ private fun Name(name: MomentLayout.Line) = Text(name.text, style = NameStyle.co
 @Composable
 private fun Top(fit: MomentLayout.Fit, f: WidgetFrame, above: Float) {
     val top = fit.top
-    if (top != null) TopRowView(fit.name.text, null, top, f, above, NameStyle) else Name(fit.name)
+    if (top != null) {
+        TopRowView(fit.name.text, null, top, f, above, NameStyle)
+    } else {
+        Row(
+            GlanceModifier.fillMaxWidth().height(WidgetGrid.TOP_ROW_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { Name(fit.name) }
+    }
 }
 
 /** The dots with the word beside them, the figure or the Start button on the right, bottoms aligned. */
@@ -187,12 +213,12 @@ private fun NumberRow(m: MomentWidgetModel, row: MomentLayout.NumberRow, f: Widg
         DotNumber(m.number.orEmpty(), row.dot, f.density, m.numberDescription)
         row.word?.let {
             Spacer(GlanceModifier.width(MomentLayout.WORD_GAP_DP.dp))
-            Text(it.text, style = WidgetType.word.copy(fontSize = it.sp.sp), maxLines = 1)
+            Text(it.text, style = WidgetType.word.copy(color = WidgetType.secondaryShown.color, fontSize = it.sp.sp), maxLines = 1)
         }
         Spacer(GlanceModifier.defaultWeight())
         when {
             row.play -> Play(m, f)
-            row.figure != null -> Text(row.figure.text, style = WidgetType.secondary.copy(fontSize = row.figure.sp.sp), maxLines = 1)
+            row.figure != null -> Text(row.figure.text, style = WidgetType.secondaryShown.copy(fontSize = row.figure.sp.sp), maxLines = 1)
         }
     }
 }
@@ -230,9 +256,9 @@ private fun Chart(chart: MomentChart, height: Float, f: WidgetFrame) {
         )
         Spacer(GlanceModifier.height(MomentLayout.CHART_LABEL_GAP_DP.dp))
         Row(GlanceModifier.fillMaxWidth()) {
-            Text(chart.from, style = WidgetType.caption, maxLines = 1)
+            Text(chart.from, style = WidgetType.captionShown, maxLines = 1)
             Spacer(GlanceModifier.defaultWeight())
-            Text(chart.to, style = WidgetType.caption, maxLines = 1)
+            Text(chart.to, style = WidgetType.captionShown, maxLines = 1)
         }
     }
 }
@@ -261,7 +287,7 @@ private fun Since(line: MomentLayout.Line, f: WidgetFrame) {
             contentScale = ContentScale.FillBounds,
         )
         Spacer(GlanceModifier.width(MomentLayout.REC_DOT_GAP_DP.dp))
-        Text(line.text, style = WidgetType.secondary.copy(fontSize = line.sp.sp), maxLines = 1)
+        Text(line.text, style = WidgetType.secondaryShown.copy(fontSize = line.sp.sp), maxLines = 1)
     }
 }
 
@@ -271,8 +297,8 @@ private fun OpenPill(f: WidgetFrame) {
     val context = LocalContext.current
     val w = MomentLayout.openWidth(f.fontScale)
     Box(
-        GlanceModifier.size(w.dp, MomentLayout.PLAY_DP.dp)
-            .background(ImageProvider(pillBitmap(w, MomentLayout.PLAY_DP, f.density)), ContentScale.FillBounds)
+        GlanceModifier.size(w.dp, WidgetGrid.TOP_ROW_DP.dp)
+            .background(ImageProvider(pillBitmap(w, WidgetGrid.TOP_ROW_DP, f.density)), ContentScale.FillBounds)
             .clickable(actionStartActivity(openLiveWorkout(context))),
         contentAlignment = Alignment.Center,
     ) { Text(MomentLayout.OPEN, style = OpenStyle, maxLines = 1) }

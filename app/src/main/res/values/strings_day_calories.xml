@@ -6,9 +6,9 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- The Activity tab's Calories row, under the active kcal, before the goal is met: the goal, then the day's total kcal. One line. -->
-    <string name="day_calories_row_line">Active of <xliff:g id="goal" example="450">%1$s</xliff:g>. <xliff:g id="total" example="1,468">%2$s</xliff:g> total</string>
+    <string name="day_calories_row_line">Active of <xliff:g id="goal" example="500">%1$s</xliff:g>, <xliff:g id="total" example="800">%2$s</xliff:g> total</string>
     <!-- The same once the goal is met: the day's total kcal. One line. -->
-    <string name="day_calories_row_line_met">Active, goal met. Total <xliff:g id="total" example="2,140">%1$s</xliff:g></string>
+    <string name="day_calories_row_line_met">Active goal met, <xliff:g id="total" example="800">%1$s</xliff:g> total</string>
 
     <!-- The label under the Calories page's big number on today. Lower case, it reads on from the number. -->
     <string name="day_calories_day_label_today">active kcal so far today</string>

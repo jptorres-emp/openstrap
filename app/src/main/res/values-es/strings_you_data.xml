@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="you_backup_status_off">Desactivado, un ZIP al día en la carpeta que elijas</string>
+    <string name="you_backup_status_waiting">Aún sin copias, se hace mientras se carga</string>
+    <string name="you_backup_last">Última copia %1$s</string>
+    <string name="you_backup_summary_failed">La última copia de seguridad falló</string>
+    <string name="you_backup_summary_waiting">Activado, aún sin copias</string>
+    <string name="you_backup_failure_folder_gone">La carpeta ya no está disponible.</string>
+    <string name="you_backup_failure_permission">unstrap ya no puede acceder a la carpeta. Vuelve a seleccionarla.</string>
+    <string name="you_backup_failure_no_space">No hay suficiente espacio para esto.</string>
+    <string name="you_backup_failure_cant_write">unstrap no pudo escribir en la carpeta.</string>
+    <string name="you_backup_failure_other">Inténtalo de nuevo o espera a la copia de seguridad de mañana.</string>
+    <plurals name="you_backup_restored_records_settings">
+        <item quantity="one">Se restauró %1$s registro y tus ajustes.</item>
+        <item quantity="many">Se restauraron %1$s registros y tus ajustes.</item>
+        <item quantity="other">Se restauraron %1$s registros y tus ajustes.</item>
+    </plurals>
+    <plurals name="you_backup_restored_records">
+        <item quantity="one">Se restauró %1$s registro.</item>
+        <item quantity="many">Se restauraron %1$s registros.</item>
+        <item quantity="other">Se restauraron %1$s registros.</item>
+    </plurals>
+    <string name="you_backup_restored_settings">Tus ajustes fueron restaurados. Tus registros ya estaban aquí.</string>
+    <string name="you_backup_restored_nothing">No hay nada que restaurar. Ya está todo aquí.</string>
+    <plurals name="you_backup_restored_skipped">
+        <item quantity="one">No se pudo leer %1$s registro.</item>
+        <item quantity="many">No se pudieron leer %1$s registros.</item>
+        <item quantity="other">No se pudieron leer %1$s registros.</item>
+    </plurals>
+    <string name="you_backup_restored_with_skipped">%1$s %2$s</string>
+    <string name="you_backup_folder_unknown">La carpeta que elegiste</string>
+    <string name="you_backup_outcome_done">Copia guardada como %1$s.</string>
+    <string name="you_backup_outcome_recording">Hay un entrenamiento en curso. La copia de seguridad se realizará al finalizar.</string>
+    <string name="you_backup_outcome_off">La copia de seguridad automática está desactivada.</string>
+    <string name="you_backup_outcome_failed">No se pudo hacer la copia de seguridad. %1$s</string>
+    <string name="you_backup_saved_copy">unstrap guardó una copia.</string>
+    <string name="you_backup_folder_refused">unstrap no puede seguir escribiendo en esa carpeta. Elige otra.</string>
+    <string name="you_backup_title">Copia de seguridad</string>
+    <string name="you_backup_automatic">Copia de seguridad automática</string>
+    <string name="you_backup_folder">Carpeta de copia de seguridad</string>
+    <string name="you_backup_now">Hacer copia ahora</string>
+    <string name="you_backup_now_running">Haciendo la copia</string>
+    <string name="you_backup_now_note">Guarda un ZIP en %2$s cada día y conserva los últimos %1$d.</string>
+    <string name="you_backup_off_note">Al activarla, te pide elegir una carpeta. unstrap guarda allí un ZIP cada día y conserva los últimos %1$d.</string>
+    <string name="you_backup_restore_note">Sirve cualquier ZIP de unstrap. Rellena lo que le falta a este teléfono.</string>
+    <string name="you_backup_save_copy">Guardar una copia</string>
+    <string name="you_backup_save_copy_note">Un ZIP guardado donde elijas. unstrap nunca lo elimina.</string>
+    <string name="you_deleted_sleep_title">Sueño eliminado</string>
+    <string name="you_hc_line_stopped_permissions">Detenido, permisos desactivados</string>
+    <string name="you_hc_line_stopped_install">Detenido, instala Health Connect</string>
+    <string name="you_hc_line_stopped_unavailable">Detenido, no disponible en este teléfono</string>
+    <string name="you_hc_line_off">Desactivado, copia tras cada sincronización</string>
+    <string name="you_hc_line_on">Activado, copia tras cada sincronización</string>
+    <string name="you_hc_line_last">Activado, última copia %1$s</string>
+    <string name="you_hc_summary_stopped_permissions">Detenido, permisos desactivados</string>
+    <string name="you_hc_summary_stopped_install">Detenido, instala Health Connect</string>
+    <string name="you_hc_summary_stopped_unavailable">Detenido, no disponible en este teléfono</string>
+    <string name="you_hc_title">Health Connect</string>
+    <string name="you_hc_auto">Copia automática a Health Connect</string>
+    <string name="you_hc_copy_now">Copiar ahora</string>
+    <string name="you_hc_open">Abrir Health Connect</string>
+    <string name="you_hc_open_note">Permisos y datos</string>
+    <string name="you_hc_calories_note">Las calorías, la frecuencia respiratoria y el VO2 max quedan fuera hasta que los permitas.</string>
+    <string name="you_hc_calories_offer">Permitir calorías, frecuencia respiratoria y VO2 max</string>
+    <string name="you_hc_install">Instala Health Connect</string>
+    <string name="you_hc_install_note">En este teléfono, Health Connect es una aplicación de Play Store. Instálala para copiar tus datos allí.</string>
+    <string name="you_hc_store_failed">No se pudo abrir Play Store.</string>
+    <string name="you_hc_restored_none">Health Connect no tiene datos de unstrap para restaurar.</string>
+    <plurals name="you_hc_restored">
+        <item quantity="one">Se restauró %1$s registro de Health Connect.</item>
+        <item quantity="many">Se restauraron %1$s registros de Health Connect.</item>
+        <item quantity="other">Se restauraron %1$s registros de Health Connect.</item>
+    </plurals>
+    <plurals name="you_hc_wrote">
+        <item quantity="one">Se copió %1$,d registro de los últimos 30 días a Health Connect.</item>
+        <item quantity="many">Se copiaron %1$,d registros de los últimos 30 días a Health Connect.</item>
+        <item quantity="other">Se copiaron %1$,d registros de los últimos 30 días a Health Connect.</item>
+    </plurals>
+    <plurals name="you_hc_auto_wrote">
+        <item quantity="one">La copia automática está activada. Se copió %1$,d registro de los últimos 30 días.</item>
+        <item quantity="many">La copia automática está activada. Se copiaron %1$,d registros de los últimos 30 días.</item>
+        <item quantity="other">La copia automática está activada. Se copiaron %1$,d registros de los últimos 30 días.</item>
+    </plurals>
+    <string name="you_hc_restore_failed">No se pudo restaurar desde Health Connect</string>
+    <string name="you_hc_write_failed">No se pudo copiar a Health Connect</string>
+    <string name="you_hc_auto_failed">La copia automática está activada, pero la primera copia no funcionó</string>
+    <string name="you_error_save_copy">No se pudo guardar la copia. %1$s</string>
+    <string name="you_error_save_copy_permission">unstrap no tenía permisos para escribir allí. Elige otra ubicación.</string>
+    <string name="you_error_save_copy_gone">Esa ubicación ya no está disponible. Elige otra.</string>
+    <string name="you_error_save_copy_other">Inténtalo de nuevo o elige otra ubicación.</string>
+    <string name="you_error_restore_copy">No se pudo restaurar la copia. %1$s</string>
+    <string name="you_error_restore_not_copy">Ese archivo no es una copia de unstrap.</string>
+    <string name="you_error_restore_cant_open">unstrap no puede abrir ese archivo. Elígelo de nuevo.</string>
+    <string name="you_error_try_again">Inténtalo de nuevo.</string>
+    <string name="you_error_hc">%1$s. %2$s</string>
+    <string name="you_error_hc_permission">unstrap ya no tiene permisos. Concédeselos en Health Connect.</string>
+    <string name="you_error_hc_no_answer">Health Connect no respondió. Inténtalo de nuevo.</string>
+    <string name="you_backup_banner_failed">Falló la última copia</string>
+    <string name="you_hc_actions_note">Copiar ahora envía los últimos 30 días. Restaurar recupera lo que unstrap guardó allí.</string>
+    <string name="you_backup_failed_folder_gone">La carpeta ya no está disponible</string>
+    <string name="you_backup_failed_permission">No se puede acceder a la carpeta, elígela de nuevo</string>
+    <string name="you_backup_failed_no_space">No hay espacio suficiente en este teléfono</string>
+    <string name="you_backup_failed_cant_write">No se pudo escribir en la carpeta</string>
+    <string name="you_backup_failed_other">Inténtalo de nuevo o espera a mañana</string>
+</resources>

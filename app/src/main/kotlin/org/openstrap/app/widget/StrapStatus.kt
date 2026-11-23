@@ -10,8 +10,14 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 
-/** The strap status line a widget shows in its top row (widgets spec 5); none while all is well. */
+/**
+ * The strap status line a widget shows in its top row (widgets spec 5). While all is well it is [Synced]: the button
+ * alone, quiet, a tap syncs (board HaloWidgets).
+ */
 sealed interface StrapStatus {
+    /** All is well, [at] the last sync's end, epoch seconds. The button shows without words; a tap syncs. */
+    data class Synced(val at: Long) : StrapStatus
+
     /** Opens the Strap page. */
     data object NotPaired : StrapStatus
 
@@ -79,6 +85,7 @@ fun strapStatusLine(
     StrapStatus.Syncing -> strings.get(R.string.system_widget_status_syncing)
     StrapStatus.SyncFailed -> strings.get(R.string.system_widget_status_not_synced)
     StrapStatus.BluetoothOff -> strings.get(R.string.system_widget_status_bluetooth_off)
+    is StrapStatus.Synced -> strings.format(R.string.system_widget_status_synced, syncedWhen(status.at, now, zone, locale))
     is StrapStatus.StaleSync -> strings.format(R.string.system_widget_status_synced, syncedWhen(status.at, now, zone, locale))
 }
 

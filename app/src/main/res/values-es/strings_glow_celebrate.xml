@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_celebrate_settings">Celebraciones</string>
+    <string name="glow_celebrate_goal_met">Meta semanal cumplida</string>
+    <string name="glow_celebrate_title">Celebraciones</string>
+    <string name="glow_celebrate_goal_moment">Momento de la meta</string>
+    <string name="glow_celebrate_goal_moment_line">Pantalla completa al alcanzar tu meta</string>
+    <string name="glow_celebrate_recap">Tu semana</string>
+    <string name="glow_celebrate_recap_line">Una notificación el lunes por la mañana</string>
+    <string name="glow_celebrate_history_title">De tus entrenamientos hasta ahora</string>
+</resources>

@@ -45,23 +45,23 @@ class TodayPlanTest {
 
     @Test fun `each moment has the spec's cards in order`() {
         assertEquals(listOf(Hero, CheckIn, BodyMorning, LastNight, HeartRate, Activity, Week, StartWorkout, EditToday), cards(Moment.Waking))
-        // The Right now list is gone: Stress has its card beside Heart rate.
-        assertEquals(listOf(Hero, Recovery, LastNight, Activity, HeartRate, Stress, Week, StartWorkout, EditToday), cards(Moment.Midday))
+        // The body list closes the day's cards (board HaloTodayMidday).
+        assertEquals(listOf(Hero, Recovery, LastNight, Activity, BodyMorning, Week, StartWorkout, EditToday), cards(Moment.Midday))
         // The workout window's hero has Start, so no strip.
         assertEquals(listOf(Hero, Charge, LoadToday, Recover, Activity, LastNight, Week, EditToday), cards(Moment.WorkoutWindow))
         assertEquals(
-            listOf(Hero, Workout, LoadToday, Recover, Charge, Activity, LastNight, Week, StartWorkout, EditToday),
+            listOf(Hero, LoadToday, Recover, Charge, Activity, LastNight, Week, StartWorkout, EditToday),
             cards(Moment.After, TodayFacts(workout = true)),
         )
         assertEquals(listOf(Hero, Charge, Activity, HeartRate, LastNight, Week, StartWorkout, EditToday), cards(Moment.Evening))
-        // At night as in the evening, but no Start a workout this late.
-        assertEquals(cards(Moment.Evening) - StartWorkout, cards(Moment.Night))
+        // At night Energy and Heart rate pair and Steps goes wide (board HaloTodayNight), with no Start a workout this late.
+        assertEquals(listOf(Hero, Charge, HeartRate, Activity, LastNight, Week, EditToday), cards(Moment.Night))
         // During a workout the hero has the live heart rate and one is already under way.
         assertEquals(listOf(Hero, Activity, Recovery, LastNight, Week, EditToday), cards(Moment.During))
-        // Heart rate shows at waking, midday, the evening and night, never around a workout. Stress only at midday.
+        // Heart rate shows at waking, the evening and night, never around a workout. No moment has Stress by default.
         for (m in listOf(Moment.WorkoutWindow, Moment.During, Moment.After)) assertFalse("$m", HeartRate in cards(m, TodayFacts(workout = true)))
         for (m in Moment.entries) {
-            assertEquals("$m", m == Moment.Midday, Stress in cards(m, TodayFacts(workout = true)))
+            assertFalse("$m", Stress in cards(m, TodayFacts(workout = true)))
         }
     }
 
@@ -71,7 +71,7 @@ class TodayPlanTest {
             rows(Moment.Waking),
         )
         assertEquals(
-            listOf("Hero Large", "Recovery+LastNight", "Activity Wide", "HeartRate+Stress", "Week Wide", "StartWorkout Strip", "EditToday Strip"),
+            listOf("Hero Large", "Recovery+LastNight", "Activity Wide", "BodyMorning List", "Week Wide", "StartWorkout Strip", "EditToday Strip"),
             rows(Moment.Midday),
         )
         assertEquals(
@@ -81,7 +81,7 @@ class TodayPlanTest {
         assertEquals(listOf("Hero Large", "Activity Wide", "Recovery+LastNight", "Week Wide", "EditToday Strip"), rows(Moment.During))
         assertEquals(
             listOf(
-                "Hero Large", "Workout Wide", "LoadToday+Recover", "Charge Wide", "Activity+LastNight", "Week Wide", "StartWorkout Strip",
+                "Hero Large", "LoadToday+Recover", "Charge Wide", "Activity+LastNight", "Week Wide", "StartWorkout Strip",
                 "EditToday Strip",
             ),
             rows(Moment.After, TodayFacts(workout = true)),
@@ -90,14 +90,20 @@ class TodayPlanTest {
             listOf("Hero Large", "Charge Wide", "Activity+HeartRate", "LastNight Strip", "Week Wide", "StartWorkout Strip", "EditToday Strip"),
             rows(Moment.Evening),
         )
+        assertEquals(
+            listOf("Hero Large", "Charge+HeartRate", "Activity Wide", "LastNight Strip", "Week Wide", "EditToday Strip"),
+            rows(Moment.Night),
+        )
         // Habit Age, when new, after Your week.
         assertEquals(listOf("Week Wide", "HabitAge Wide", "StartWorkout Strip", "EditToday Strip"), rows(Moment.Midday, TodayFacts(healthspan = true)).takeLast(4))
     }
 
     @Test fun `sizes and tiers follow the spec`() {
-        // Energy is the second glow wherever it shows: before a workout, after it and in the evening.
-        for (m in listOf(Moment.WorkoutWindow, Moment.After, Moment.Evening, Moment.Night)) {
-            assertTrue("$m", todayCards(m, TodayFacts()).first { it.card == Charge }.secondGlow)
+        // Energy is the second glow before a workout only; after it and in the evening and night it is a plain card
+        // (boards HaloTodayAfter, HaloTodayEvening, HaloTodayNight).
+        assertTrue(todayCards(Moment.WorkoutWindow, TodayFacts()).first { it.card == Charge }.secondGlow)
+        for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
+            assertFalse("$m", todayCards(m, TodayFacts()).first { it.card == Charge }.secondGlow)
         }
         // Pinned where the moment doesn't have it, it's the second glow too.
         assertTrue(applyEdits(todayCards(Moment.Waking, TodayFacts()), TodayEdits(pinned = listOf(Charge)), Moment.Waking).first { it.card == Charge }.secondGlow)
@@ -112,15 +118,10 @@ class TodayPlanTest {
         )
         val two = listOf(Recovery, LastNight, HeartRate, Stress).map { TodaySlot(it, CardSize.Small) }
         assertEquals(listOf("Recovery+LastNight", "HeartRate Wide", "Stress Wide"), rows(fitRows(two)))
-        // Without Steps between them at midday, the later pair splits into Wides.
+        // With Steps hidden in the evening, Heart rate is left alone and becomes a Wide.
         assertEquals(
-            listOf("Hero Large", "Recovery+LastNight", "HeartRate Wide", "Stress Wide"),
-            rows(applyEdits(todayCards(Moment.Midday, TodayFacts()), TodayEdits(hidden = setOf(Activity)), Moment.Midday)).take(4),
-        )
-        // With Stress hidden, Heart rate is left alone and becomes a Wide.
-        assertEquals(
-            listOf("Hero Large", "Recovery+LastNight", "Activity Wide", "HeartRate Wide", "Week Wide"),
-            rows(applyEdits(todayCards(Moment.Midday, TodayFacts()), TodayEdits(hidden = setOf(Stress)), Moment.Midday)).take(5),
+            listOf("Hero Large", "Charge Wide", "HeartRate Wide", "LastNight Strip"),
+            rows(applyEdits(todayCards(Moment.Evening, TodayFacts()), TodayEdits(hidden = setOf(Activity)), Moment.Evening)).take(4),
         )
     }
 
@@ -174,7 +175,7 @@ class TodayPlanTest {
         val slots = todayCards(Moment.Midday, TodayFacts(alerts = true))
         val edits = TodayEdits(hidden = setOf(Stress), pinned = listOf(HeartRate, LoadToday))
         val out = applyEdits(slots, edits, Moment.Midday)
-        assertEquals(listOf(Hero, Alerts, HeartRate, LoadToday, Recover, Recovery, LastNight, Activity, Week, StartWorkout, EditToday), out.map { it.card })
+        assertEquals(listOf(Hero, Alerts, HeartRate, LoadToday, Recover, Recovery, LastNight, Activity, BodyMorning, Week, StartWorkout, EditToday), out.map { it.card })
         // A pin the moment doesn't have comes in at its Today size: Load with To recover as their pair. Heart rate,
         // pinned away from Stress, is a Wide, and the pair under Load's splits, as a pair never follows a pair.
         assertEquals(
@@ -186,9 +187,9 @@ class TodayPlanTest {
             CardSize.Strip,
             applyEdits(todayCards(Moment.Evening, TodayFacts()), TodayEdits(pinned = listOf(LastNight)), Moment.Evening).first { it.card == LastNight }.size,
         )
-        // Pins pair only with their own partner: Heart rate and Steps pinned at waking are two Wides.
+        // Two pins that are Smalls here share a row: Heart rate and Steps pinned at waking stay a pair.
         assertEquals(
-            listOf("Hero Large", "HeartRate Wide", "Activity Wide", "CheckIn Strip"),
+            listOf("Hero Large", "HeartRate+Activity", "CheckIn Strip", "BodyMorning List"),
             rows(applyEdits(todayCards(Moment.Waking, TodayFacts()), TodayEdits(pinned = listOf(HeartRate, Activity)), Moment.Waking)).take(4),
         )
     }
@@ -209,17 +210,28 @@ class TodayPlanTest {
         assertEquals(TodayEdits(pinned = listOf(Week)), TodayEdits.parse(listOf("Week"), listOf("Week")))
     }
 
-    @Test fun `time to recover goes with Load, hidden or pinned`() {
+    @Test fun `time to recover is its own row, and pinning Load brings it along`() {
         val after = todayCards(Moment.After, TodayFacts(workout = true))
         val hidden = applyEdits(after, TodayEdits(hidden = setOf(LoadToday)), Moment.After).map { it.card }
         assertFalse(LoadToday in hidden)
-        assertFalse(Recover in hidden)
+        assertTrue(Recover in hidden)
         val pinned = applyEdits(after, TodayEdits(pinned = listOf(LoadToday)), Moment.After)
-        assertEquals(listOf(Hero, LoadToday, Recover, Workout), pinned.map { it.card }.take(4))
+        assertEquals(listOf(Hero, LoadToday, Recover, Charge), pinned.map { it.card }.take(4))
         assertTrue(pinned.take(3).drop(1).all { it.pinned && it.size == CardSize.Small })
-        // Recover is never offered on its own in Edit Today.
-        assertFalse(Recover.editable)
-        assertFalse(Recover.pinnable)
+        // Both pinned is the same pair, once.
+        val both = applyEdits(after, TodayEdits(pinned = listOf(LoadToday, Recover)), Moment.After)
+        assertEquals(listOf(Hero, LoadToday, Recover, Charge), both.map { it.card }.take(4))
+        // Hidden, it stays out of Load's pin.
+        val without = applyEdits(after, TodayEdits(hidden = setOf(Recover), pinned = listOf(LoadToday)), Moment.After)
+        assertFalse(Recover in without.map { it.card })
+        // Edit Today lists it with a name, and it can be pinned.
+        assertTrue(Recover.editable)
+        assertTrue(Recover.pinnable)
+    }
+
+    @Test fun `a bare Today ends with its cards, with no week, Start a workout or Edit Today`() {
+        val out = todayCards(Moment.Midday, TodayFacts(bare = true, healthspan = true)).map { it.card }
+        assertEquals(listOf(Hero, Recovery, LastNight, Activity, BodyMorning), out)
     }
 
     @Test fun `habit age is on Today only while its estimate is new, or pinned once there is one`() {
@@ -243,5 +255,37 @@ class TodayPlanTest {
         assertEquals(1, usualSport(listOf(1 to 10L, 1 to 20L, 4 to 30L)))
         assertEquals(4, usualSport(listOf(1 to 10L, 4 to 30L)))
         assertEquals(null, usualSport(emptyList()))
+    }
+
+    @Test fun `a pin dragged to another place moves there, out of range or onto itself changes nothing`() {
+        val e = TodayEdits(pinned = listOf(LoadToday, LastNight))
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(0, 1).pinned)
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(1, 0).pinned)
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(0, 5).pinned)
+        assertEquals(e, e.movePin(1, 1))
+        assertEquals(e, e.movePin(3, 0))
+    }
+
+    @Test fun `the pin order is the order under the hero`() {
+        val waking = todayCards(Moment.Waking, TodayFacts())
+        val a = applyEdits(waking, TodayEdits(pinned = listOf(HeartRate, LastNight)), Moment.Waking).map { it.card }
+        val b = applyEdits(waking, TodayEdits(pinned = listOf(LastNight, HeartRate)), Moment.Waking).map { it.card }
+        assertTrue(a.indexOf(HeartRate) < a.indexOf(LastNight))
+        assertTrue(b.indexOf(LastNight) < b.indexOf(HeartRate))
+    }
+
+    @Test fun `two pinned Smalls share a row under the hero, a pinned Small with a pair or a Wide is widened`() {
+        val evening = todayCards(Moment.Evening, TodayFacts())
+        val two = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, Activity)), Moment.Evening)
+        assertEquals(listOf(HeartRate to CardSize.Small, Activity to CardSize.Small), two.drop(1).take(2).map { it.card to it.size })
+        // Load brings To recover as its own pair, so Heart rate pinned before it stands alone as a Wide.
+        val withLoad = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, LoadToday)), Moment.Evening)
+        assertEquals(
+            listOf(HeartRate to CardSize.Wide, LoadToday to CardSize.Small, Recover to CardSize.Small),
+            withLoad.drop(1).take(3).map { it.card to it.size },
+        )
+        // Last night is a strip in the evening, so Heart rate pinned with it can't pair.
+        val withStrip = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, LastNight)), Moment.Evening)
+        assertEquals(CardSize.Wide, withStrip[1].size)
     }
 }

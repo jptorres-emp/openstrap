@@ -1,5 +1,6 @@
 package org.openstrap.app.widget
 
+import org.openstrap.app.data.HeartZones
 import android.util.Log
 import kotlinx.coroutines.flow.first
 import org.openstrap.app.data.DailyMetric
@@ -75,7 +76,16 @@ class StepsToday(val minutes: List<ActivityMinute>, val steps: Int, val past: Ma
  * The Start widget's reads: the listed [workouts] and [sides] (null and empty when they failed), whether [location]
  * is on, the workout's [state] then.
  */
-class StartRead(val workouts: List<WorkoutAnalysis>?, val sides: Map<Int, Boolean>, val location: Boolean, val state: WorkoutState)
+class StartRead(
+    val workouts: List<WorkoutAnalysis>?, val sides: Map<Int, Boolean>, val location: Boolean, val state: WorkoutState,
+    /** The strap's live heart rate while connected, and your zones, for a workout recording. */
+    val bpm: Int? = null, val zones: HeartZones = HeartZones.STANDARD,
+    /** The recording workout's live kcal and heart rate so far, for the Large's figures. */
+    val live: LiveWorkoutFigures? = null,
+)
+
+/** What a recording workout has so far that no row holds yet: active kcal, average and peak heart rate. */
+data class LiveWorkoutFigures(val activeKcal: Float?, val averageBpm: Int?, val peakBpm: Int?)
 
 /** The Recovery widget's reads: [today] and, while its score isn't in, [yesterday], null where it wasn't worked out. */
 class RecoveryRead(val todayResult: RecoveryResult?, val today: RecoveryDay?, val yesterday: RecoveryDay?)
@@ -114,6 +124,10 @@ class WidgetSnapshot(
     private val placed: () -> Set<WidgetKind>,
     /** Whether Bluetooth is off on the phone now. */
     private val bluetoothOff: () -> Boolean = { false },
+    /** The strap's live heart rate now, null when there's none or the strap isn't connected. */
+    private val liveHeartRate: () -> Int? = { null },
+    /** The recording workout's live figures (WorkoutSession's kcal and stats). */
+    private val liveWorkout: () -> LiveWorkoutFigures? = { null },
 ) {
     suspend fun gather(kinds: Set<WidgetKind>, now: Instant, zone: ZoneId): WidgetData {
         val today = now.atZone(zone).toLocalDate()
@@ -142,7 +156,12 @@ class WidgetSnapshot(
             moment = moment,
             usualBedtime = bedtime,
             steps = goal?.takeIf { WidgetKind.Steps in kinds }?.let { StepsRead(it, day) },
-            start = if (WidgetKind.Start in kinds) start() else null,
+            // Moment shows the same recording card as Start (workout-rules.md, section 7), without Start's lists.
+            start = when {
+                WidgetKind.Start in kinds -> start()
+                WidgetKind.Moment in kinds -> start(lists = false)
+                else -> null
+            },
             recovery = profile?.takeIf { WidgetKind.Recovery in kinds }?.let { recovery(today, rec, it) },
             sleep = span?.takeIf { WidgetKind.Sleep in kinds }?.let { s ->
                 catching { sleep(s.getOrThrow(), today, zone) }.onFailure { logUnread("sleep for $today", it) }
@@ -210,15 +229,20 @@ class WidgetSnapshot(
     }.onFailure { logUnread("steps for $today", it) }.getOrNull()
 
     /** Every workout as the workout lists read them ([Workouts.listed]), the sides last chosen and whether location is on. */
-    private suspend fun start(): StartRead {
+    private suspend fun start(lists: Boolean = true): StartRead {
         val state = workoutState()
-        val workouts = catching {
+        val workouts = if (!lists) null else catching {
             Workouts.listed(
                 dao.workouts().first(), dao.sportEffects().first(), dao.lastWorkoutHeartRates().first(), dao.appWorkouts().first(),
                 dao.setCounts().first().associate { it.workoutStart to it.sets }, LIST_MAX_HR,
             ) to settings.workoutSides.first()
         }.onFailure { logUnread("workouts for Start", it) }.getOrNull()
-        return StartRead(workouts?.first, workouts?.second.orEmpty(), workouts != null && location(), state)
+        val zones = if (state is WorkoutState.Recording) catching { settings.heartZones.first() }.getOrNull() else null
+        return StartRead(
+            workouts?.first, workouts?.second.orEmpty(), workouts != null && location(), state,
+            bpm = liveHeartRate().takeIf { state is WorkoutState.Recording }, zones = zones ?: HeartZones.STANDARD,
+            live = if (state is WorkoutState.Recording) liveWorkout() else null,
+        )
     }
 
     /** Today's Recovery with the strap's score, and yesterday's while this morning's isn't in. */

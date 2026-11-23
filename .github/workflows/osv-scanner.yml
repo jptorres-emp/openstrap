@@ -1,0 +1,37 @@
+# OSV-Scanner over the libraries the release APK ships. Weekly too, since a new advisory against a library fails it
+# without any change here.
+name: Dependency scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  osv-scanner:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      # The same Java, Gradle and Android SDK packages as the build jobs (android.yml).
+      - uses: ./.github/actions/setup
+
+      # Gradle keeps no lockfile, so one is written here for the scanner: only the release APK's runtime libraries, since
+      # build tools (lint, KSP) and test libraries never reach a phone.
+      - name: Write the release lockfile
+        run: ./gradlew --init-script .github/scripts/lock-all.gradle.kts :app:dependencies --configuration releaseRuntimeClasspath --write-locks -q > /dev/null
+
+      - name: OSV-Scanner
+        run: |
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
+          echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  osv-scanner" | sha256sum -c -
+          chmod +x osv-scanner
+          ./osv-scanner scan source --lockfile app/gradle.lockfile

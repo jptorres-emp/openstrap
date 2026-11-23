@@ -30,6 +30,7 @@ class RewardsKeeper(
     suspend fun facts(workouts: List<WorkoutAnalysis>): Facts = withContext(Dispatchers.IO) {
         val phone = dao.appWorkoutsAll().associateBy { it.start }
         val sets = dao.setsAll().groupBy { it.workoutStart }
+        val rounds = dao.roundsAll().groupBy { it.workoutStart }
         // One still recording isn't done yet.
         val done = workouts.filter { it.end > it.workout.start && !(it.fromPhone && phone[it.workout.start]?.end == null) }.map { a ->
             val p = phone[a.workout.start].takeIf { a.fromPhone }
@@ -37,10 +38,22 @@ class RewardsKeeper(
                 a.workout.start, a.shownStart, a.end, a.workout.sportType, a.activeSeconds, a.startedByYou,
                 gpsMeters = a.distanceMeters?.takeIf { !a.distanceFromSteps }, meters = a.distanceMeters,
                 stretches = Rewards.Stretch.parse(p?.stretches), structure = p?.structure, sets = sets[a.workout.start].orEmpty(), activeKcal = a.activeKcal,
+                rounds = finishedRounds(p?.structure, rounds[a.workout.start].orEmpty(), a.shownStart, a.end),
             )
         }
         val zone = ZoneId.systemDefault()
         Facts(done, days(zone), firstDay, zone)
+    }
+
+    /**
+     * The rounds a HIIT or interval workout finished inside what is shown of it (board HaloGoalsBests, "Most rounds"). A
+     * game's periods aren't rounds; a workout with none recorded (the strap's, or from before they were kept) has 0.
+     */
+    private fun finishedRounds(
+        structure: String?, rows: List<org.openstrap.app.data.db.AppWorkoutRound>, shownStart: Long, end: Long,
+    ): Int {
+        if (Structure.parse(structure).let { it == null || it is Structure.Periods }) return 0
+        return rows.count { r -> r.workEnd?.let { it in shownStart..end } == true }
     }
 
     private class DaysRead(val stamp: org.openstrap.app.data.db.TableStamp, val zone: ZoneId, val at: Long, val days: List<Rewards.Day>)

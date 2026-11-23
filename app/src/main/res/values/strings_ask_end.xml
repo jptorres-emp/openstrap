@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Workouts settings page (ui/device/WorkoutSettingsScreen.kt): "Ask to end when I stop" with a time per group of
+  sports, its time picker sheet, and the You page's row to it.
+-->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="ask_end_page_title">Workouts</string>
+    <string name="ask_end_section">Ask to end when I stop</string>
+    <string name="ask_end_switch">Ask to end when I stop</string>
+    <string name="ask_end_switch_note">Buzzes when you stop moving, never ends a workout by itself</string>
+    <string name="ask_end_most">Most workouts</string>
+    <string name="ask_end_most_note">Runs, rides, walks, strength, HIIT</string>
+    <string name="ask_end_games">Games and sports</string>
+    <string name="ask_end_games_note">Padel, tennis, football</string>
+    <string name="ask_end_mind_body">Yoga and Pilates</string>
+    <string name="ask_end_mind_body_note">Long still moments are part of it</string>
+    <string name="ask_end_footnote">The strap buzzes once and the app asks. Keep going and it asks again after the same time.</string>
+    <string name="ask_end_after">After <xliff:g id="minutes" example="8">%1$d</xliff:g> min</string>
+    <string name="ask_end_off">Off</string>
+    <string name="ask_end_during">During a workout</string>
+    <string name="ask_end_zones_max"><xliff:g id="bpm" example="186">%1$d</xliff:g> bpm max</string>
+    <string name="ask_end_sheet_note">A buzz after <xliff:g id="minutes" example="8">%1$d</xliff:g> min without moving. Off is at the end of the list.</string>
+    <string name="ask_end_sheet_note_off">No buzz and no question for these. Pick a time to turn it back on.</string>
+    <string name="ask_end_wheel">Minutes without moving</string>
+    <string name="ask_end_you_line">Ask to end after <xliff:g id="minutes" example="8">%1$d</xliff:g> min</string>
+    <string name="ask_end_you_line_some">Ask to end for some sports</string>
+    <string name="ask_end_you_line_off">Ask to end is off</string>
+</resources>

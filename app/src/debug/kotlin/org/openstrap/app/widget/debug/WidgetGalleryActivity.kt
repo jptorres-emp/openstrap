@@ -42,7 +42,7 @@ import org.openstrap.app.widget.widgets
  * 353 × 220, 4 × 3 about 353 × 330) instead of the three minimums, to see what people see; `--es cells min` goes
  * back. For Moment, `--es moment Evening` shows that moment (a Moment name, `auto` for the clock's) and
  * `--es placed recovery,sleep` takes those widgets as placed for the duplicate rule (`none` for none, `auto` for the
- * launcher's). `--es strap stale` shows every widget's strap status line in a state (notpaired, low, stale, yesterday,
+ * launcher's). `--es data sample` shows every widget's sample day instead of the database, `recording` the same with Start recording a walk. `--es strap stale` shows every widget's strap status line in a state (notpaired, low, stale, yesterday,
  * week, syncing, none for no line, auto for the strap's). The gallery's own hosted widgets count as placed too while it shows them. The ids it binds are deleted
  * when it closes or hosts another kind.
  */
@@ -108,11 +108,15 @@ class WidgetGalleryActivity : ComponentActivity() {
     override fun onDestroy() {
         unbindAll()
         // Placed widgets go back to the moment's mood, and Moment to the clock's moment and the launcher's widgets.
-        if (WidgetRefresh.debugMood != null || WidgetRefresh.debugMoment != null || WidgetRefresh.debugPlaced != null || WidgetRefresh.debugStrap != null) {
+        val forced = listOf(WidgetRefresh.debugMood, WidgetRefresh.debugMoment, WidgetRefresh.debugPlaced, WidgetRefresh.debugStrap)
+            .any { it != null }
+        if (forced || WidgetRefresh.debugSample) {
             WidgetRefresh.debugMood = null
             WidgetRefresh.debugMoment = null
             WidgetRefresh.debugPlaced = null
             WidgetRefresh.debugStrap = null
+            WidgetRefresh.debugSample = false
+            WidgetRefresh.debugRecording = false
             widgets.changedAll()
         }
         super.onDestroy()
@@ -212,6 +216,10 @@ class WidgetGalleryActivity : ComponentActivity() {
 
     /** The `strap` extra: the status line every widget shows; true when it was given. */
     private fun applyStrap(intent: android.content.Intent): Boolean {
+        intent.getStringExtra(EXTRA_DATA)?.let {
+            WidgetRefresh.debugSample = it.equals("sample", ignoreCase = true) || it.equals("recording", ignoreCase = true)
+            WidgetRefresh.debugRecording = it.equals("recording", ignoreCase = true)
+        }
         val strap = intent.getStringExtra(EXTRA_STRAP) ?: return false
         WidgetRefresh.debugStrap = strap.takeUnless { it.equals("auto", ignoreCase = true) }
         return true
@@ -291,6 +299,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         const val EXTRA_MOMENT = "moment"
         const val EXTRA_PLACED = "placed"
         const val EXTRA_STRAP = "strap"
+        const val EXTRA_DATA = "data"
         val SIZES = listOf("Small" to WidgetSizes.Small, "Wide" to WidgetSizes.Wide, "Large" to WidgetSizes.Large)
 
         /** One UI's cells on the phone, roughly (spec 2.1): what the three layouts stretch to there. */

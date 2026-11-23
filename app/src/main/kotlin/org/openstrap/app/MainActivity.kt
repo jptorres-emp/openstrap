@@ -320,6 +320,10 @@ private val RailMinWidth = 600.dp
 private val CapsuleOverBar = 104.dp
 private val CapsuleNoBar = 16.dp
 
+/** Below the fold the status bar is far away, so what sits there doesn't make room for it. */
+@Composable
+private fun Modifier.belowTheFold(folded: Boolean): Modifier = if (folded) consumeWindowInsets(WindowInsets.statusBars) else this
+
 /**
  * The app: the tabs, the pages over them, the sheets and the workout screens, in that order. Back goes to what was
  * composed last, so the order is the back order (wave 4 Decisions 1): the tabs, the pages over them, All metrics, add
@@ -455,7 +459,7 @@ private fun AppRoot(
         }
         // Below the fold the status bar is far away, so the pages don't make room for it.
         BoxWithConstraints(
-            Modifier.weight(1f).fillMaxWidth().let { if (hinge != null) it.consumeWindowInsets(WindowInsets.statusBars) else it },
+            Modifier.weight(1f).fillMaxWidth().belowTheFold(hinge != null),
         ) {
             // Wider than tall (a phone on its side, an unfolded foldable turned sideways): the tabs stand down the left
             // edge, so the pages keep their height.
@@ -465,7 +469,10 @@ private fun AppRoot(
             // enough for the detail to open beside the tab, the bar stays with the tab it belongs to.
             var barHidden by remember { mutableStateOf(false) }
             val detailOpen = nav.stack(nav.current).isNotEmpty()
-            val showBar = !rail && !barHidden && !(detailOpen && maxWidth < SideBySideWidth)
+            // The You and Strap pages (and what they open) are stepped into the same way, from the avatar and the strap
+            // chip: no bar under them either, wide or narrow, since they cover the whole tab.
+            val pageOpen = nav.pages.isNotEmpty()
+            val showBar = !rail && !barHidden && !pageOpen && !(detailOpen && maxWidth < SideBySideWidth)
             val selectTab: (Int) -> Unit = { t -> tapTab(t, nav, firmwareVm, scroll) }
             Scaffold(
                 bottomBar = {
@@ -497,7 +504,7 @@ private fun AppRoot(
                         detail = { t, d ->
                             DetailHost(
                                 t, d, nav, shown, histories, container, dayVm, workoutsVm, liveHeart, profile, padding,
-                                onOpenProfile = { openPage(Page.Profile) }, seeHabitAge = seeHabitAge,
+                                onOpenProfile = { openPage(Page.Profile) },
                             )
                         },
                         onOpenPage = openPage, seeHabitAge = seeHabitAge,

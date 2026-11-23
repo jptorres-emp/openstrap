@@ -1,9 +1,11 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Greys
+import androidx.compose.runtime.getValue
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.DayWords
-import org.openstrap.app.ui.glow.draw.EdgeSurface
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -59,13 +61,13 @@ import org.openstrap.app.data.Structure
 import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.presentation.EarnedLine
 import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.familyColor
-import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 
 /*
@@ -156,7 +158,7 @@ internal fun storyCard(
                 StoryChip(text, best = false, met = it.met)
             },
     )
-    val time = StoryStat(workoutClock(active), null, strings.get(R.string.glow_share_stat_time))
+    val time = StoryStat(Units.length(active), null, strings.get(R.string.glow_share_stat_time))
     val timeMinutes = StoryStat(minutes, minUnit, strings.get(R.string.glow_share_stat_time))
     val avg = a.workout.averageHeartRate?.let { StoryStat("$it", null, strings.get(R.string.glow_share_stat_avg_bpm)) }
     val peak = readings.maxOfOrNull { it.second }?.let { StoryStat("$it", null, strings.get(R.string.glow_share_stat_peak_bpm)) }
@@ -166,11 +168,12 @@ internal fun storyCard(
             val m = summary.distanceMeters?.takeIf { it > 0f }
             if (m != null) {
                 val pace = hero.pace?.let {
-                    StoryStat(it, strings.get(R.string.glow_share_unit_per_km), strings.get(R.string.glow_share_stat_pace))
+                    StoryStat(it, Units.paceUnit(strings), strings.get(R.string.glow_share_stat_pace))
                 }
                 StoryCard.Run(date, sport, hero.value, hero.unit, listOfNotNull(time, pace, avg), chips)
             } else {
-                StoryCard.Run(date, sport, dotClock(active), "", listOfNotNull(avg, kcal, peak).take(MAX_STATS), chips)
+                val stats = listOfNotNull(avg, kcal, peak).take(MAX_STATS)
+                StoryCard.Run(date, sport, Units.length(active, Units.DOT_LOCALE), "", stats, chips)
             }
         }
         Workouts.Family.Strength -> {
@@ -183,7 +186,7 @@ internal fun storyCard(
             )
         }
         Workouts.Family.IndoorCardio ->
-            StoryCard.Indoor(date, sport, dotClock(active), a.zoneSeconds, listOfNotNull(avg, kcal, peak), chips)
+            StoryCard.Indoor(date, sport, Units.length(active, Units.DOT_LOCALE), a.zoneSeconds, listOfNotNull(avg, kcal, peak), chips)
         Workouts.Family.Intervals -> roundsCard(summary, date, minutes to minUnit, listOfNotNull(peak), time, chips, strings)
         Workouts.Family.MindBody -> {
             val settled = FamilySummary.settled(readings, a.shownStart, a.end)
@@ -320,7 +323,7 @@ internal object StoryRouteShape {
  */
 @Composable
 internal fun StoryCardView(card: StoryCard, photo: ImageBitmap?, route: List<Route.Point>, modifier: Modifier = Modifier) {
-    Box(modifier.size(StoryWidth, StoryHeight).background(EdgeSurface)) {
+    Box(modifier.size(StoryWidth, StoryHeight).background(Greys.Card)) {
         if (photo != null) {
             Image(photo, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             PhotoFade()
@@ -360,8 +363,8 @@ private val StoryHeroRoom = 230.dp
 private fun StoryStack(card: StoryCard, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(StoryGap.Part)) {
         Column(verticalArrangement = Arrangement.spacedBy(StoryGap.Inner)) {
-            Text(card.title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            HeroValue(card.value, card.unit, dot = DotSize.Detail, gap = 10.dp, maxWidth = StoryHeroRoom)
+            Text(card.title, color = Color.White, style = GlowType.storyTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            StoryNumber(card.value, card.unit)
         }
         StoryDetail(card)
         if (card.stats.isNotEmpty() || card.chips.isNotEmpty()) {
@@ -375,19 +378,34 @@ private fun StoryStack(card: StoryCard, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * The card's one number in Doto 76 ([BigNumber.Live], board HaloShareCards) with its unit after it in 16 px at 80% white, on
+ * the digits' baseline, shrunk to fit [StoryHeroRoom]. BigNumberText's fitWidth does the shrinking.
+ */
+@Composable
+private fun StoryNumber(value: String, unit: String) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        BigNumberText(value, BigNumber.Live, fitWidth = StoryHeroRoom)
+        if (unit.isNotBlank()) Text(
+            unit, Modifier.padding(start = 10.dp, bottom = 4.dp).weight(1f, fill = false), color = Ink.Strong,
+            style = GlowType.button.copy(fontWeight = FontWeight.Normal), maxLines = 1,
+        )
+    }
+}
+
 /** The one picture of the session a kind draws between its number and its figures; a run and a game draw none. */
 @Composable
 private fun StoryDetail(card: StoryCard) {
     when (card) {
         is StoryCard.Lift -> if (card.rows.isNotEmpty()) Column {
             card.rows.forEachIndexed { i, (name, text) ->
-                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.12f)))
+                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Ink.Edge))
                 Row(Modifier.fillMaxWidth().padding(vertical = StoryGap.Inner), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).padding(end = 12.dp),
                     )
-                    Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.body, maxLines = 1)
+                    Text(text, color = Ink.Strong, style = GlowType.body, maxLines = 1)
                 }
             }
         }
@@ -403,7 +421,7 @@ private fun StoryDetail(card: StoryCard) {
         }
         // The heart rate through the session as one soft white line.
         is StoryCard.Calm -> if (card.heart.isNotEmpty()) {
-            PlainLine(card.heart, Color.White.copy(alpha = 0.55f), 40.dp, smooth = false, stroke = 2.dp)
+            PlainLine(card.heart, Ink.Tertiary, 40.dp, smooth = false, stroke = 2.dp)
         }
         is StoryCard.Week -> WeekDots(card.days, Color.White, dot = 34.dp)
         is StoryCard.Run, is StoryCard.Game -> Unit
@@ -417,7 +435,7 @@ private fun StoryDetail(card: StoryCard) {
 private fun StatRow(stats: List<StoryStat>) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         stats.forEachIndexed { i, s ->
-            if (i > 0) Box(Modifier.padding(end = StoryGap.Near).width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.18f)))
+            if (i > 0) Box(Modifier.padding(end = StoryGap.Near).width(1.dp).fillMaxHeight().background(Ink.Line))
             Column(Modifier.weight(1f)) {
                 // The value and its unit as one line on one baseline; a long one ("10:05 /km") shrinks the value to fit.
                 val text = buildAnnotatedString {
@@ -433,7 +451,7 @@ private fun StatRow(stats: List<StoryStat>) {
                     )
                 }
                 Text(
-                    s.label, color = Color.White.copy(alpha = StoryDim), style = GlowType.secondary, maxLines = 1,
+                    s.label, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -532,7 +550,7 @@ private fun RouteLine(route: List<Route.Point>, modifier: Modifier) {
 private fun BrandRow(date: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) { Wordmark() }
-        Text(date, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, maxLines = 1)
+        Text(date, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
     }
 }
 
@@ -541,7 +559,7 @@ private fun BrandRow(date: String) {
 private fun StoryChipView(chip: StoryChip) {
     val (icon, tint) = if (chip.best) AppIcons.FlagCheckered to MetricColors.calories else AppIcons.Target to if (chip.met) MetricColors.good else Color.White
     Row(
-        Modifier.height(30.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(start = 10.dp, end = 12.dp),
+        Modifier.height(32.dp).clip(CircleShape).background(Ink.Scrim).padding(start = 10.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
@@ -549,7 +567,5 @@ private fun StoryChipView(chip: StoryChip) {
     }
 }
 
-private val ChipText = GlowType.secondary.copy(fontWeight = FontWeight.Medium)
+private val ChipText = GlowType.secondary
 
-/** White for a card's dimmer lines, as on the boards. */
-private const val StoryDim = 0.7f

@@ -1,9 +1,20 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.workout.FamilySummary
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,13 +36,11 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.HeroValue
 import org.openstrap.app.ui.glow.draw.DotSize
-import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.WorkoutButton
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.workoutClock
@@ -39,7 +48,6 @@ import org.openstrap.app.ui.glow.workoutColor
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.presentation.WorkoutCopy
-import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.ZoneSeconds
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.stringResource
@@ -52,6 +60,7 @@ import org.openstrap.app.R
  * early. The strap buzzes at the end of each period and break, so nothing needs the phone. Free play has no periods.
  */
 @Composable
+@Suppress("UnusedParameter")
 internal fun LiveGameScreen(
     r: WorkoutState.Recording,
     liveHeartRate: Int?,
@@ -81,45 +90,73 @@ internal fun LiveGameScreen(
     val effort = Games.effort(zoneSeconds.toIntArray())
     val hard = remember(readings.size / 10, heartZones) { Games.hardEfforts(readings, r.maxHeartRate, heartZones) }
     val figures = listOf(
-        kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+        kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
         stats?.max?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
         hard.toString() to stringResource(R.string.workout_live_figure_hard_efforts),
     )
+    val sport = liveColor(r)
+    val tint = heroTint(sport)
+    val inBreak = periods != null && phase is Phase.Rest
     LiveFrame(
-        r, color, connected, contentPadding, controls, time = { active.value }, smallTime = compact || periods != null,
+        r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent,
+        // Half time stays on the left, the way every sport's own action does; a break's next step is the white tap.
+        lap = if (periods != null && phase is Phase.Work && !r.paused) ({ SideAction(StartCopy.breakName(periods.rounds),
+            AppIcons.PauseFill, onHalfTime) }) else null,
+        pauseWhite = !inBreak,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, figures) },
     ) {
-        if (periods != null && phase != null) PeriodRow(r, periods, phase, { now.value }, { active.value })
-        val style = heroStyle(color, LightAngle.Below).let { s -> bpm?.let { s.copy(motion = GlowMotion.Heartbeat(it)) } ?: s }
-        if (split) EffortBar(effort) else GlowCard(style, Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
-                    if (bpm != null) HeroValue("$bpm", stringResource(R.string.workout_live_unit_bpm), dot = DotSize.Detail)
-                    else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
-                    Spacer(Modifier.weight(1f))
-                    WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)?.let { z ->
-                        Text(WorkoutCopy.zoneLine(z), color = Color.White, style = GlowType.secondary)
-                    }
-                }
-                EffortBar(effort)
+        val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)
+        // Board HaloLiveGame: the heart rate as the hero, the period in its one line, then the effort in a solid card.
+        LiveHero(sport, liveAngle(r)) {
+            HeroTitle(stringResource(R.string.workout_live_heart_title), null, tint)
+            if (bpm != null) androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                HaloBigNumber(
+                    "$bpm", BigNumber.Live, Modifier.weight(1f), unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint,
+                )
+                zone?.let { org.openstrap.app.ui.glow.ZoneChip(it, Modifier.padding(bottom = org.openstrap.app.ui.theme.Space.S8)) }
             }
+            else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
+            if (periods != null && phase != null) PeriodLine(r, periods, phase, { now.value }, { active.value }, tint)
+        }
+        if (!split) LiveCard {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
+                    modifier = Modifier.weight(1f))
+                Text(
+                    effort?.let { stringResource(R.string.workout_live_effort_of,
+                        it) } ?: stringResource(R.string.workout_live_effort_none),
+                    color = GlowType.noteColor, style = GlowType.noteSmall,
+                )
+            }
+            EffortBar(effort, tint)
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Greys.Control))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_live_zones_title), color = GlowType.noteColor, style = GlowType.noteSmall,
+                    maxLines = 1, modifier = Modifier.weight(1f))
+                FamilySummary.mostlyZone(zoneSeconds)?.let {
+                    Text(it, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+                }
+            }
+            ZoneTimeBar(zoneSeconds, zone)
         }
         LiveFigures(figures)
         Spacer(Modifier.weight(1f))
-        if (periods != null && phase is Phase.Work) WorkoutButton(StartCopy.breakName(periods.rounds), Color.White, Color.Black, onHalfTime, icon = AppIcons.PauseFill, height = 64.dp)
-        if (periods != null && phase is Phase.Rest) WorkoutButton(
+        if (periods != null && phase is Phase.Rest) HaloButton(
             stringResource(R.string.workout_live_game_start_period, StartCopy.periodName(phase.round + 1, periods.rounds).lowercase()),
-            Color.White, Color.Black, onHalfTime, icon = AppIcons.PlayFill, height = 64.dp,
+            onHalfTime, Modifier.fillMaxWidth(), HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.PlayFill,
         )
     }
 }
 
-/** The period and the time in it, or the break and its time left: its own scope, so only it reads each second. */
+/** The period and the time in it, or the break and its time left, as the hero's line: its own scope, so only it reads each second. */
 @Composable
-private fun PeriodRow(r: WorkoutState.Recording, periods: Structure.Periods, phase: Phase, now: () -> Long, active: () -> Long) {
+private fun PeriodLine(r: WorkoutState.Recording, periods: Structure.Periods, phase: Phase, now: () -> Long,
+    active: () -> Long, tint: Color) {
     val (title, clock) = when (phase) {
         is Phase.Work -> StartCopy.periodName(phase.round, periods.rounds) to
-            workoutClock((WorkoutRecorder.activeSeconds(r.workout, now()) - WorkoutRecorder.activeSeconds(r.workout, phase.start)).coerceAtLeast(0))
+            workoutClock((WorkoutRecorder.activeSeconds(r.workout, now()) - WorkoutRecorder.activeSeconds(r.workout,
+                phase.start)).coerceAtLeast(0))
         is Phase.Rest -> StartCopy.breakName(periods.rounds) to
             stringResource(
                 R.string.workout_live_game_break_left,
@@ -127,24 +164,16 @@ private fun PeriodRow(r: WorkoutState.Recording, periods: Structure.Periods, pha
             )
         else -> stringResource(R.string.workout_live_game_full_time) to workoutClock(active())
     }
-    Row(Modifier.fillMaxWidth()) {
-        Text(title, color = Color.White, style = GlowType.pageTitle, modifier = Modifier.weight(1f))
-        Text(clock, color = Color.White, style = GlowType.pageTitle.copy(fontFeatureSettings = "tnum"))
-    }
+    HeroLine("$title, $clock", tint)
 }
 
-/** Effort 1 to 5 as five steps, lit up to it in the zones' colours, "Effort 3 of 5" beside them. */
+/** Effort 1 to 5 as five steps, lit up to it in the sport's colour (zone is only ever a chip); the words are the card's note. */
 @Composable
-internal fun EffortBar(effort: Int?) {
-    val of = effort?.let { stringResource(R.string.workout_live_effort_of, it) }
-    val described = of ?: stringResource(R.string.workout_live_effort_none)
-    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        SegmentBar(
-            List(5) { i -> Segment(1f, if (effort != null && i < effort) ZONE_COLORS[i] else Color.Black.copy(alpha = 0.35f)) },
-            Modifier.weight(1f).semantics { contentDescription = described },
-            height = 8.dp, gap = 4.dp,
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(of ?: stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.secondary)
-    }
+internal fun EffortBar(effort: Int?, tint: Color = Color.White) {
+    val described = effort?.let { stringResource(R.string.workout_live_effort_of, it) } ?: stringResource(R.string.workout_live_effort_none)
+    SegmentBar(
+        List(5) { i -> Segment(1f, if (effort != null && i < effort) tint else Ink.Edge) },
+        Modifier.fillMaxWidth().semantics { contentDescription = described },
+        height = 14.dp, gap = 4.dp, corner = 4.dp,
+    )
 }

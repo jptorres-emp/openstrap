@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_notif_end_question">¿Terminar el entrenamiento?</string>
+    <string name="core_notif_paused">En pausa</string>
+    <string name="core_notif_waiting">Esperando</string>
+    <string name="core_notif_bpm">%1$d lpm</string>
+    <string name="core_notif_still_recording">Siguiendo con la grabación</string>
+    <string name="core_notif_minutes_in_target">%1$d min en %2$s</string>
+    <string name="core_notif_goal">Meta %1$s</string>
+</resources>

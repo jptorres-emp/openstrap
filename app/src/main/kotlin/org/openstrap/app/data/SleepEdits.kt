@@ -140,6 +140,19 @@ object SleepEdits {
         if (to <= from) null else it.copy(start = from, end = to)
     }
 
+    /**
+     * [stages] kept to [start] until [end], in time order, with none overlapping another: where two rows cover the same
+     * time the one that starts first keeps it and the later one keeps only what's after. So a night's totals never add
+     * up to more than the night is long, even when a day holds the rows of two overlapping sessions.
+     */
+    fun clean(stages: List<SleepStage>, start: Long, end: Long): List<SleepStage> {
+        var cursor = start
+        return clip(stages, start, end).sortedWith(compareBy({ it.start }, { it.end })).mapNotNull { st ->
+            val from = maxOf(st.start, cursor)
+            if (st.end <= from) null else st.copy(start = from).also { cursor = st.end }
+        }
+    }
+
     /** Why an edit can't be saved ([check]). [nap] says which kind's limits it broke, or ran into. */
     sealed interface Problem {
         data object WakeBeforeSleep : Problem

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_recovery_quality_hrv">VFC %1$d ms aquí, %2$d ms de la banda</string>
+    <string name="core_recovery_quality_rhr">Frecuencia cardíaca en reposo %1$d lpm, %2$d lpm desde la banda</string>
+    <string name="core_recovery_cause_hard_day">un día de entrenamiento duro</string>
+    <string name="core_regularity_irregular">Irregular</string>
+    <string name="core_regularity_fair">Aceptable</string>
+    <string name="core_regularity_regular">Normal</string>
+    <string name="core_regularity_very_regular">Bueno</string>
+</resources>

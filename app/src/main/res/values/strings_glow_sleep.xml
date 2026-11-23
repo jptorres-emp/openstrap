@@ -17,14 +17,12 @@
     <string name="glow_sleep_stage_span"><xliff:g id="stage" example="Deep">%1$s</xliff:g>, <xliff:g id="times" example="01:10 to 01:55">%2$s</xliff:g>, <xliff:g id="minutes" example="45">%3$d</xliff:g> min</string>
     <!-- Title of the list of heart rate, HRV and breathing while asleep. -->
     <string name="glow_sleep_vitals_title">Night vitals</string>
-    <!-- The note on the night vitals' title row: each is compared with your earlier nights. -->
-    <string name="glow_sleep_vitals_note">Against your normal</string>
     <!-- Title of the sleep regularity card. -->
     <string name="glow_sleep_regularity_title">Sleep regularity</string>
     <!-- The regularity card's note on its title row. -->
     <string name="glow_sleep_last_7_nights">Last 7 nights</string>
     <!-- The regularity card when no night in the week has sleep. -->
-    <string name="glow_sleep_regularity_none">No sleep recorded in the last 7 nights</string>
+    <string name="glow_sleep_regularity_none">No sleep recorded</string>
     <!-- Beside the count of breathing disturbances: the count is per hour asleep. Short. -->
     <string name="glow_sleep_an_hour">an hour</string>
 
@@ -51,7 +49,7 @@
     <!-- Title of the night's heart rate chart. -->
     <string name="glow_sleep_heart_rate">Heart rate</string>
     <!-- The note on the night's heart rate chart: its lowest and average. -->
-    <string name="glow_sleep_heart_note">Lowest <xliff:g id="lowest" example="48">%1$d</xliff:g>, average <xliff:g id="average" example="55">%2$d</xliff:g> bpm</string>
+    <string name="glow_sleep_heart_note">Low <xliff:g id="lowest" example="48">%1$d</xliff:g>, average <xliff:g id="average" example="55">%2$d</xliff:g> bpm</string>
     <!-- The note on the night's breathing chart: its average, breaths a minute. -->
     <string name="glow_sleep_breathing_note">Average <xliff:g id="rate" example="14.2">%1$s</xliff:g> br/min</string>
     <!-- Title of the night's breathing chart. -->
@@ -76,4 +74,6 @@
     <string name="glow_sleep_use_strap_times">Use the strap\'s times</string>
     <!-- The naps row in a sleep detail's related list when the day had none. -->
     <string name="glow_sleep_naps_none">None that day</string>
+    <!-- Under a Sleep Small's number before its first night: the word form of waiting, 18 characters at most. -->
+    <string name="glow_sleep_after_a_night">After a night</string>
 </resources>

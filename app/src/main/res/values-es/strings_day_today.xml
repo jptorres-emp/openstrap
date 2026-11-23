@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="day_score_recovery">Recuperación</string>
+    <string name="day_score_energy">Energía</string>
+    <string name="day_score_sleep">Puntuación de sueño</string>
+    <string name="day_score_regularity">Regularidad del sueño</string>
+    <string name="day_score_naps">Siestas</string>
+    <string name="day_score_heart_points">Puntos cardios</string>
+    <string name="day_score_active_minutes">Minutos activos</string>
+    <string name="day_score_load">Carga</string>
+    <string name="day_score_vo2max">VO2 máx.</string>
+    <string name="day_score_recover">Tiempo de recuperación</string>
+    <string name="day_score_calories">Calorías</string>
+    <string name="day_score_distance">Distancia</string>
+    <string name="day_card_suggestion">Entrenamiento por guardar</string>
+    <string name="day_card_alerts">De tu brazalete</string>
+    <string name="day_card_check_in">¿Cómo te sientes?</string>
+    <string name="day_card_body_morning">Tu cuerpo esta mañana</string>
+    <string name="day_card_last_night">Anoche</string>
+    <string name="day_card_heart_rate">Frecuencia cardíaca</string>
+    <string name="day_card_stress">Estrés</string>
+    <string name="day_card_activity">Pasos</string>
+    <string name="day_card_recovery">Recuperación</string>
+    <string name="day_card_charge">Energía</string>
+    <string name="day_card_recover">Por recuperar</string>
+    <string name="day_card_load">Carga</string>
+    <string name="day_card_workout">El entrenamiento</string>
+    <string name="day_card_week">Tu semana</string>
+    <string name="day_card_habit_age">Edad de hábitos</string>
+    <string name="day_card_start_workout">Iniciar un entrenamiento</string>
+    <string name="day_pair_ready">Coloca el brazalete en su cargador, cerca de este teléfono.</string>
+    <string name="day_pair_searching">Buscando tu brazalete cerca.</string>
+    <string name="day_pair_found">Se encontró un brazalete cerca. Selecciónalo para vincularlo.</string>
+    <string name="day_pair_connecting">Conectando con tu brazalete. Mantenlo cerca.</string>
+    <string name="day_pair_connected">Conectado. La primera sincronización comienza ahora.</string>
+    <string name="day_pair_failed">No se pudo conectar. Si la app Zepp está abierta, puede estar reteniendo la banda, así que ciérrala en los ajustes de apps de tu teléfono y vincula de nuevo.</string>
+    <string name="day_pair_key_rejected">El brazalete rechazó la vinculación. Abre la página del brazalete para vincularlo de nuevo.</string>
+    <string name="day_first_score">Primera puntuación</string>
+    <string name="day_partial_day">Día parcial</string>
+    <string name="day_partial_line_today">La banda registró %1$s de las %2$s de hoy hasta ahora.</string>
+    <string name="day_partial_line">La banda registró %1$s del día.</string>
+    <string name="day_partial_meaning">El brazalete se usó durante parte del día, por lo que sus totales son bajos.</string>
+    <string name="day_partial_lowers_title">Qué reduce</string>
+    <string name="day_partial_lowers">Los pasos, las calorías y la energía solo cuentan el tiempo que llevaste puesta la banda. La carga también los pausa.</string>
+    <string name="day_partial_when_title">Cuándo un día cuenta como parcial</string>
+    <string name="day_partial_when">Cuando la banda se llevó menos de %1$s del día. Hoy, menos de esa parte de las horas hasta ahora.</string>
+    <string name="day_up_to">Hasta las %1$s</string>
+    <string name="day_stuck_last_night_title">Anoche</string>
+    <string name="day_stuck_last_night">Los datos de anoche siguen en la banda.</string>
+    <string name="day_stuck_keep_near">Mantén la banda cerca de tu teléfono y se sincronizará.</string>
+    <string name="day_stuck_not_synced_title">No sincronizado</string>
+    <string name="day_stuck_data_since">Tus datos desde las %1$s siguen en la banda.</string>
+    <string name="day_last_tried">Último intento %1$s</string>
+    <string name="day_recovery_failed">No se pudo calcular tu Recuperación de hoy.</string>
+    <string name="day_charge_failed">No se pudo calcular tu Energía de hoy.</string>
+    <string name="day_failed_short">No se pudo calcular</string>
+    <string name="day_try_again">Intentar de nuevo</string>
+    <string name="day_waiting_last_night">Esperando los datos de anoche</string>
+    <string name="day_data_on_strap">Tus datos aún están en la banda.</string>
+    <string name="day_chip_not_paired">Sin banda</string>
+    <string name="day_chip_not_paired_description">Ninguna banda vinculada</string>
+    <string name="day_chip_connecting">Conectando</string>
+    <string name="day_chip_connected">Conectado</string>
+    <string name="day_chip_connecting_description">Conectando a la banda</string>
+    <string name="day_chip_last_seen_description">Banda vista por última vez %1$s</string>
+    <string name="day_chip_not_connected">No conectado</string>
+    <string name="day_chip_not_connected_description">Banda no conectada</string>
+    <string name="day_chip_charging">Cargando %1$d%%</string>
+    <plurals name="day_chip_charging_description">
+        <item quantity="one">Banda cargando, batería al %1$d por ciento</item>
+        <item quantity="many">Banda cargando, batería al %1$d por ciento</item>
+        <item quantity="other">Banda cargando, batería al %1$d por ciento</item>
+    </plurals>
+    <string name="day_chip_not_synced">No sincronizado</string>
+    <string name="day_chip_not_synced_description">Banda conectada, sin sincronizar</string>
+    <string name="day_chip_connected_description">Banda conectada</string>
+    <string name="day_chip_battery">%1$d%%</string>
+    <plurals name="day_chip_battery_low_description">
+        <item quantity="one">Banda conectada, batería baja, %1$d percent</item>
+        <item quantity="many">Banda conectada, batería baja, %1$d percent</item>
+        <item quantity="other">Banda conectada, batería baja, %1$d percent</item>
+    </plurals>
+    <plurals name="day_chip_battery_description">
+        <item quantity="one">Banda conectada, batería al %1$d por ciento</item>
+        <item quantity="many">Banda conectada, batería al %1$d por ciento</item>
+        <item quantity="other">Banda conectada, batería al %1$d por ciento</item>
+    </plurals>
+    <string name="day_ago_now">Hace un momento</string>
+    <string name="day_ago_minutes">hace %1$d min</string>
+    <string name="day_ago_hours">hace %1$d h</string>
+    <plurals name="day_ago_days">
+        <item quantity="one">hace %1$d día</item>
+        <item quantity="many">hace %1$d días</item>
+        <item quantity="other">hace %1$d días</item>
+    </plurals>
+    <string name="day_header_you">Tú</string>
+    <string name="day_header_you_update">Tú, hay una nueva versión lista</string>
+    <string name="day_header_open_you">Abrir Tú</string>
+    <string name="day_header_all_metrics">Todas las métricas</string>
+    <string name="day_header_open_all_metrics">Abrir todas las métricas</string>
+    <string name="day_header_pick_day">Elige un día</string>
+    <string name="day_header_day_description">%1$s, %2$s</string>
+    <string name="day_header_open_strap">Abre tu banda</string>
+    <string name="day_calendar_previous_month">Mes anterior</string>
+    <string name="day_calendar_next_month">Mes siguiente</string>
+    <string name="day_calendar_has_data">Tiene datos</string>
+    <string name="day_calendar_today">Hoy</string>
+    <string name="day_calendar_go_to_today">Ir a hoy</string>
+    <string name="day_rating_very_good">Muy bien</string>
+    <string name="day_rating_good">Bien</string>
+    <string name="day_rating_fair">Normal</string>
+    <string name="day_rating_low">Bajo</string>
+    <string name="day_stress_counts_from_calm" tools:ignore="PluralsCandidate">El estrés cuenta desde %1$d: %2$d por encima de tu nivel de calma de %3$d en los últimos %4$s.</string>
+    <plurals name="day_stress_last_days">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <string name="day_stress_counts_for_now" tools:ignore="PluralsCandidate">El estrés cuenta desde %1$d por ahora. Tras %2$s de uso se ajusta a tu propio nivel de calma.</string>
+    <plurals name="day_stress_more_days">
+        <item quantity="one">%1$d día más</item>
+        <item quantity="many">%1$d días más</item>
+        <item quantity="other">%1$d días más</item>
+    </plurals>
+    <string name="day_stress_counts_until" tools:ignore="PluralsCandidate">El estrés se cuenta desde %1$d por ahora, hasta que haya suficientes lecturas de calma para determinar tu propio nivel.</string>
+</resources>

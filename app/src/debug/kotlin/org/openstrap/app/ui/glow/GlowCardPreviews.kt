@@ -24,7 +24,7 @@ import org.openstrap.app.widget.WidgetSamples
 internal fun GlowCardPreview() {
     val recovery = WidgetSamples.recovery(PreviewDay, previewLocale())
     PreviewPage {
-        GlowCard(GlowStyle.Ember.copy(lightLevel = 0.78f), Modifier.fillMaxWidth().height(GlowGrid.UnitHeight)) {
+        HaloCard(Modifier.fillMaxWidth().height(GlowGrid.UnitHeight), tone = CardTone.lit(GlowStyle.Ember.copy(lightLevel = 0.78f))) {
             Column(Modifier.fillMaxSize()) {
                 Text(recovery.title, color = Color.White, style = GlowType.cardTitle)
                 Spacer(Modifier.weight(1f))
@@ -35,7 +35,10 @@ internal fun GlowCardPreview() {
             }
         }
         Spacer(Modifier.height(GlowGrid.Gap))
-        GlowCard(GlowStyle.Ember.copy(lightLevel = 0.62f, second = true), Modifier.fillMaxWidth().height(GlowGrid.UnitHeight)) {
+        HaloCard(
+            Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+            tone = CardTone.lit(GlowStyle.Ember.copy(lightLevel = 0.62f, second = true)),
+        ) {
             Text(say("Energy", "الطاقة"), color = Color.White, style = GlowType.cardTitle)
         }
     }

@@ -72,7 +72,7 @@ object WidgetSamples {
     fun sleep(today: LocalDate, zone: ZoneId): SleepWidgetModel = SleepWidgetModel.from(sleepNight(today, zone), null, firstNight = false, napsToday = false, zone = zone)
 
     /**
-     * Outdoor runs the most (one of 5.2 km this week), then walks, rides, a treadmill run and strength, at [now].
+     * Outdoor runs the most (one of 5.2 km this week), then walks, rides, yoga and strength, at [now].
      */
     fun start(now: Instant, zone: ZoneId, locale: Locale = Locale.getDefault()): StartWidgetModel {
         val today = now.atZone(zone).toLocalDate()
@@ -84,7 +84,7 @@ object WidgetSamples {
         val history = listOf(
             workout(4, 18, 1, 60, meters = 5_200f), workout(11, 7, 1, 45), workout(18, 7, 1, 45),
             workout(8, 8, 3, 30), workout(12, 8, 3, 30), workout(9, 17, 4, 50), workout(15, 17, 4, 50),
-            workout(1, 19, 2, 35), workout(6, 10, 52, 40, sets = 12),
+            workout(1, 19, 60, 35), workout(6, 10, 52, 40, sets = 12),
         )
         return StartWidgetModel.from(history, emptyMap(), true, null, now, zone, locale)
     }
@@ -123,5 +123,24 @@ object WidgetSamples {
             stepGoal = 10_000,
         )
         return MomentWidgetModel.from(input, now, zone)
+    }
+
+    /** A walk recording since [now] less 24 minutes, at 112 bpm in zone 2, for the gallery's Start. */
+    fun recording(now: Instant, zone: ZoneId): StartRecording {
+        val start = now.epochSecond - 24 * 60
+        val input = StartRecordingInput(
+            org.openstrap.app.data.SportTypes.WALK, start, 24 * 60L, false, bpm = 112, zone = 1,
+            figures = org.openstrap.app.i18n.Strings.app.let { t ->
+                listOf(
+                    org.openstrap.app.presentation.Units.distance(
+                        2310f, org.openstrap.app.presentation.Units.Precision.Workout,
+                    ).orEmpty() to t.get(org.openstrap.app.R.string.workout_live_figure_distance),
+                    org.openstrap.app.presentation.Pace.clock(org.openstrap.app.presentation.Pace.of(2310f, 24 * 60L)).orEmpty() to
+                        t.get(org.openstrap.app.R.string.workout_live_figure_avg_pace),
+                    "96" to t.get(org.openstrap.app.R.string.workout_live_figure_active_kcal),
+                )
+            },
+        )
+        return checkNotNull(StartWidgetModel.from(emptyList(), emptyMap(), false, input, now, zone).recording)
     }
 }

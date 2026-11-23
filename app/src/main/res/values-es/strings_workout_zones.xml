@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="workout_zones_title">Zonas de frecuencia cardíaca</string>
+    <string name="workout_zones_max_title">Tu frecuencia cardíaca máxima</string>
+    <string name="workout_zones_set_it">Fijar mi frecuencia máx.</string>
+    <string name="workout_zones_learn_it">Aprender de nuevo</string>
+    <string name="workout_zones_note">Iguales para todos los deportes. Las metas, el tiempo en zonas y la Carga las usan. Toca una zona para mover sus límites.</string>
+    <string name="workout_zones_you_line_max">Máx. %1$d lpm, igual para todos los deportes</string>
+    <string name="workout_zones_you_line">Las mismas zonas para todos los deportes</string>
+    <string name="workout_zones_max_row">Frecuencia cardíaca máxima</string>
+    <string name="workout_zones_profile_set">%1$d lpm, fijada por ti</string>
+    <string name="workout_zones_profile_worked_out">Calculada por unstrap</string>
+    <string name="workout_zones_source_set">Configurada por ti</string>
+    <string name="workout_zones_source_learned_on">Esfuerzos intensos, %1$s</string>
+    <string name="workout_zones_source_learned">Tus esfuerzos más intensos</string>
+    <string name="workout_zones_source_age">Tu edad, por ahora</string>
+    <string name="workout_zones_source_strap">Tu banda, hasta que añadas tu edad</string>
+    <string name="workout_zones_source_guess">Primera estimación, añade tu edad o fíjala</string>
+    <string name="workout_zones_zone_name">Zona %1$d</string>
+    <string name="workout_zones_bpm_range">%1$d a %2$d lpm</string>
+    <string name="workout_zones_bpm_up" tools:ignore="PluralsCandidate">%1$d lpm o más</string>
+    <string name="workout_zones_starts_at">Comienza en</string>
+    <string name="workout_zones_ends_at">Termina en</string>
+    <string name="workout_zones_edges_first">Mover su fin cambia dónde comienza la zona 2.</string>
+    <string name="workout_zones_edges_last">La zona 5 llega hasta tu máx. Mover su inicio cambia dónde termina la zona 4.</string>
+    <string name="workout_zones_edges_other">Mover un límite también mueve la zona de al lado.</string>
+    <string name="workout_zones_reset">Volver a las zonas habituales</string>
+    <string name="workout_zones_set_title">Tu frecuencia cardíaca máxima</string>
+    <string name="workout_zones_set_note">A partir de una prueba o una carrera que hiciste al máximo. Tus zonas se basan en ella.</string>
+    <string name="workout_zones_set_field">Frecuencia cardíaca máxima</string>
+    <string name="workout_zones_save">Guardar</string>
+</resources>

@@ -6,7 +6,7 @@ import org.openstrap.app.export.AutoBackup
 import org.openstrap.app.i18n.Strings
 import java.time.ZoneId
 import java.util.Locale
-import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.Stamp
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.data.settings.BackupFailure
 
@@ -21,7 +21,7 @@ object BackupCopy {
         strings: Strings = Strings.app,
     ): String {
         if (!state.on) return strings.get(R.string.you_backup_status_off)
-        state.failed?.let { return strings.format(R.string.you_backup_status_failed, failure(it, strings)) }
+        if (state.failed != null) return strings.get(R.string.you_backup_summary_failed)
         val done = state.lastDone ?: return strings.get(R.string.you_backup_status_waiting)
         return strings.format(R.string.you_backup_last, whenDone(done, now, zone, locale))
     }
@@ -51,9 +51,20 @@ object BackupCopy {
         },
     )
 
-    /** "today at 03:12", "yesterday at 03:12", "on Tue 20 Oct": [DayWords.whenDone], on the phone's clock. */
+    /** The banner's reason, as a phrase with no stop. */
+    fun failureShort(f: BackupFailure, strings: Strings = Strings.app): String = strings.get(
+        when (f) {
+            BackupFailure.FolderGone -> R.string.you_backup_failed_folder_gone
+            BackupFailure.PermissionLost -> R.string.you_backup_failed_permission
+            BackupFailure.NoSpace -> R.string.you_backup_failed_no_space
+            BackupFailure.CantWrite -> R.string.you_backup_failed_cant_write
+            BackupFailure.Other -> R.string.you_backup_failed_other
+        },
+    )
+
+    /** "03:12", "Yesterday 03:12", "Tue 10 Nov, 03:12": [Stamp.of], on the phone's clock. */
     fun whenDone(epochSeconds: Long, now: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
-        DayWords.whenDone(epochSeconds, now, zone, locale = locale)
+        Stamp.of(epochSeconds, now, zone, locale = locale)
 
     /**
      * Where the folder picker opens when backup is first turned on. The top of the phone's storage can't be chosen

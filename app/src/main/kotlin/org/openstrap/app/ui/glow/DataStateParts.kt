@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -42,6 +43,7 @@ import org.openstrap.app.ui.dashboard.PARTIAL_DAY_ROWS
 import org.openstrap.app.ui.dashboard.PairStep
 import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.ui.dashboard.partialLine
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /*
@@ -108,9 +110,9 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
                 drawCircle(StrapLight.copy(alpha = alpha), 2.dp.toPx(), Offset(x, y))
             }
             when (step) {
-                PairStep.Ready -> drawLine(Color.White.copy(alpha = 0.22f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                PairStep.Ready -> drawLine(Ink.Line, Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
                 PairStep.Searching -> {
-                    drawLine(Color.White.copy(alpha = 0.3f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                    drawLine(Ink.Disabled, Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
                     // Two ripples out of the phone, half a cycle apart: it's calling.
                     for (k in 0..1) ripple(phoneX, (t + k / 2f) % 1f, Color.White, 14.dp.toPx())
                 }
@@ -181,12 +183,12 @@ private fun PhoneDrawing(modifier: Modifier) {
     Canvas(modifier) {
         val stroke = 1.5.dp.toPx()
         drawRoundRect(
-            Color.White.copy(alpha = 0.8f), Offset(stroke / 2, stroke / 2), Size(size.width - stroke, size.height - stroke),
+            Ink.Strong, Offset(stroke / 2, stroke / 2), Size(size.width - stroke, size.height - stroke),
             CornerRadius(6.dp.toPx()), style = Stroke(stroke),
         )
         val slot = size.width * 0.3f
         drawLine(
-            Color.White.copy(alpha = 0.45f), Offset((size.width - slot) / 2, 5.dp.toPx()), Offset((size.width + slot) / 2, 5.dp.toPx()),
+            Ink.Tertiary, Offset((size.width - slot) / 2, 5.dp.toPx()), Offset((size.width + slot) / 2, 5.dp.toPx()),
             1.2.dp.toPx(), StrokeCap.Round,
         )
     }

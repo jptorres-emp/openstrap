@@ -36,13 +36,14 @@
     <string name="workout_summary_trim_recorded">记录时间 %1$s。</string>
     <string name="workout_summary_trim_hint">拖动滑块调整运动的实际起止时间。已记录的原始数据不会被删除。</string>
     <string name="workout_summary_split_km">第 %1$d 公里</string>
+    <string name="workout_summary_split_mile">第 %1$d 英里</string>
     <string name="workout_summary_split_last">最后 %1$s</string>
-    <string name="workout_summary_meters">%1$d m</string>
     <string name="workout_summary_when_morning">今天上午 %1$s</string>
     <string name="workout_summary_when_evening">今天晚上 %1$s</string>
     <string name="workout_summary_when_today">今天 %1$s</string>
     <string name="workout_summary_when_yesterday">昨天 %1$s</string>
     <string name="workout_summary_when_day">%1$s %2$s</string>
+    <string name="workout_summary_set_skipped">已跳过</string>
     <string name="workout_summary_set_reps_kg">%1$d × %2$s kg</string>
     <plurals name="workout_summary_set_reps">
         <item quantity="other">%1$d 次</item>

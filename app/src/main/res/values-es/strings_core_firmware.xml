@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_firmware_part_firmware">Firmware</string>
+    <string name="core_firmware_part_resources">Imágenes y texto</string>
+    <string name="core_firmware_part_base_resources">Imágenes y texto base</string>
+    <string name="core_firmware_part_extra_resources">Imágenes y texto adicionales</string>
+    <string name="core_firmware_part_font">Fuente</string>
+    <string name="core_firmware_part_gps">GPS</string>
+</resources>

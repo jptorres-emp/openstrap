@@ -1,5 +1,12 @@
 package org.openstrap.app.ui.alarms
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import androidx.compose.foundation.layout.padding
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.theme.Space
 import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
@@ -9,19 +16,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -38,20 +40,14 @@ import org.openstrap.app.device.BlePermissions
 import org.openstrap.app.device.StrapNotificationListener
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.HaloButton
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.PagePanel
-import org.openstrap.app.ui.glow.PageSwitchRow
-import androidx.compose.ui.graphics.Color
-import org.openstrap.app.ui.glow.GlowSegments
+import org.openstrap.app.ui.device.SegmentSheet
+import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.HaloSheet
+import org.openstrap.app.ui.glow.SwitchRow
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.presentation.ClockSetting
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.TimeOfDay
 
@@ -124,13 +120,19 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
         Unit
     }
 
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_phone_title), onBack) }
+    // Which picker sheet is open: the call buzz, how long it runs, or the notification pattern.
+    var picking by rememberSaveable { mutableStateOf<String?>(null) }
+    val callsOn = calls && callPermission
+    val notificationsOn = notifications && notificationAccess
+
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_phone_title), onBack) }
+        // Rows as the HaloPhoneAlerts board draws them: switches, and value rows that open a picker sheet.
         item {
-            PagePanel {
-                PageSwitchRow(
+            PageGroup(heading = stringResource(R.string.you_phone_group_calls)) {
+                SwitchRow(
                     stringResource(R.string.you_phone_calls), stringResource(R.string.you_phone_calls_note),
-                    calls && callPermission,
+                    callsOn,
                     { on ->
                         when {
                             !on -> vm.setBuzzOnCalls(false)
@@ -141,73 +143,89 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
                     },
                     divider = false,
                 )
-                if (phoneBlocked && !callPermission) {
-                    PageNote(stringResource(R.string.you_phone_calls_blocked), color = MetricColors.warn)
-                    PageButton(stringResource(R.string.you_phone_open_settings), openAppSettings, Modifier.fillMaxWidth())
+                if (callsOn) {
+                    NavRow(stringResource(R.string.you_phone_call_buzz), callStyle.label, onClick = { picking = "callBuzz" })
+                    NavRow(stringResource(R.string.you_phone_call_length), callLength.label, onClick = { picking = "callLength" })
                 }
-                if (calls && callPermission) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.you_phone_call_buzz), style = GlowType.body, color = Color.White)
-                        // Picking one plays it for a few seconds, so the two can be compared on the wrist.
-                        GlowSegments(CallBuzz.entries.map { it.label }, callStyle.ordinal, { i -> vm.pickCallBuzz(CallBuzz.entries[i]) })
-                        callPreviewError?.let { PageNote(it, color = MetricColors.warn) }
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.you_phone_call_length), style = GlowType.body, color = Color.White)
-                        GlowSegments(
-                            CallBuzzLength.entries.map { it.label }, callLength.ordinal,
-                            { i -> vm.pickCallLength(CallBuzzLength.entries[i]) },
-                        )
-                    }
-                }
-                PageSwitchRow(
+            }
+        }
+        if (phoneBlocked && !callPermission) item {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                HaloNote(stringResource(R.string.you_phone_calls_blocked), color = MetricColors.warn)
+                HaloButton(stringResource(R.string.you_phone_open_settings), openAppSettings, Modifier.fillMaxWidth())
+            }
+        }
+        callPreviewError?.let { msg -> item { HaloNote(msg, color = MetricColors.warn) } }
+        item {
+            // Do Not Disturb is said once, here, for calls and notifications both.
+            PageGroup(heading = stringResource(R.string.you_phone_group_notifications),
+                footnote = stringResource(R.string.you_phone_note)) {
+                SwitchRow(
                     stringResource(R.string.you_phone_notifications), stringResource(R.string.you_phone_notifications_note),
-                    notifications && notificationAccess,
+                    notificationsOn,
                     { on ->
                         vm.setBuzzOnNotifications(on)
                         if (on && !notificationAccess) openNotificationAccess()
                     },
+                    divider = false,
                 )
-                if (notifications && !notificationAccess) {
-                    PageNote(stringResource(R.string.you_phone_notifications_access), color = MetricColors.warn)
-                    PageButton(stringResource(R.string.you_phone_open_settings), openNotificationAccess, Modifier.fillMaxWidth())
+                if (notificationsOn) {
+                    NavRow(stringResource(R.string.you_phone_pattern), pattern.label, onClick = { picking = "pattern" })
                 }
-                if (notifications && notificationAccess) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.you_phone_pattern), style = GlowType.body, color = Color.White)
-                        // Picking a pattern plays it once, so it can be felt before the next notification.
-                        GlowSegments(BuzzPattern.entries.map { it.label }, pattern.ordinal, { i -> vm.pickPattern(BuzzPattern.entries[i]) })
-                        previewError?.let { PageNote(it, color = MetricColors.warn) }
-                    }
-                    PageSwitchRow(
-                        stringResource(R.string.you_phone_quiet), quietHoursSummary(quiet, calls && callPermission), quiet.on,
-                        { on -> vm.updateQuietHours { it.copy(on = on) } },
-                    )
-                    if (quiet.on) {
-                        PageRow(
-                            stringResource(R.string.you_phone_quiet_from), quietClock(quiet.from), onClick = { pickingFrom = true },
-                            divider = false,
-                        )
-                        PageRow(stringResource(R.string.you_phone_quiet_to), quietClock(quiet.to), onClick = { pickingFrom = false })
-                        if (calls && callPermission) {
-                            PageSwitchRow(
-                                stringResource(R.string.you_phone_quiet_calls), stringResource(R.string.you_phone_quiet_calls_note),
-                                quiet.calls,
-                                { on -> vm.updateQuietHours { it.copy(calls = on) } },
-                            )
-                        }
-                    }
-                }
-                // Do Not Disturb is said once, here, for calls and notifications both.
-                PageNote(stringResource(R.string.you_phone_note))
             }
         }
+        if (notifications && !notificationAccess) item {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                HaloNote(stringResource(R.string.you_phone_notifications_access), color = MetricColors.warn)
+                HaloButton(stringResource(R.string.you_phone_open_settings), openNotificationAccess, Modifier.fillMaxWidth())
+            }
+        }
+        previewError?.let { msg -> item { HaloNote(msg, color = MetricColors.warn) } }
+        if (notificationsOn) item {
+            PageGroup(heading = stringResource(R.string.you_phone_quiet)) {
+                SwitchRow(
+                    stringResource(R.string.you_phone_quiet),
+                    // The summary is only needed here when it warns (the same start and end).
+                    if (quiet.on && quiet.from == quiet.to) quietHoursSummary(quiet, callsOn) else null, quiet.on,
+                    { on -> vm.updateQuietHours { it.copy(on = on) } },
+                    divider = false,
+                )
+                if (quiet.on) {
+                    NavRow(stringResource(R.string.you_phone_quiet_from), quietClock(quiet.from), onClick = { pickingFrom = true })
+                    NavRow(stringResource(R.string.you_phone_quiet_to), quietClock(quiet.to), onClick = { pickingFrom = false })
+                    if (callsOn) {
+                        SwitchRow(
+                            stringResource(R.string.you_phone_quiet_calls), stringResource(R.string.you_phone_quiet_calls_note),
+                            quiet.calls,
+                            { on -> vm.updateQuietHours { it.copy(calls = on) } },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // A sheet's Save is what writes the choice (and plays it once, as picking did before); Cancel leaves it as it was.
+    when (picking) {
+        "callBuzz" -> SegmentSheet(
+            stringResource(R.string.you_phone_call_buzz), CallBuzz.entries.map { it.label }, callStyle.ordinal,
+            onSave = { vm.pickCallBuzz(CallBuzz.entries[it]); picking = null }, onDismiss = { picking = null },
+        )
+        "callLength" -> SegmentSheet(
+            stringResource(R.string.you_phone_call_length), CallBuzzLength.entries.map { it.label }, callLength.ordinal,
+            onSave = { vm.pickCallLength(CallBuzzLength.entries[it]); picking = null }, onDismiss = { picking = null },
+        )
+        "pattern" -> SegmentSheet(
+            stringResource(R.string.you_phone_pattern), BuzzPattern.entries.map { it.label }, pattern.ordinal,
+            onSave = { vm.pickPattern(BuzzPattern.entries[it]); picking = null }, onDismiss = { picking = null },
+        )
     }
 
     pickingFrom?.let { from ->
         QuietTimeSheet(
             stringResource(if (from) R.string.you_phone_quiet_from_title else R.string.you_phone_quiet_until_title),
             if (from) quiet.from else quiet.to,
+            note = quietHoursSummary(quiet, callsOn),
             onSave = { m ->
                 pickingFrom = null
                 vm.updateQuietHours { if (from) it.copy(from = m) else it.copy(to = m) }
@@ -217,18 +235,19 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
     }
 }
 
-/** One end of the quiet hours on the alarms' clock, then Cancel and Save. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** One end of the quiet hours on two wheels (HaloQuietHoursSheet board), then Cancel and Save. */
 @Composable
-private fun QuietTimeSheet(title: String, minutes: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
-    val time = rememberTimePickerState(minutes / 60, minutes % 60, is24Hour = ClockSetting.use24Hour)
-    PageSheet(onDismiss, title) {
-        TimePicker(time, Modifier.align(Alignment.CenterHorizontally), colors = AlarmClockColors())
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.you_action_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.you_action_save), { onSave(time.hour * 60 + time.minute) }, Modifier.weight(1f), primary = true,
+private fun QuietTimeSheet(title: String, minutes: Int, note: String, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
+    var picked by remember { mutableIntStateOf(minutes) }
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { onSave(picked) },
             )
-        }
+        },
+    ) {
+        TimeWheels(minutes, { picked = it })
+        HaloNote(note)
     }
 }

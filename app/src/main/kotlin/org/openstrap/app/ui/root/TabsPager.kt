@@ -8,7 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.pager.HorizontalPager
+import org.openstrap.app.ui.components.dayHeld
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -45,11 +47,13 @@ import org.openstrap.app.ui.components.sinkBehind
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.ActivityHistory
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.Detail
 import org.openstrap.app.ui.dashboard.LocalScrollToTop
 import org.openstrap.app.ui.dashboard.MomentHeader
 import org.openstrap.app.ui.dashboard.RecoveryFailure
+import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.dashboard.StrapChip
 import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.presentation.dayTitle
@@ -65,6 +69,8 @@ import org.openstrap.app.ui.glow.HomeTab
 import org.openstrap.app.ui.glow.IndexTarget
 import org.openstrap.app.ui.glow.LiveHeroHooks
 import org.openstrap.app.ui.glow.LocalGlowMood
+import org.openstrap.app.ui.glow.LocalHeroLightAngle
+import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.LocalGlowPagePaused
 import org.openstrap.app.ui.glow.TodayStrap
 import org.openstrap.app.ui.glow.draw.GlowMood
@@ -84,6 +90,8 @@ fun tabItems(): List<NavItem> = Tab.entries.map { tab ->
 }
 
 /** The day shown as every tab and detail sees it: the debug previews applied, its Recovery, strap score and check-in. */
+// One field per part of the day the screens show.
+@Suppress("LongParameterList")
 class ShownDay(
     val day: DayUiState,
     val recovery: RecoveryResult?,
@@ -94,9 +102,17 @@ class ShownDay(
     val wear: Wear?,
     /** The first real score shows its moment (E4). */
     val firstScore: Boolean,
+    /** The day's rows haven't arrived yet: the screens show their placeholders, never another day's numbers. */
+    val loading: Boolean = false,
+    /** The last day, kept for a moment while this one loads ([org.openstrap.app.ui.components.rememberDayHold]): drawn dimmed. */
+    val pending: Boolean = false,
+    /** Your usual steps by hour for the day shown, null until there are enough worn days. */
+    val usualSteps: List<Float>? = null,
+    /** Heart points, calories and steps up to the day shown. */
+    val activity: ActivityHistory = ActivityHistory(),
 ) {
     /** The strap's own score for the day shown's night, by the strap session it came from ([RecoveryResult.strapScore]). */
-    val strapScore: Int? get() = recovery?.takeIf { it.date == day.date }?.strapScore
+    val strapScore: Int? get() = recovery?.strapScore
 }
 
 /** The stored histories the charts read. */
@@ -188,8 +204,11 @@ internal fun TabsPager(
         userScrollEnabled = !subScreenOpen, key = { it }, beyondViewportPageCount = Tab.entries.size - 1,
     ) { page ->
         val back = if (page == tab) emptyArray() else arrayOf(LocalNavigationEventDispatcherOwner provides idleBack)
+        // Every hero on the tab, and on the details opening over it, is lit from the moment's side; Sleep from below.
+        val heroAngle = if (Tab.entries[page] == Tab.Sleep) LightAngle.Below else today.moment?.let(::heroLightAngle)
         @Suppress("SpreadOperator") // at most one local, once per page
         CompositionLocalProvider(
+            LocalHeroLightAngle provides heroAngle,
             // Remembered: a new lambda each time would be a new static local, recomposing the whole tab under it.
             LocalGlowPagePaused provides remember(pager, page, covered) { tabPaused(pager, page, covered) },
             LocalScrollToTop provides scroll.of(page),
@@ -202,10 +221,10 @@ internal fun TabsPager(
                 detail = { stack -> stack.lastOrNull()?.let { detail(t, it) } },
             ) {
                 PullToSync(strap.sync, connected, container.strap::syncNow) {
-                    TabRoot(
+                    Box(Modifier.dayHeld(shown.pending)) { TabRoot(
                         t, nav, shown, histories, today, container, dayVm, workoutsVm, rootVm, live, padding, showCharge,
                         onChargeConsume, header, onOpenPage, seeHabitAge,
-                    )
+                    ) }
                 }
             }
         }
@@ -241,8 +260,8 @@ private fun TabRoot(
 ) {
     val day = shown.day
     val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
-    val usualSteps by dayVm.usualSteps.collectAsStateWithLifecycle()
-    val activity by dayVm.activityHistory.collectAsStateWithLifecycle()
+    val usualSteps = shown.usualSteps
+    val activity = shown.activity
     val suggestions by workoutsVm.suggestions.collectAsStateWithLifecycle()
     // Hidden while a workout records: the strap's history may show the one under way.
     val suggestion = suggestions.firstOrNull().takeIf { today.running == null }
@@ -252,7 +271,6 @@ private fun TabRoot(
     when (t) {
         // The moment's mood lights Today only (spec 2.1 Moods), the Sleep tab sets its own.
         Tab.Today -> CompositionLocalProvider(LocalGlowMood provides (today.moment?.let(::momentMood) ?: GlowMood.Day)) {
-            val offer by container.workout.offer.collectAsStateWithLifecycle()
             val edits by rootVm.todayEdits.collectAsStateWithLifecycle()
             val habitAgeSeen by rootVm.habitAgeSeenAsOf.collectAsStateWithLifecycle()
             GlowTodayScreen(
@@ -279,9 +297,6 @@ private fun TabRoot(
                 // The same way in as Activity's start card: the ready screen for the sport, or Choose with every sport.
                 onStartSport = { nav.openReady(it) },
                 onOtherSport = nav::openChoose,
-                offer = offer,
-                onRecordOffer = { container.workout.recordOffer() },
-                onDeclineOffer = { container.workout.declineOffer() },
                 running = today.running,
                 onOpenRunning = today.onOpenRunning,
                 liveHero = today.liveHero,
@@ -296,8 +311,8 @@ private fun TabRoot(
             )
         }
         Tab.Recovery -> GlowRecoveryScreen(
-            day, shown.recovery, histories.daily, header = { TabHeader(Tab.Recovery, header) }, contentPadding = padding,
-            onOpenMetric = { openStack(Tab.Recovery, Detail.OfMetric(it)) },
+            day, shown.recovery, header = { TabHeader(Tab.Recovery, header) }, contentPadding = padding,
+            onOpenMetric = { openStack(Tab.Recovery, Detail.OfMetric(it, night = it in SleepCopy.NIGHT_FIGURES)) },
             onOpenScore = { openStack(Tab.Recovery, Detail.OfScore(it)) },
             strapScore = shown.strapScore,
             healthspan = shown.healthspan,
@@ -305,7 +320,7 @@ private fun TabRoot(
             onOpenProfile = { onOpenPage(Page.Profile) },
             showCharge = showCharge, onChargeShown = onChargeConsume,
             recoveryFailure = shown.recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
-            wear = shown.wear, firstScore = shown.firstScore,
+            wear = shown.wear, firstScore = shown.firstScore, history = histories.daily,
         )
         Tab.Sleep -> GlowSleepScreen(
             day, header = { TabHeader(Tab.Sleep, header) }, contentPadding = padding,

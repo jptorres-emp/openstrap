@@ -24,7 +24,7 @@ import org.openstrap.app.ui.glow.packGrid
  * phone and on two columns, and Today's rows keep the grid's rules (2.4): no lone Small, no pair right after a pair.
  */
 class TodayLooksTest {
-    private val allFacts = TodayFacts(offer = true, suggestion = true, alerts = true, workout = true, healthspan = true)
+    private val allFacts = TodayFacts(suggestion = true, alerts = true, workout = true, healthspan = true)
 
     /** The three ways Today is laid out: a phone, two columns, and two columns with the Small pairs across both. */
     private val layouts = listOf(false to false, true to false, true to true)
@@ -79,9 +79,9 @@ class TodayLooksTest {
 
     @Test fun `each card draws its own picture, a Small as a Wide`() {
         val expected = mapOf(
-            TodayCard.HeartRate to PictureKind.Line, TodayCard.Stress to PictureKind.DayStrip, Activity to PictureKind.HourlyBars,
+            TodayCard.HeartRate to PictureKind.Line, Activity to PictureKind.HourlyBars,
             Recovery to PictureKind.WeekDots, LoadToday to PictureKind.LevelFill, TodayCard.Recover to PictureKind.CountdownRing,
-            TodayCard.Workout to PictureKind.ZoneBar, Week to PictureKind.WeekRings, TodayCard.HabitAge to PictureKind.AgeScale,
+            Week to PictureKind.WeekRings, TodayCard.HabitAge to PictureKind.AgeScale,
             TodayCard.Charge to PictureKind.Curve,
         )
         val seen = mutableSetOf<TodayCard>()
@@ -92,7 +92,7 @@ class TodayLooksTest {
         assertEquals(expected.keys, seen)
         // Last night is its stage bar as a card, words alone as a strip.
         assertEquals(look(Tier.Picture, Hue.Sleep, PictureKind.StageBar), today(Moment.Waking, TodayFacts()).first { it.card == LastNight }.look)
-        assertEquals(look(Tier.Picture, Hue.Sleep, PictureKind.StageBar, Shape.Small), today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look)
+        assertEquals(look(Tier.Glow, Hue.Sleep, PictureKind.StageBar, Shape.Small), today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look)
         assertEquals(look(Tier.Strip, Hue.Sleep, PictureKind.None, Shape.Strip), today(Moment.Evening, TodayFacts()).first { it.card == LastNight }.look)
         // No picture kind is drawn twice on one Today.
         for (m in Moment.entries) {
@@ -107,22 +107,40 @@ class TodayLooksTest {
         assertEquals(look(Tier.Glow, Hue.Charge, PictureKind.Curve), window[1].look)
         assertEquals(true, window[1].secondGlow)
         assertFalse(window[0].look!!.sameDesign(window[1].look))
-        // After a workout and in the evening it's the same level glow, and the only glow besides the hero.
+        // After a workout, in the evening and at night it is a plain picture card with its curve. The hero is the only glow,
+        // except where Last night is a lit Small (after a workout), the one other lit card.
         for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
             val out = today(m, TodayFacts(workout = true))
-            assertEquals("$m", look(Tier.Glow, Hue.Charge, PictureKind.Curve), out.first { it.card == TodayCard.Charge }.look)
-            assertEquals("$m", 2, out.count { it.look?.tier == Tier.Glow })
+            assertEquals("$m", Tier.Picture, out.first { it.card == TodayCard.Charge }.look?.tier)
+            val lastNightLit = out.any { it.card == LastNight && it.look?.tier == Tier.Glow }
+            assertEquals("$m", if (lastNightLit) 2 else 1, out.count { it.look?.tier == Tier.Glow })
         }
+        assertEquals(2, today(Moment.After, TodayFacts(workout = true)).count { it.look?.tier == Tier.Glow })
         // After a run the hero is Recovery teal: red is for effort.
         assertEquals(Hue.Recovery, today(Moment.After, TodayFacts(workout = true)).first().look?.hue)
     }
 
-    @Test fun `no moment has more than one glow besides the hero, whatever is pinned`() {
+    @Test fun `no two lit cards touch under the hero, whatever is pinned, in every layout`() {
         val pinnable = TodayCard.entries.filter { it.pinnable }
-        for (m in Moment.entries) for (a in pinnable) for (b in pinnable.filter { it != a } + listOf(null)) {
-            val out = today(m, allFacts, TodayEdits(pinned = listOfNotNull(a, b)))
-            assertTrue("$m $a $b", out.count { it.card != Hero && it.look?.tier == Tier.Glow } <= 1)
+        for (m in Moment.entries) for (a in pinnable) for (b in pinnable.filter { it != a } + listOf(null)) for ((wide, across) in layouts) {
+            val out = today(m, allFacts, TodayEdits(pinned = listOfNotNull(a, b)), wide = wide, across = across)
+            assertEquals("$m $a $b wide=$wide", emptyList<Pair<Int, Int>>(), litClashes(out, wide, m, across))
         }
+    }
+
+    @Test fun `every moment's own plan has no two lit cards touching, and Last night is lit where it is a Small`() {
+        for (m in Moment.entries) for (facts in listOf(TodayFacts(), allFacts, TodayFacts(workout = true))) for ((wide, across) in layouts) {
+            val out = today(m, facts, wide = wide, across = across)
+            assertEquals("$m $facts wide=$wide", emptyList<Pair<Int, Int>>(), litClashes(out, wide, m, across))
+            out.filter { it.card == LoadToday }.forEach { assertEquals("$m Load is grey", Tier.Picture, it.look?.tier) }
+        }
+        assertEquals(Tier.Glow, today(Moment.Midday, TodayFacts()).first { it.card == LastNight }.look?.tier)
+        // Two lit cards that would touch: the later steps down to grey.
+        val lit = listOf(
+            TodaySlot(Hero, CardSize.Large), TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true, pinned = true),
+            TodaySlot(Recovery, CardSize.Small), TodaySlot(LastNight, CardSize.Small), TodaySlot(EditToday, CardSize.Strip),
+        )
+        assertTrue(litClashes(varyLooks(lit, Moment.During), false, Moment.During).isEmpty())
     }
 
     @Test fun `a Small is its own design, but two Smalls side by side are neighbours`() {
@@ -182,7 +200,7 @@ class TodayLooksTest {
         assertEquals(CardSize.Wide, pinned[2].size)
         // The strips that need an answer stack under the hero as they are.
         val stack = today(Moment.Waking, allFacts)
-        assertEquals(List(4) { CardSize.Strip }, stack.drop(1).take(4).map { it.size })
+        assertEquals(List(3) { CardSize.Strip }, stack.drop(1).take(3).map { it.size })
         assertVaried(stack, false, "answer strips")
     }
 
@@ -249,7 +267,7 @@ class TodayLooksTest {
         val rnd = Random(42)
         repeat(20_000) {
             val m = Moment.entries.random(rnd)
-            val facts = TodayFacts(rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean())
+            val facts = TodayFacts(rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean(), rnd.nextBoolean())
             val pins = pinLists.random(rnd)
             val hidden = hideable.filter { rnd.nextInt(3) == 0 }.toSet() - pins.toSet()
             val live = rnd.nextBoolean()

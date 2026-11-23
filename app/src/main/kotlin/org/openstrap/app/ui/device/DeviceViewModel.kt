@@ -29,6 +29,7 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.StrapController
 import org.openstrap.app.device.StrapInfo
 import org.openstrap.app.device.StrapManager
+import org.openstrap.app.device.SyncRecord
 import org.openstrap.app.device.SyncState
 import org.openstrap.app.export.AutoBackup
 import org.openstrap.app.health.HealthConnectAutoSync
@@ -65,6 +66,9 @@ class DeviceViewModel(
     /** The words of its messages, in res/values/strings_you_*.xml. Read on each use, so they follow the app's language. */
     private val strings: Strings get() = Strings.app
 
+    /** Restart shows only when the strap reports it: asked by the Device screen as it opens, once per connection. */
+    fun checkCanRestart() = viewModelScope.launch { strap.checkCanRestart() }
+
     val paired: StateFlow<PairedDevice?> =
         settings.pairedDevice.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -75,6 +79,7 @@ class DeviceViewModel(
 
     val connection: StateFlow<ConnectionState> get() = strap.connection
     val sync: StateFlow<SyncState> get() = strap.sync
+    val syncRecord: StateFlow<SyncRecord> get() = strap.syncRecord
     val info: StateFlow<StrapInfo?> get() = strap.info
     val findingStrap: StateFlow<Boolean> get() = strap.findingStrap
 
@@ -86,10 +91,8 @@ class DeviceViewModel(
     val buzzOnCalls: StateFlow<Boolean> = settings.buzzOnCalls.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val buzzOnNotifications: StateFlow<Boolean> = settings.buzzOnNotifications.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val wearReminder: StateFlow<Boolean> = settings.wearReminder.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val autoStartWorkouts: StateFlow<Boolean> = settings.autoStartWorkouts.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     fun setWearReminder(on: Boolean) = viewModelScope.launch { settings.setWearReminder(on) }
-    fun setAutoStartWorkouts(on: Boolean) = viewModelScope.launch { settings.setAutoStartWorkouts(on) }
 
     private val _scan = MutableStateFlow(ScanUiState())
     val scan = _scan.asStateFlow()
@@ -158,6 +161,9 @@ class DeviceViewModel(
     val companionDeclined: StateFlow<Boolean> =
         settings.companionDeclined.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** The prompt was backed out of: the offer is hidden until the app starts again, and the battery setting shows meanwhile. */
+    val companionOfferHidden: StateFlow<Boolean> get() = companion.offerHidden
+
     /** "Stay connected in background": whether Android can associate the strap, and whether it is, or battery optimization is off. */
     val companionSupported: Boolean get() = companion.supported
     val companionAssociated: StateFlow<Boolean> get() = companion.associated
@@ -167,7 +173,10 @@ class DeviceViewModel(
     fun associate(activity: Activity, address: String, launch: (IntentSender) -> Unit) =
         companion.associate(activity, address, launch, onError = ::showMessage)
 
-    /** The association prompt's answer. Turned down, the page says what else keeps the strap connected. */
+    /**
+     * The association prompt's answer. Backed out of, the offer hides for now and the page says what else keeps the strap
+     * connected; a failure of the system's own is kept ([CompanionLink.onResult]).
+     */
     fun associationResult(resultCode: Int) {
         if (!companion.onResult(resultCode)) showMessage(strings.get(R.string.you_strap_not_linked))
     }

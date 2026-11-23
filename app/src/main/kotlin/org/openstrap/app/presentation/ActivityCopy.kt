@@ -246,7 +246,10 @@ internal object ActivityCopy {
 
     /** The distance row's line and the detail's label: where the number comes from. */
     fun distanceSource(fromSteps: Boolean, strings: Strings = Strings.app): String =
-        strings.get(if (fromSteps) R.string.core_activity_distance_from_steps else R.string.core_activity_distance_from_strap)
+        strings.get(
+            if (fromSteps) Units.res(R.string.core_activity_distance_from_steps, R.string.core_activity_distance_from_steps_mi)
+            else Units.res(R.string.core_activity_distance_from_strap, R.string.core_activity_distance_from_strap_mi),
+        )
 
     /** The sentence under the kilometres: the steps they come from. */
     fun distance(steps: Int, today: Boolean, strings: Strings = Strings.app): String = strings.format(

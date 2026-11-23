@@ -20,17 +20,17 @@ class WorkoutCopyTest {
     private val connected = ConnectionState.Connected(batteryPercent = 80, firmware = null)
 
     @Test fun `the ready hero is the strap in every state`() {
-        val live = WorkoutCopy.ReadyHero("Strap connected", "Live from your strap.", live = true)
+        val live = WorkoutCopy.ReadyHero("Strap connected", "Live from your strap", live = true)
         assertEquals(live, WorkoutCopy.readyHero(connected, 72))
-        assertEquals(live.copy(line = "Waiting for heart rate."), WorkoutCopy.readyHero(connected, null))
-        assertEquals(live.copy(line = "Live from your strap. Battery 15%."), WorkoutCopy.readyHero(connected.copy(batteryPercent = 15), 72))
+        assertEquals(live.copy(line = "Waiting for heart rate"), WorkoutCopy.readyHero(connected, null))
+        assertEquals(live.copy(line = "Live from your strap, battery 15%"), WorkoutCopy.readyHero(connected.copy(batteryPercent = 15), 72))
         // Ready warns at 20%, earlier than the 15% everywhere else, before a workout that may run long.
-        assertEquals(live.copy(line = "Live from your strap. Battery 20%."), WorkoutCopy.readyHero(connected.copy(batteryPercent = 20), 72))
+        assertEquals(live.copy(line = "Live from your strap, battery 20%"), WorkoutCopy.readyHero(connected.copy(batteryPercent = 20), 72))
         assertEquals(live, WorkoutCopy.readyHero(connected.copy(batteryPercent = 21), 72))
         assertTrue(WorkoutCopy.READY_LOW_BATTERY > org.openstrap.app.presentation.StrapBands.LOW_BATTERY)
         // Charging, a low battery is on its way up: not worth a word.
         assertEquals(live, WorkoutCopy.readyHero(connected.copy(batteryPercent = 15, charging = true), 72))
-        val away = WorkoutCopy.ReadyHero("Strap not connected", "You can start anyway.", live = false)
+        val away = WorkoutCopy.ReadyHero("Strap not connected", "You can start anyway", live = false)
         assertEquals(away.copy(title = "Connecting to the strap"), WorkoutCopy.readyHero(ConnectionState.Connecting, null))
         assertEquals(away.copy(title = "Connecting to the strap"), WorkoutCopy.readyHero(ConnectionState.Authenticating, null))
         assertEquals(away, WorkoutCopy.readyHero(ConnectionState.Disconnected, 72))
@@ -39,11 +39,11 @@ class WorkoutCopyTest {
     }
 
     @Test fun `gps and route notes`() {
-        assertEquals("Off. Only the totals are kept.", WorkoutCopy.routeNote(false))
+        assertEquals("Off, only the totals are kept", WorkoutCopy.routeNote(false))
     }
 
     @Test fun `zone name and time in it`() {
-        assertEquals("Zone 3," to "tempo", WorkoutCopy.zoneTitle(2))
+        assertEquals("Zone 3" to "tempo", WorkoutCopy.zoneTitle(2))
         assertEquals("9 min in this zone", WorkoutCopy.zoneTime(9 * 60 + 59))
         assertEquals("Under a minute in this zone", WorkoutCopy.zoneTime(42))
     }

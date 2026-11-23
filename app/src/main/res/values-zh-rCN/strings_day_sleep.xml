@@ -7,9 +7,9 @@
     <string name="day_sleep_night_label_year_nights">%1$s，过去 12 个月夜间</string>
     <string name="day_sleep_night_label_year_days">%1$s，过去 12 个月全天</string>
     <string name="day_sleep_no_sleep">无睡眠记录</string>
-    <string name="day_sleep_none_last_night">昨晚无记录</string>
-    <string name="day_sleep_none_that_night">当晚无记录</string>
-    <string name="day_sleep_no_reading">暂无读数</string>
+    <string name="day_sleep_none_last_night">未记录到睡眠</string>
+    <string name="day_sleep_none_that_night">未记录到睡眠</string>
+    <string name="day_sleep_no_reading">尚无读数</string>
     <string name="day_sleep_not_measured_last_night">昨晚未测量</string>
     <string name="day_sleep_not_measured_that_night">当晚未测量</string>
     <string name="day_sleep_heart_lowest_last_night">昨晚 %2$s 出现最低 %1$d bpm，睡眠期间平均 %3$d bpm。</string>
@@ -20,9 +20,10 @@
     <string name="day_sleep_heart_week">过去 7 晚睡眠平均 %1$d bpm，范围 %2$d 至 %3$d。</string>
     <string name="day_sleep_score_label_last_night">昨晚</string>
     <string name="day_sleep_score_label_that_night">当晚</string>
+    <string name="day_sleep_score_label_adjusted">%1$s，已调整</string>
     <string name="day_sleep_no_score">暂无分数</string>
-    <string name="day_sleep_no_score_last_night">手环未对昨晚睡眠评分</string>
-    <string name="day_sleep_no_score_that_night">手环未对当晚睡眠评分</string>
+    <string name="day_sleep_no_score_last_night">手环未评分</string>
+    <string name="day_sleep_no_score_that_night">手环未评分</string>
     <string name="day_sleep_headline_sentence">%1$s。</string>
     <string name="day_sleep_factor_time_asleep">睡眠时长</string>
     <string name="day_sleep_factor_staying_asleep">维持睡眠</string>
@@ -30,8 +31,8 @@
     <string name="day_sleep_factor_awake_detail">入睡后清醒 %1$s</string>
     <string name="day_sleep_factor_helping">起到帮助</string>
     <string name="day_sleep_factor_good">达标</string>
-    <string name="day_sleep_factor_fair">略有拉低</string>
-    <string name="day_sleep_factor_low">有所拉低</string>
+    <string name="day_sleep_factor_fair">略有拖累</string>
+    <string name="day_sleep_factor_low">拖累</string>
     <string name="day_sleep_fell_asleep">入睡</string>
     <string name="day_sleep_woke">醒来</string>
     <string name="day_sleep_asleep">睡眠时长</string>
@@ -97,7 +98,7 @@
         <item quantity="other">%1$d 项可恢复</item>
     </plurals>
     <string name="day_sleep_vital_no_sleep">未记录到睡眠</string>
-    <string name="day_sleep_vital_no_reading">暂无读数</string>
+    <string name="day_sleep_vital_no_reading">尚无读数</string>
     <plurals name="day_sleep_vital_learning">
         <item quantity="other">正在了解，%1$d/%2$d 晚</item>
     </plurals>

@@ -36,9 +36,9 @@
     <string name="you_alarms_summary_none">None</string>
     <!-- Every alarm is switched off. -->
     <string name="you_alarms_summary_all_off">All off</string>
-    <!-- The first alarm that's on: its time, then its days in lower case, "06:40 weekdays". -->
-    <string name="you_alarms_summary_first"><xliff:g id="time" example="06:40">%1$s</xliff:g> <xliff:g id="days" example="weekdays">%2$s</xliff:g></string>
-    <!-- The same with how many more alarms are on, "06:40 weekdays and 1 more". -->
+    <!-- The first alarm that's on: its time, then its days, "06:40, Weekdays". -->
+    <string name="you_alarms_summary_first">%1$s, %2$s</string>
+    <!-- The same with how many more alarms are on, "06:40, Weekdays and 1 more". -->
     <plurals name="you_alarms_summary_more">
         <item quantity="one"><xliff:g id="first" example="06:40 weekdays">%2$s</xliff:g> and <xliff:g id="count" example="1">%1$d</xliff:g> more</item>
         <item quantity="other"><xliff:g id="first" example="06:40 weekdays">%2$s</xliff:g> and <xliff:g id="count" example="2">%1$d</xliff:g> more</item>
@@ -47,9 +47,9 @@
     <!-- The Strap page's Health alerts row, at most 22 characters. Both heart rate and oxygen alerts are on. -->
     <string name="you_health_summary_both">Heart rate and oxygen</string>
     <!-- Heart rate alerts above and below, in beats a minute. -->
-    <string name="you_health_summary_over_under">Above <xliff:g id="high" example="150">%1$d</xliff:g>, below <xliff:g id="low" example="40">%2$d</xliff:g></string>
-    <string name="you_health_summary_over">Above <xliff:g id="high" example="150">%1$d</xliff:g> bpm</string>
-    <string name="you_health_summary_under">Below <xliff:g id="low" example="40">%1$d</xliff:g> bpm</string>
+    <string name="you_health_summary_over_under">Over %1$d, under %2$d bpm</string>
+    <string name="you_health_summary_over">Over <xliff:g id="high" example="150">%1$d</xliff:g> bpm</string>
+    <string name="you_health_summary_under">Under <xliff:g id="low" example="40">%1$d</xliff:g> bpm</string>
     <!-- The blood oxygen alert, in percent. -->
     <string name="you_health_summary_oxygen">Oxygen below <xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
 
@@ -60,12 +60,11 @@
     <string name="you_alarms_delete_all">Delete all</string>
     <!-- The Alarms page's title. -->
     <string name="you_alarms_title">Alarms</string>
-    <string name="you_alarms_reading">Reading from the strap…</string>
+    <string name="you_alarms_reading">Reading</string>
     <string name="you_alarms_try_again">Try again</string>
     <!-- The alarms panel's title. -->
     <string name="you_alarms_on_strap">On the strap</string>
-    <!-- Beside the panel's title: alarms set out of how many the strap holds, "3 of 10". -->
-    <string name="you_alarms_count"><xliff:g id="count" example="3">%1$d</xliff:g> of <xliff:g id="max" example="10">%2$d</xliff:g></string>
+    <!-- The alarms panel's heading when the strap's limit is known: alarms set out of how many it holds, "3 of 10 alarms". -->
     <string name="you_alarms_none">No alarms on the strap.</string>
     <string name="you_alarms_add">Add alarm</string>
     <string name="you_alarms_tip">The strap buzzes at the alarm time. To stop it, tap the front of the strap several times.</string>
@@ -74,24 +73,25 @@
     <string name="you_alarms_edit">Edit alarm</string>
     <string name="you_alarms_delete">Delete alarm</string>
     <!-- A message when an alert is changed before the strap's settings were read. -->
-    <string name="you_alarms_not_loaded">Settings haven\'t loaded yet</string>
-    <string name="you_alarms_read_failed">Couldn\'t read from the strap</string>
+    <string name="you_alarms_not_loaded">Settings haven\'t loaded yet.</string>
+    <string name="you_alarms_read_failed">Couldn\'t read from the strap.</string>
 
     <!-- The Health alerts page's title, and its panel's. -->
     <string name="you_health_title">Health alerts</string>
-    <string name="you_health_panel">Heart rate and blood oxygen</string>
     <!-- Rows with a menu of values each. -->
     <string name="you_health_measuring">Heart rate measuring</string>
     <!-- Under Heart rate measuring when the alerts can't work at the interval chosen. Continuous is a value of that menu. -->
-    <string name="you_health_measuring_note">Heart rate alerts need Continuous or every minute.</string>
+    <string name="you_health_measuring_note">Heart rate alerts need Continuous or Every 1 min.</string>
     <string name="you_health_high">High heart rate alert</string>
     <!-- A heart rate alert's value, in beats a minute. -->
-    <string name="you_health_above">Above <xliff:g id="bpm" example="150">%1$d</xliff:g></string>
     <string name="you_health_low">Low heart rate alert</string>
-    <string name="you_health_below">Below <xliff:g id="bpm" example="40">%1$d</xliff:g></string>
+    <!-- A switch: the strap measures blood oxygen on its own while you rest. -->
+    <string name="you_health_auto_oxygen">Auto blood oxygen</string>
+    <string name="you_health_auto_oxygen_note">Measures while you rest</string>
     <string name="you_health_oxygen">Low blood oxygen alert</string>
+    <!-- Under the blood oxygen alert while Auto blood oxygen is off. -->
+    <string name="you_health_oxygen_note">Needs Auto blood oxygen on.</string>
     <!-- The blood oxygen alert's value, in percent. -->
-    <string name="you_health_below_percent">Below <xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
     <string name="you_health_note">The strap buzzes when an alert goes off. unstrap isn\'t a medical device.</string>
 
     <!-- The Strap page's Phone alerts row. -->
@@ -108,13 +108,13 @@
     <!-- The Phone alerts page's title. -->
     <string name="you_phone_title">Phone alerts</string>
     <string name="you_phone_calls">Incoming calls</string>
-    <string name="you_phone_calls_note">Buzzes while your phone rings. App calls like WhatsApp need notification access.</string>
+    <string name="you_phone_calls_note">Buzzes while your phone rings. App calls need notification access.</string>
     <string name="you_phone_calls_blocked">Needs phone access. Android won\'t ask again, so turn it on under Permissions.</string>
     <!-- A button that opens Android's settings for unstrap. -->
     <string name="you_phone_open_settings">Open settings</string>
     <string name="you_phone_call_buzz">Call buzz</string>
     <!-- Above the choice of how long the strap buzzes for a ringing call. -->
-    <string name="you_phone_call_length">Buzz for</string>
+    <string name="you_phone_call_length">Buzz length</string>
     <!-- The notifications switch's title. -->
     <string name="you_phone_notifications">Notifications</string>
     <string name="you_phone_notifications_note">Buzzes for notifications that make a sound.</string>
@@ -126,8 +126,23 @@
     <string name="you_phone_quiet_to">To</string>
     <string name="you_phone_quiet_calls">Calls too</string>
     <string name="you_phone_quiet_calls_note">When off, the strap still buzzes for calls.</string>
-    <string name="you_phone_note">Follows Do Not Disturb and silent apps. Never reads what a notification says.</string>
+    <string name="you_phone_note">unstrap follows Do Not Disturb and silent apps. It never reads what a notification says.</string>
     <!-- The time sheet's title for each end of quiet hours. -->
     <string name="you_phone_quiet_from_title">Quiet from</string>
     <string name="you_phone_quiet_until_title">Quiet until</string>
+    <!-- Health alerts (Halo): a limit row's value, its row names, the group headings, and the alarm sheet's repeat line. -->
+    <string name="you_health_bpm_value"><xliff:g id="bpm" example="150">%1$d</xliff:g> bpm</string>
+    <string name="you_health_percent_value"><xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
+    <string name="you_health_row_above">Above</string>
+    <string name="you_health_row_below">Below</string>
+    <string name="you_health_group_heart">Heart rate</string>
+    <string name="you_health_group_oxygen">Blood oxygen</string>
+    <string name="you_alarms_repeat">Repeat, <xliff:g id="days" example="Weekdays">%1$s</xliff:g></string>
+    <!-- Phone alerts (Halo): the group headings. -->
+    <string name="you_phone_group_calls">Calls</string>
+    <string name="you_phone_group_notifications">Notifications</string>
+    <plurals name="you_alarms_panel_count">
+        <item quantity="one">%1$d of %2$d alarm</item>
+        <item quantity="other">%1$d of %2$d alarms</item>
+    </plurals>
 </resources>

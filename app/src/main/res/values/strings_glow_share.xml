@@ -28,8 +28,6 @@
     <string name="glow_share_stat_bpm_end">Bpm at end</string>
     <!-- A game card's figure label: the training load. One word, a third of the card's width. -->
     <string name="glow_share_stat_load">Load</string>
-    <!-- Unit after a pace figure: a kilometre. Very short. -->
-    <string name="glow_share_unit_per_km">/km</string>
 
     <!-- Unit beside the kilograms a strength card says were lifted. Very short. -->
     <string name="glow_share_unit_kg">kg</string>
@@ -70,6 +68,8 @@
     <string name="glow_share_change_photo">Change photo</string>
     <!-- The pill under the card when it has no photo. -->
     <string name="glow_share_add_photo">Add a photo</string>
+    <!-- Shown under the card when the picked photo couldn't be read. One short sentence. -->
+    <string name="glow_share_photo_failed">Couldn\'t read that photo</string>
     <!-- Label before the choice of how a run's route shows on the card. One word, narrow. -->
     <string name="glow_share_route">Route</string>
     <!-- A choice for the route: not on the card. One short word. -->
@@ -78,4 +78,6 @@
     <string name="glow_share_route_line">Line</string>
     <!-- A switch that cuts the route's first and last 200 m, so home doesn't show. -->
     <string name="glow_share_hide_ends">Hide start and end</string>
+    <!-- Under the route's hide start and end switch: how much is cut from each end of the line. -->
+    <string name="glow_share_hide_ends_note">Cuts <xliff:g id="meters" example="200">%1$d</xliff:g> m off each end of the line</string>
 </resources>

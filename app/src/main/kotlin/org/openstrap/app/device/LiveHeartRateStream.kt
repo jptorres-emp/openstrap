@@ -1,15 +1,23 @@
 package org.openstrap.app.device
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.catching
@@ -21,9 +29,10 @@ import org.openstrap.protocol.toHex
 import org.openstrap.protocol.u8
 
 /**
- * Live heart rate from the strap, on the channel push, or the standard 2A37 characteristic without it. It streams
- * only while the app is on screen, a workout records it, or workout auto-start watches for effort ([wanted]). There is
- * no switch for it, as in Zepp: the strap's own measuring is set by its monitor frequency.
+ * Live heart rate from the strap, on the channel push, or the standard 2A37 characteristic without it. As in Zepp
+ * 10.10.5 it streams only while something uses it ([wanted]): a screen that shows it, with the app in front, or a
+ * workout recording. Never just because the strap connected. There is no switch for it, as in Zepp: the strap's own
+ * measuring is set by its monitor frequency.
  */
 // One setter per reason to stream, as StrapController has them, plus start, stop and the reading.
 @Suppress("TooManyFunctions")
@@ -38,88 +47,123 @@ internal class LiveHeartRateStream(
     val liveHeartRate = MutableStateFlow<Int?>(null)
     val heartRateReadings = MutableSharedFlow<Int>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    private var liveJob: Job? = null
-
     /** Which of the strap's heart rate sources is shown and recorded ([HeartRateSources]); guarded by itself. */
     private val sources = HeartRateSources()
 
-    /** Live HR streams only while the app is on screen, where it's shown, or while a workout records it. */
-    @Volatile private var appVisible = false
-    @Volatile private var workoutActive = false
+    /** Why live HR is wanted, besides a screen showing it: the app in front, or a workout recording. */
+    private enum class Reason { AppVisible, Workout }
 
-    @Volatile private var effortWatch = false
+    private val reasons = MutableStateFlow<Set<Reason>>(emptySet())
 
-    private fun wanted() = workoutActive || effortWatch || appVisible
+    /** The screens showing live HR now, each by its own key (Zepp's HeartRateCenter consumers). */
+    private val screens = MutableStateFlow<Set<Any>>(emptySet())
 
-    val isRunning: Boolean get() = liveJob?.isActive == true
+    /** A workout records it, or a screen shows it with the app in front. */
+    private fun wanted(r: Set<Reason>, shown: Set<Any>) = Reason.Workout in r || (Reason.AppVisible in r && shown.isNotEmpty())
 
-    fun setAppVisible(visible: Boolean) {
-        if (visible == appVisible) return
-        appVisible = visible
-        refresh()
+    /** Bumped by each new connection, so a stream is opened again even when the link dropped and came back unseen. */
+    private val connects = MutableStateFlow(0)
+
+    /** True from the first command of a stream to the end of its stop, so a stop is sent only for a stream that opened. */
+    private val wireOpen = MutableStateFlow(false)
+
+    /** The session and client the open stream was sent on, for its stop. Touched by the one coroutine in [follow] only. */
+    private var openSession: ChannelSession? = null
+    private var openClient: GattClient? = null
+
+    /** What [follow] acts on: stream or not, on which connection. */
+    private data class Plan(val stream: Boolean, val connect: Int)
+
+    init {
+        // One ordered coroutine owns the wire: collectLatest ends a stream (cancelled, then joined) before the next
+        // block starts, so a stop and a start can't cross, and a failed flash that ends firmwareUpdating restarts it.
+        scope.launch {
+            combine(reasons, screens, connection, firmwareUpdating, connects) { r, shown, c, fw, n ->
+                Plan(wanted(r, shown) && c is ConnectionState.Connected && !fw, n)
+            }.distinctUntilChanged().collectLatest { follow(it) }
+        }
     }
+
+    fun setAppVisible(visible: Boolean) { set(Reason.AppVisible, visible) }
 
     fun setWorkoutActive(active: Boolean) {
-        if (active == workoutActive) return
-        workoutActive = active
-        log(if (active) "workout started: live hr stays on in the background" else "workout ended")
-        refresh()
+        if (set(Reason.Workout, active)) log(if (active) "workout started: live hr stays on in the background" else "workout ended")
     }
 
-    fun setEffortWatch(active: Boolean) {
-        if (active == effortWatch) return
-        effortWatch = active
-        refresh()
+    /** A screen showing live HR came or went. */
+    fun showOnScreen(key: Any, shown: Boolean) {
+        screens.update { if (shown) it + key else it - key }
     }
 
-    /** A new connection: starts streaming if [wanted]. */
+    /** True when [reason] changed. */
+    private fun set(reason: Reason, on: Boolean): Boolean {
+        var changed = false
+        reasons.update { current ->
+            changed = (reason in current) != on
+            if (on) current + reason else current - reason
+        }
+        return changed
+    }
+
+    /** A new connection: starts again if something still uses it, as Zepp's `uyl.f` restarts its consumers. */
     fun onConnected() {
-        if (wanted()) start()
+        connects.update { it + 1 }
     }
 
     /** The link ended: the stream with it. */
     fun onLinkEnded() {
-        liveJob?.cancel()
         liveHeartRate.value = null
         synchronized(sources) { sources.reset() }
         sessionLogged = false
     }
 
-    /** Starts or stops streaming to match [wanted]; a stream already running is left alone. */
-    private fun refresh() {
-        if (!wanted()) {
-            if (liveJob?.isActive == true) pause()
-        } else if (liveJob?.isActive != true && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
-            start()
-        }
+    /**
+     * Stops streaming and returns once the strap has been told (or a few seconds passed), for a firmware update, which
+     * sets [firmwareUpdating] first: the stream follows it on its own, and starts again if the update fails.
+     */
+    suspend fun pause() {
+        withTimeoutOrNull(PAUSE_WAIT_MS) { wireOpen.first { !it } }
     }
 
-    /** Stops streaming for now (e.g. during a firmware update); [refresh] starts it again when it's wanted. */
-    fun pause() {
-        liveJob?.cancel()
+    private suspend fun follow(plan: Plan) {
+        if (plan.stream) stream() else closeWire()
+    }
+
+    /** Tells the strap to stop, if a stream was opened and the link is still up. Not cancellable: both commands go out. */
+    private suspend fun closeWire() {
         liveHeartRate.value = null
-        val s = link.session
-        val client = link.gatt
-        scope.launch { stop(s, client) }
+        val s = openSession
+        val client = openClient
+        openSession = null
+        openClient = null
+        if (!wireOpen.value) return
+        withContext(NonCancellable) {
+            if (connection.value is ConnectionState.Connected) stop(s, client)
+            wireOpen.value = false
+        }
     }
 
     // The catch-all rethrows a cancellation, and a failed stream only stops showing live HR.
     @Suppress("SuspendFunSwallowedCancellation", "TooGenericExceptionCaught")
-    private fun start() {
-        liveJob?.cancel()
+    private suspend fun stream() {
         liveHeartRate.value = null
         val s = link.activeSession ?: return
         val client = link.gatt ?: return
         synchronized(sources) { sources.reset() }
-        liveJob = scope.launch {
+        openSession = s
+        openClient = client
+        wireOpen.value = true
+        coroutineScope {
             launch { clearWhenStale() }
             try {
                 val channel = s.services.has(Endpoints.HEART_RATE)
                 listen(s, client, channel)
                 if (channel) {
+                    // Zepp's `az5`: up to 15 s for the open's answer, and 0x0048 only once it is `05 00`.
                     val opened = s.request(Endpoints.OPEN_APP, LiveHeartRate.OPEN, OPEN_TIMEOUT_MS) { it.u8(0) == OPEN_REPLY }
                     log("live hr open: ${opened.toHex()}")
-                    val subscribed = s.request(Endpoints.HEART_RATE, LiveHeartRate.SUBSCRIBE, OPEN_TIMEOUT_MS) {
+                    check(opened.size >= 2 && opened.u8(1) == OPEN_OK) { "live hr open refused: ${opened.toHex()}" }
+                    val subscribed = s.request(Endpoints.HEART_RATE, LiveHeartRate.SUBSCRIBE, SUBSCRIBE_TIMEOUT_MS) {
                         it.u8(0) == SUBSCRIBE_REPLY
                     }
                     log("live hr subscribe: ${subscribed.toHex()}")
@@ -130,7 +174,9 @@ internal class LiveHeartRateStream(
                 while (isActive) {
                     delay(LiveHeartRate.KEEP_ALIVE_MS)
                     if (channel) {
-                        s.send(Endpoints.OPEN_APP, LiveHeartRate.KEEP_ALIVE)
+                        // Zepp only logs the keep-alive's result: a failed one doesn't stop the stream.
+                        catching { s.send(Endpoints.OPEN_APP, LiveHeartRate.KEEP_ALIVE) }
+                            .onFailure { log("live hr keep-alive failed: $it") }
                     } else {
                         val keepAlive = LiveHeartRate.LEGACY_KEEP_ALIVE
                         client.write(StrapUuids.HEART_RATE_SERVICE, StrapUuids.HR_CONTROL, keepAlive, withResponse = true)
@@ -157,11 +203,11 @@ internal class LiveHeartRateStream(
                 LiveHeartRate.parsePush(p)?.let { offer(HeartRateSources.Source.CHANNEL, it, noReading = false) }
             }
         }
-        // Each keep-alive is answered with `05 02`; only log the first reply and anything else.
-        var opens = 0
+        // Each keep-alive is answered alike; log each different reply once.
+        val seen = mutableSetOf<String>()
         launch {
             s.messagesFor(Endpoints.OPEN_APP).collect { p ->
-                if (opens++ == 0 || !p.contentEquals(KEEP_ALIVE_REPLY)) log("live hr 001d < ${p.toHex()}")
+                if (p.isNotEmpty() && p.u8(0) == OPEN_REPLY && seen.add(p.toHex())) log("live hr 001d < ${p.toHex()}")
             }
         }
         if (channel) return
@@ -238,10 +284,12 @@ internal class LiveHeartRateStream(
     }
 
     private companion object {
-        val KEEP_ALIVE_REPLY = byteArrayOf(0x05, 0x02)
-        const val OPEN_TIMEOUT_MS = 5_000L
+        const val OPEN_TIMEOUT_MS = 15_000L
+        const val OPEN_OK = 0x00
+        const val SUBSCRIBE_TIMEOUT_MS = 5_000L
         const val OPEN_REPLY = 0x05
         const val SUBSCRIBE_REPLY = 0x04
         const val STALE_CHECK_MS = 2_000L
+        const val PAUSE_WAIT_MS = 5_000L
     }
 }

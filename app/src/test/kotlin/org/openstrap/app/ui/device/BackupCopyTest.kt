@@ -16,14 +16,14 @@ class BackupCopyTest {
     private fun status(s: BackupState) = BackupCopy.status(s, now, utc, Locale.UK)
 
     @Test fun `the row says off, waiting, when it last ran, or why it failed`() {
-        assertEquals("Off. A zip each day in a folder you choose", status(BackupState(null, null, null, null, null)))
-        assertEquals("Each day while the phone charges. No backup yet", status(on))
-        assertEquals("Last backup today at 03:12", status(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60)))
-        assertEquals("Last backup yesterday at 23:50", status(on.copy(lastDone = 1792195200L - 600)))
-        assertEquals("Last backup on Wed 14 Oct", status(on.copy(lastDone = 1792195200L - 3 * 86_400L)))
-        assertEquals("Last backup on Fri 9 Oct", status(on.copy(lastDone = 1792195200L - 8 * 86_400L)))
+        assertEquals("Off, daily zips in a folder you choose", status(BackupState(null, null, null, null, null)))
+        assertEquals("No backup yet, runs while charging", status(on))
+        assertEquals("Last backup 03:12", status(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60)))
+        assertEquals("Last backup Yesterday 23:50", status(on.copy(lastDone = 1792195200L - 600)))
+        assertEquals("Last backup Wed 14 Oct, 00:00", status(on.copy(lastDone = 1792195200L - 3 * 86_400L)))
+        assertEquals("Last backup Fri 9 Oct, 00:00", status(on.copy(lastDone = 1792195200L - 8 * 86_400L)))
         assertEquals(
-            "Last backup failed. The folder is no longer available.",
+            "Last backup failed",
             status(on.copy(lastDone = 1792195200L, failed = BackupFailure.FolderGone, failedAt = now)),
         )
     }
@@ -31,8 +31,8 @@ class BackupCopyTest {
     @Test fun `the You page's row says it in a few words`() {
         fun summary(s: BackupState) = BackupCopy.summary(s, now, utc, Locale.UK)
         assertEquals("Off", summary(BackupState(null, null, null, null, null)))
-        assertEquals("On. No backup yet", summary(on))
-        assertEquals("Last backup today at 03:12", summary(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60)))
+        assertEquals("On, no backup yet", summary(on))
+        assertEquals("Last backup 03:12", summary(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60)))
         assertEquals("Last backup failed", summary(on.copy(lastDone = 1792195200L, failed = BackupFailure.NoSpace, failedAt = now)))
     }
 
@@ -57,7 +57,7 @@ class BackupCopyTest {
         try {
             org.openstrap.app.presentation.ClockSetting.use24Hour = false
             val line = status(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60))
-            assertEquals("last backup today at 3:12 am", line.lowercase(Locale.ROOT))
+            assertEquals("last backup 3:12 am", line.lowercase(Locale.ROOT))
             org.openstrap.app.testing.assertCleanCopy(line)
         } finally {
             org.openstrap.app.presentation.ClockSetting.use24Hour = was

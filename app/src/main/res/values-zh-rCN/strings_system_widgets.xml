@@ -2,9 +2,13 @@
 <resources>
     <string name="system_widget_status_not_paired">配对手环</string>
     <string name="system_widget_status_not_paired_short">配对手环</string>
+    <string name="system_widget_status_not_paired_shortest">配对</string>
     <string name="system_widget_status_low_battery">手环电量 %1$d%%</string>
     <string name="system_widget_status_percent">%1$d%%</string>
-    <string name="system_widget_status_syncing">正在同步…</string>
+    <string name="system_widget_status_syncing">正在同步</string>
+    <string name="system_widget_status_not_synced">未同步</string>
+    <string name="system_widget_status_bluetooth_off">蓝牙已关闭</string>
+    <string name="system_widget_status_bluetooth_off_short">蓝牙关闭</string>
     <string name="system_widget_status_synced">已同步 %1$s</string>
     <string name="system_widget_open">打开</string>
     <string name="system_widget_this_week">本周</string>
@@ -27,7 +31,8 @@
     <string name="system_widget_recovery_no_reading">暂无读数</string>
     <string name="system_widget_recovery_resting_hr">静息心率</string>
     <string name="system_widget_recovery_hrv">HRV</string>
-    <string name="system_widget_recovery_sleep">睡眠</string>
+    <string name="system_widget_recovery_resting_hr_short">静息心率</string>
+    <string name="system_widget_recovery_sleep">睡眠评分</string>
     <string name="system_widget_recovery_figure">%1$s%2$s</string>
     <string name="system_widget_score_word">%1$s，%2$s</string>
     <string name="system_widget_recovery_week_description">最近七天每日恢复情况</string>
@@ -55,6 +60,8 @@
     </plurals>
     <string name="system_widget_recording">正在记录</string>
     <string name="system_widget_paused">已暂停</string>
+    <string name="system_widget_rest">休息中</string>
+    <string name="system_widget_still_going">还在运动吗？</string>
     <string name="system_widget_moment_energy_left">剩余精力</string>
     <string name="system_widget_moment_left">剩余</string>
     <string name="system_widget_moment_energy_at_waking">起床时精力 %1$d</string>

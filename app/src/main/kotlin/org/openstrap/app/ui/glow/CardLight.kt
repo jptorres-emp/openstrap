@@ -1,27 +1,17 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.glow.draw.EdgeSurface
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.chart
+
+/** The grey card as a brush, for the draw/ code that fills a card outline itself. */
+internal val SolidSurface: Brush = Brush.verticalGradient(listOf(Greys.Card, Greys.Card))
 
 /**
  * A card lit by a soft light off its edge, as Ready's heart and the share cards are from below and the Heart rate zones
@@ -37,36 +27,6 @@ internal fun DrawScope.drawCardLight(color: Color, center: Offset, radiusX: Floa
         val brush = Brush.radialGradient(*colors.toTypedArray(), center = center, radius = radiusY)
         drawCircle(brush, radiusY, center)
     }
-}
-
-/**
- * A card on the edge surface lit by one [drawCardLight] in [color]: centred at [lightCenter] and [reach] across and
- * tall, both worked out from the card's size, through [stops]. The rim is [color] at 30%. Not a [GlowCard]: its light
- * is one soft radial, as Ready's heart and the max heart rate's hero have it, not the glow's rendered layers.
- */
-// Callers pass a fixed list of three or four stops and never change it in place.
-@Suppress("UnstableCollections", "ComposeUnstableCollections")
-@Composable
-internal fun LitPanel(
-    color: Color,
-    stops: List<Pair<Float, Float>>,
-    lightCenter: (Size) -> Offset,
-    reach: (Size) -> Size,
-    modifier: Modifier = Modifier,
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(EdgeSurface)
-            .drawBehind {
-                val r = reach(size)
-                drawCardLight(color, lightCenter(size), r.width, r.height, stops)
-            }
-            .border(1.dp, color.copy(alpha = 0.3f), GlowLayout.CardShape)
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = verticalArrangement,
-        content = content,
-    )
 }
 
 /**

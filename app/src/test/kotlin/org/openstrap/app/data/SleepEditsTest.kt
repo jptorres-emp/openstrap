@@ -192,4 +192,20 @@ class SleepEditsTest {
         // Nothing to compare with says nothing.
         assertNull(SleepEdits.stillHeartRate(readings(74f, 72f).filter { it.first >= nap.start }, nap.start, nap.end, deepSeconds = 0))
     }
+
+    @Test fun `clean keeps a night's rows to its times with no two over the same time`() {
+        val night = SleepSession(at(23, 20, day = 29), at(7, 21))
+        // Two overlapping sessions' rows, as two debug seeds once left on one day, and one past the wake-up.
+        val rows = listOf(
+            SleepStage(at(23, 0, day = 29), at(1, 0), night.start, SleepStage.LIGHT),
+            SleepStage(at(0, 30), at(3, 0), night.start, SleepStage.DEEP),
+            SleepStage(at(2, 0), at(2, 30), night.start, SleepStage.REM),
+            SleepStage(at(3, 0), at(8, 0), night.start, SleepStage.LIGHT),
+        )
+        val out = SleepEdits.clean(rows, night.start, night.end)
+        assertEquals(listOf(at(23, 20, day = 29), at(1, 0), at(3, 0)), out.map { it.start })
+        assertEquals(listOf(at(1, 0), at(3, 0), at(7, 21)), out.map { it.end })
+        assertEquals(night.end - night.start, out.sumOf { it.end - it.start })
+        assertTrue(Summaries.sleepBreakdown(out).let { it.asleepSeconds + it.awakeSeconds } <= night.end - night.start)
+    }
 }

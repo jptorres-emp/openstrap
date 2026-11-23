@@ -1,7 +1,11 @@
 package org.openstrap.app.widget
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
@@ -18,20 +22,24 @@ import org.openstrap.protocol.services.StepTotals
 /**
  * Which widgets a workout's state moving from [previous] to [next] refreshes (widgets spec 7). Starting or ending a
  * workout changes the moment and the Start widget, and so does any other change of state class: a summary closing can
- * follow a discard, which takes a workout out of Start's week and Moment's after a workout. A pause or a resume stops
- * or restarts Start's timer. Nothing before the first state is known ([previous] null).
+ * follow a discard, which takes a workout out of Start's week and Moment's after a workout. A pause or a resume, a
+ * rest starting or the stop question showing changes the recording card both show (workout-rules.md, section 7).
+ * Nothing before the first state is known ([previous] null).
  */
 fun workoutKinds(previous: WorkoutState?, next: WorkoutState): Set<WidgetKind> {
     if (previous == null) return emptySet()
-    val wasPaused = (previous as? WorkoutState.Recording)?.paused
-    val paused = (next as? WorkoutState.Recording)?.paused
+    val was = (previous as? WorkoutState.Recording)?.let(::cardLook)
+    val now = (next as? WorkoutState.Recording)?.let(::cardLook)
     return when {
         (previous is WorkoutState.Recording) != (next is WorkoutState.Recording) -> setOf(WidgetKind.Moment, WidgetKind.Start)
         previous::class != next::class -> setOf(WidgetKind.Moment, WidgetKind.Start)
-        paused != null && wasPaused != null && paused != wasPaused -> setOf(WidgetKind.Start)
+        now != null && was != null && now != was -> setOf(WidgetKind.Moment, WidgetKind.Start)
         else -> emptySet()
     }
 }
+
+/** What of a recording the widgets' card shows a change of: paused, the rest's end, the stop question. */
+private fun cardLook(r: WorkoutState.Recording) = Triple(r.paused, r.restUntil, r.endPrompt != null)
 
 /**
  * Everything a widget's refresh follows (widgets spec 7). The widgets watch these instead of being told: settings,
@@ -51,6 +59,10 @@ internal class WidgetTriggers(
     val profile: Flow<Any>,
     /** The phone's clock, date or time zone was changed ([org.openstrap.app.data.Today.changes]). */
     val clockChanges: Flow<Unit> = emptyFlow(),
+    /** Whether Bluetooth is off on the phone: the status line says so. */
+    val bluetoothOff: Flow<Boolean> = emptyFlow(),
+    /** The strap's live heart rate: while a workout records, Start shows it with its zone. */
+    val liveHeartRate: Flow<Int?> = emptyFlow(),
     val now: () -> Long,
 )
 
@@ -74,26 +86,46 @@ internal fun CoroutineScope.watchWidgetTriggers(t: WidgetTriggers, changed: (Set
         var previous: SyncState = SyncState.Idle
         t.sync.collect { s ->
             if (s is SyncState.Running && previous !is SyncState.Running) launch {
-                val done = catching { t.strapSnapshot.first().lastSyncDone }.getOrNull()
-                if (syncStale(done, t.now())) changed(all)
+                val kept = catching { t.strapSnapshot.first() }.getOrNull()
+                // Stale or failing: their line turns to Syncing.
+                if (syncStale(kept?.lastSyncDone, t.now()) || kept?.failingSince != null) changed(all)
             }
             previous = s
         }
     }
-    // When the status line could change: pairing, the low battery edge, charging.
+    // When the status line could change: pairing, the low battery edge, charging, a sync failing or working again.
     launch {
         var before: StrapSnapshot? = null
         t.strapSnapshot.collect { now ->
             val was = before
             before = now
-            if (was != null && strapStateChanged(now.paired, now.battery, now.charging, was.paired, was.battery, was.charging)) changed(all)
+            if (was != null && strapStateChanged(
+                    now.paired, now.battery, now.charging, was.paired, was.battery, was.charging,
+                    failing = now.failingSince != null, wasFailing = was.failingSince != null,
+                )
+            ) {
+                changed(all)
+            }
         }
     }
+    // Bluetooth going off or on moves the line, whatever the strap's own state says.
+    launch { t.bluetoothOff.distinctUntilChanged().drop(1).collect { changed(all) } }
     launch { t.todaySteps.filterNotNull().collect { stepsChanged() } }
     // Everything a widget shows may have moved.
     launch { t.syncEnded.collect { changed(all) } }
     // A new zone moves today and its midnight: the refresh shows the day it is there and sets midnight's alarm again.
     launch { t.clockChanges.collect { changed(all) } }
+    // While a workout records, the recording card's heart rate and zone (Start's and Moment's) follow the strap, at
+    // most every HEART_EVERY_MS: the timer
+    // ticks on its own, the heart rate needs a redraw.
+    launch {
+        t.workoutState.map { it is WorkoutState.Recording }.distinctUntilChanged()
+            .flatMapLatest { recording -> if (recording) t.liveHeartRate.distinctUntilChanged().drop(1).conflate() else emptyFlow() }
+            .collect {
+                changed(setOf(WidgetKind.Start, WidgetKind.Moment))
+                delay(HEART_EVERY_MS)
+            }
+    }
     launch {
         var previous: WorkoutState = WorkoutState.Idle
         t.workoutState.collect { s ->
@@ -103,3 +135,6 @@ internal fun CoroutineScope.watchWidgetTriggers(t: WidgetTriggers, changed: (Set
         }
     }
 }
+
+/** The least time between Start's redraws for the live heart rate, ms. */
+internal const val HEART_EVERY_MS = 10_000L

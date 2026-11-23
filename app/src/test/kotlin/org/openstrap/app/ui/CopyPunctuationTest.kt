@@ -9,7 +9,8 @@ import org.openstrap.app.testing.SourceTree
 import java.io.File
 
 /**
- * No interpunct, semicolon or em dash in any string the user reads (spec 7.1 rule 6, 8.2). Scans the text in
+ * No interpunct, semicolon or em dash in any string the user reads (the text rule that ends every Halo rules
+ * file: detail, workout, rewards and settings). Scans the text in
  * res/values and the string literals of the Kotlin source that holds copy, leaving out code, comments, template code,
  * log and exception messages and debug-only branches. Ranges say "to" (user, 2026-11-03): the second test bans the en
  * dash and the em dash in every string of the app and the protocol module, exception messages included, since some

@@ -19,8 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.OpenStrapApp
@@ -59,11 +57,11 @@ class AutoBackup(
         data class Failed(val failure: BackupFailure) : Outcome
     }
 
-    suspend fun run(): Outcome = lock.withLock {
-        val folder = settings.backup.first().folder ?: return@withLock Outcome.Off
+    suspend fun run(): Outcome = DataJobs.exclusive {
+        val folder = settings.backup.first().folder ?: return@exclusive Outcome.Off
         // Until the session has looked for a workout left recording, Idle doesn't mean none.
         withTimeoutOrNull(10_000) { restored.first { it } }
-        if (workout.value is WorkoutState.Recording) return@withLock Outcome.Recording
+        if (workout.value is WorkoutState.Recording) return@exclusive Outcome.Recording
         val now = System.currentTimeMillis() / 1000
         catching {
             val name = withContext(Dispatchers.IO) { write(Uri.parse(folder)) }
@@ -123,9 +121,21 @@ class AutoBackup(
         var written = false
         try {
             (resolver.openOutputStream(temp.uri, "w") ?: throw Failed(BackupFailure.CantWrite)).use { backups.writeZip(it) }
-            // A second run on the same day replaces the first.
-            dir.findFile(name)?.delete()
-            if (!temp.renameTo(name)) copyAs(dir, temp, name)
+            // A second run on the same day replaces the first, but only once the new one is in place: the old one is
+            // moved aside, and put back if the new one can't be written. A provider that can't rename deletes it first,
+            // as before: the new one is complete by then.
+            val aside = BackupFiles.asideName(today)
+            val previous = dir.findFile(name)
+            val movedAside = previous != null && previous.renameTo(aside)
+            if (previous != null && !movedAside && !previous.delete()) throw Failed(BackupFailure.CantWrite)
+            var installed = false
+            try {
+                if (!temp.renameTo(name)) copyAs(dir, temp, name)
+                installed = true
+            } finally {
+                if (!installed && movedAside) runCatching { dir.findFile(aside)?.renameTo(name) }
+            }
+            dir.findFile(aside)?.let(::deleteQuietly)
             written = true
         } finally {
             // Failed or cancelled part way: the temp copy goes, and the failure itself is what's reported.
@@ -161,9 +171,6 @@ class AutoBackup(
     }
 
     companion object {
-        /** One backup at a time, the daily one and Back up now alike. */
-        private val lock = Mutex()
-
         private const val DAILY = "auto-backup"
         private const val AFTER_WORKOUT = "auto-backup-retry"
         private const val TEMP_MIME = "application/octet-stream"

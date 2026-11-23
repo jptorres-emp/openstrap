@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,13 +15,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -74,7 +75,8 @@ sealed interface FirstScoreDay {
 }
 
 /** The day shown's own extras: the check-in. The strap's score comes with its Recovery ([RecoveryResult.strapScore]). */
-data class DayExtras(val checkIn: Int? = null)
+/** The check-in of [date], null while that day's is read. */
+data class DayExtras(val date: LocalDate? = null, val checkIn: Int? = null)
 
 /** A badge past history earned, with the weekly goal it was earned at when it is a goal badge. */
 data class EarnedBadge(val badge: Rewards.Badge, val goal: Int?)
@@ -165,14 +167,37 @@ class AppRootViewModel(
         }
     }.state(null)
 
-    /** Goals and bests, All badges and the recap (workouts spec 3.5), once there are workouts. */
+    /**
+     * Goals and bests, All badges and the recap (workouts spec 3.5). The workouts start as an empty list before they
+     * load, so an empty list waits, unless nothing is stored at all ([RewardsKeeper.refresh] tells the two apart the
+     * same way): a new user still gets the page, with the week at nought and the bests and badges to go for, rather
+     * than "Loading" for ever.
+     */
     val rewardsView: StateFlow<RewardsView?> =
         combine(workouts, goals.map { it.workoutsPerWeek }, dao.personalBests(), dao.badges()) { list, goal, bests, earned ->
             RewardsInputs(list, goal, bests, earned)
-        }.filter { it.workouts.isNotEmpty() }
-            .mapLatest { i -> catching { rewards.view(i.workouts, i.goal, i.bests, i.earned) }.getOrNull() }
+        }.mapLatest { i -> viewOf(i, dao) }
+            // Null is the list still loading, or a view that couldn't be worked out: what showed before stays.
+            .filterNotNull()
             .flowOn(work)
             .state(null)
+
+    /**
+     * The rewards page for [i], tried [VIEW_TRIES] times [VIEW_RETRY_MS] apart, as a read can hit a locked database.
+     * Null while the list is still loading (empty with workouts stored), or when every try failed.
+     */
+    // Each return is a way it ends: still loading, worked out, or every try failed.
+    @Suppress("ReturnCount")
+    private suspend fun viewOf(i: RewardsInputs, dao: HealthDao): RewardsView? {
+        repeat(VIEW_TRIES) { n ->
+            if (n > 0) delay(VIEW_RETRY_MS)
+            catching {
+                if (i.workouts.isEmpty() && dao.anyWorkoutOnce()) return null
+                return rewards.view(i.workouts, i.goal, i.bests, i.earned)
+            }.onFailure { Log.w(TAG, "rewards page not worked out", it) }
+        }
+        return null
+    }
 
     private class RewardsInputs(
         val workouts: List<WorkoutAnalysis>,
@@ -185,7 +210,7 @@ class AppRootViewModel(
 
     /** The day shown's check-in, from [dayShown]. */
     val dayExtras: StateFlow<DayExtras> = shownDay.filterNotNull().flatMapLatest { date ->
-        health.checkIn(date).map { DayExtras(it?.feeling) }
+        health.checkIn(date).map { DayExtras(date, it?.feeling) }
     }.state(DayExtras())
 
     init {
@@ -193,11 +218,12 @@ class AppRootViewModel(
         // (workouts spec 4), and on a new goal. The one recording isn't in it until it ends. Started at once, as the
         // weekly recap notification reads what's stored.
         val recording = workout.state.map { (it as? WorkoutState.Recording)?.workout?.start }.distinctUntilChanged()
+        // Each sync too: the step badges and the most steps follow the days' steps, which only a sync writes.
         viewModelScope.launch(work) {
-            combine(workouts, recording, settings.goals) { list, start, g ->
+            val inputs = combine(workouts, recording, settings.goals) { list, start, g ->
                 list.filter { it.workout.start != start } to g.workoutsPerWeek
-            }
-                .distinctUntilChangedBy { (list, goal) -> list.map { Triple(it.workout.start, it.shownStart, it.end) } to goal }
+            }.distinctUntilChangedBy { (list, goal) -> list.map { Triple(it.workout.start, it.shownStart, it.end) } to goal }
+            combine(inputs, strap.syncEnded.onSubscription { emit(Unit) }) { i, _ -> i }
                 .collectLatest { (list, goal) -> catching { rewards.refresh(list, goal) }.onFailure { Log.w(TAG, "rewards failed", it) } }
         }
     }
@@ -245,6 +271,12 @@ class AppRootViewModel(
 
     fun setHeartZones(zones: HeartZones) = write("heart zones") { settings.setHeartZones(zones) }
 
+    /** "Ask to end when I stop" with each group's time (the Workouts settings page). A recording workout reads it live. */
+    val askToEnd: StateFlow<org.openstrap.app.data.settings.AskToEnd> =
+        settings.askToEnd.state(org.openstrap.app.data.settings.AskToEnd())
+
+    fun setAskToEnd(a: org.openstrap.app.data.settings.AskToEnd) = write("ask to end") { settings.setAskToEnd(a) }
+
     fun historyBadgesShown() = write("history badges") { settings.historyBadgesShown() }
 
     /** The calorie goal your last four weeks suggest (calories spec 3.4), null when it can't be worked out. */
@@ -254,10 +286,19 @@ class AppRootViewModel(
     suspend fun summaryRewards(start: Long): SummaryRewards? =
         catching { rewards.summary(start, workouts.value, goals.value.workoutsPerWeek) }.getOrNull()
 
-    /** The manual copy and auto sync write with these. The calorie ones are optional but asked for until granted. */
+    /**
+     * The manual copy and auto sync write with these. Only the needed permissions decide: the optional ones are asked
+     * for in the same screen when the needed ones are missing, and never again by themselves.
+     */
     suspend fun healthConnectWrite(): HcState = HcState.blocked(healthConnect.availability()) ?: when {
-        healthConnect.hasRequestedPermissions() -> HcState.Granted
+        healthConnect.hasPermissions() -> HcState.Granted
         else -> HcState.Needs(healthConnect.requestedPermissions)
+    }
+
+    /** Just the optional permissions, for the Health Connect page's offer to ask again. Granted when nothing is left to ask. */
+    suspend fun healthConnectOptional(): HcState = HcState.blocked(healthConnect.availability()) ?: when {
+        healthConnect.hasOptionalPermissions() -> HcState.Granted
+        else -> HcState.Needs(healthConnect.optionalPermissions)
     }
 
     suspend fun healthConnectRead(): HcState = HcState.blocked(healthConnect.availability()) ?: when {
@@ -274,5 +315,7 @@ class AppRootViewModel(
     private companion object {
         const val TAG = "unstrap"
         const val STOP_MS = 5_000L
+        const val VIEW_TRIES = 3
+        const val VIEW_RETRY_MS = 2_000L
     }
 }

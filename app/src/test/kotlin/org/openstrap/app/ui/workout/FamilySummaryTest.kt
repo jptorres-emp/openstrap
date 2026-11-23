@@ -75,7 +75,7 @@ class FamilySummaryTest {
         assertNull(FamilySummary.restRecovery(sets, readings, null))
         assertEquals("Your heart rate dropped under 110 in 41 s on average, 9 s faster than last time.", FamilySummary.restLine(41, 110, 50))
         assertEquals("Your heart rate dropped under 110 in 41 s on average, about the same as last time.", FamilySummary.restLine(41, 110, 43))
-        assertEquals("Your heart rate dropped under 110 in 1:05 on average.", FamilySummary.restLine(65, 110, null))
+        assertEquals("Your heart rate dropped under 110 in 1 min 05 on average.", FamilySummary.restLine(65, 110, null))
     }
 
     @Test
@@ -96,9 +96,21 @@ class FamilySummaryTest {
 
     @Test
     fun theHardestRoundIsTheHighestPeakFromThreeRounds() {
-        val lines = listOf(RoundLine(1, 158, 19), RoundLine(2, 176, 17), RoundLine(3, null, null), RoundLine(4, 176, 22))
+        val lines = listOf(RoundLine(1, 158, 19), RoundLine(2, 176, 17), RoundLine(3, null, null), RoundLine(4, 170, 22))
         assertEquals(1, FamilySummary.hardestRound(lines))
         assertNull(FamilySummary.hardestRound(lines.take(2)))
+    }
+
+    @Test
+    fun noRoundIsNamedHardestWhenTwoShareTheHighestPeak() {
+        val lines = listOf(RoundLine(1, 158, 19), RoundLine(2, 176, 17), RoundLine(3, 176, 22))
+        assertNull(FamilySummary.hardestRound(lines))
+    }
+
+    @Test
+    fun noRecoverySentenceWhenNothingCameDownOnAverage() {
+        val lines = listOf(RoundLine(1, 150, 0), RoundLine(2, 150, 0))
+        assertNull(FamilySummary.roundsLine(lines, 10))
     }
 
     @Test

@@ -125,15 +125,15 @@ object WorkoutDetailCopy {
     ): List<WorkoutFact> =
         listOfNotNull(
             meters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let { m ->
-                val km = m >= Units.METERS_PER_KM
+                val major = Units.isMajor(m)
                 val unit = when {
-                    km && fromSteps -> R.string.workout_detail_fact_km_from_steps
-                    km -> R.string.workout_detail_fact_km
-                    fromSteps -> R.string.workout_detail_fact_m_from_steps
-                    else -> R.string.workout_detail_fact_m
+                    major && fromSteps -> Units.res(R.string.workout_detail_fact_km_from_steps, R.string.workout_detail_fact_mi_from_steps)
+                    major -> Units.res(R.string.workout_detail_fact_km, R.string.workout_detail_fact_mi)
+                    fromSteps -> Units.res(R.string.workout_detail_fact_m_from_steps, R.string.workout_detail_fact_ft_from_steps)
+                    else -> Units.res(R.string.workout_detail_fact_m, R.string.workout_detail_fact_ft)
                 }
                 // The value is drawn in the dot font, so it keeps the dot and ASCII digits.
-                val value = if (km) Units.km(m, Units.Precision.Workout, Units.DOT_LOCALE) else m.toInt().toString()
+                val value = Units.figure(m, Units.Precision.Workout, Units.DOT_LOCALE)?.number.orEmpty()
                 WorkoutFact(strings.get(R.string.workout_detail_fact_distance), value, strings.get(unit), WorkoutFact.Kind.Distance)
             },
             pausedSeconds.takeIf { it >= MIN_PAUSED_S }?.let {

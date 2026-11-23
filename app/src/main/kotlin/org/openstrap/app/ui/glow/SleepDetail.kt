@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.OnSurface
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
@@ -20,11 +23,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -35,8 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -50,7 +51,7 @@ import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.SleepEdits
 import org.openstrap.app.data.SleepHistory
-import org.openstrap.app.data.Summaries
+import org.openstrap.app.data.HeartReadings
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.wasoMinutes
 import org.openstrap.app.presentation.ChartPoint
@@ -67,17 +68,15 @@ import org.openstrap.app.presentation.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.SLEEP_NIGHTS
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.SleepCopy
-import org.openstrap.app.ui.dashboard.SleepWindows
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Locale
-import org.openstrap.app.ui.glow.draw.stageColor
 import org.openstrap.app.ui.glow.pictures.Nap
 import org.openstrap.app.ui.glow.pictures.NapDay
 import org.openstrap.app.ui.glow.pictures.PictureSize
@@ -96,26 +95,23 @@ private fun sleepDays(state: DayUiState, history: DailyHistory): Set<LocalDate> 
     // shown goes by its own night, as the page says it, so a dot never stands beside "No sleep recorded".
     val loaded = state.nights.map { it.date }.toSet()
     val days = state.nights.filter { it.session != null }.map { it.date }.toSet() +
-        daysWithData(DailyMetric.Breathing, state.date, today, history).filter { it !in loaded }
+        stripDaysWithData(DailyMetric.Breathing, state.date, today, history).filter { it !in loaded }
     return if (state.loaded && state.sleep == null) days - state.date else days
 }
 
-/** The lines in a detail's body that aren't the one sentence: a reading's caption, a chart's title. */
-@Composable
-private fun Caption(text: String, modifier: Modifier = Modifier) =
-    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, modifier = modifier)
+private const val SECONDS_PER_MIN = 60L
 
 /** A chart's title inside a detail's body, with an optional [note] on the right. */
 @Composable
 private fun ChartTitle(title: String, note: String?, modifier: Modifier = Modifier, scrubbed: DetailHeadline? = null) {
-    Row(modifier.fillMaxWidth().padding(top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(top = Space.S16, bottom = Space.S8), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
         // While the line is scrubbed, its reading takes the note's place, in white so it reads as the live value.
         if (scrubbed != null) Text(
             stringResource(R.string.glow_sleep_scrubbed, scrubbed.value.toString(), scrubbed.label), color = Color.White,
             style = GlowType.secondary, maxLines = 1,
         )
-        else if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+        else if (note != null) Text(note, color = Ink.Secondary, style = GlowType.secondary)
     }
 }
 
@@ -133,13 +129,22 @@ internal fun SleepScoreDetail(
     onOpen: (Detail) -> Unit, onSwitch: (Detail) -> Unit, onSelectDay: (LocalDate) -> Unit, contentPadding: PaddingValues, onBack: () -> Unit,
     editing: SleepEditing,
 ) {
-    val session = state.sleep
+    val night = remember(state.sleep, state.sleepStages) { state.shownNight() }
+    val session = night?.session
     val score = session?.score
     val color = MetricColors.sleepDeep
-    var adjusting by remember(state.date) { mutableStateOf(false) }
-    var deleting by remember(state.date) { mutableStateOf(false) }
-    // The strap's session just deleted, while its Undo shows.
-    var undo by remember { mutableStateOf<SleepSession?>(null) }
+    // Saveable, so turning the phone doesn't close the sheet being used.
+    var adjusting by rememberSaveable(state.date) { mutableStateOf(false) }
+    var deleting by rememberSaveable(state.date) { mutableStateOf(false) }
+    // The strap's session just asked to be deleted, and once the day shows it gone, the same session while its Undo
+    // shows. Both are for this day only, so Undo never names another day, and Undo is never offered for a delete that
+    // didn't happen.
+    var pendingDelete by remember(state.date) { mutableStateOf<SleepSession?>(null) }
+    var undo by remember(state.date) { mutableStateOf<SleepSession?>(null) }
+    SideEffect {
+        val gone = pendingDelete ?: return@SideEffect
+        if (session == null) { undo = gone; pendingDelete = null }
+    }
     // TODO(step 6): Month and Year wait for a stored history of the strap's sleep scores; the day loads only 14 nights.
     val ranges = listOf(Range.Day, Range.Week)
     var rangeIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -160,9 +165,13 @@ internal fun SleepScoreDetail(
             DetailHeadline(Math.round(known.average()).toString(), stringResource(R.string.glow_sleep_week_average), null)
         range == Range.Week ->
             DetailHeadline.none(stringResource(R.string.glow_sleep_no_scores), stringResource(R.string.glow_sleep_in_last_7_nights))
-        score != null -> DetailHeadline(score.toString(), SleepCopy.scoreLabel(isToday), TabCopy.sleepScoreWord(score))
+        score != null -> DetailHeadline(
+            score.toString(), SleepCopy.scoreLabel(isToday, state.sleepScoreAdjusted), TabCopy.sleepScoreWord(score),
+        )
         session == null && state.deletedSleep != null ->
             DetailHeadline.none(stringResource(R.string.glow_sleep_no_score), SleepCopy.noScoreDeleted(isToday))
+        // The day's rows haven't arrived: nothing yet, not "No score".
+        !state.loaded -> DetailHeadline.none("", "")
         else -> SleepCopy.noScore(session != null, isToday).let { (word, why) -> DetailHeadline.none(word, why) }
     }
 
@@ -175,84 +184,96 @@ internal fun SleepScoreDetail(
             // The horizon arc (chart kit, spec 2.7) holds the night's score, centred, the number under its crest. A
             // scrub takes its place in the hero alone, so the rest of the detail stays put (audit K4).
             heroValue = if (range == Range.Day && score != null) {
-                { HorizonArc(score / 100f, color, key = state.date) { DetailScoreNumber(score) } }
+                { DetailGauge(score / 100f, color, key = Score.Sleep) { DetailScoreNumber(score, state.date) } }
             } else null,
             scrubbed = { scrub },
         ) {
+            // The picture crossfades between ranges while the header and the figures stay put, as the metric detail's does.
+            // One time asleep and one time awake for the night, from its stage rows ([ShownNight]): the stage legend, the
+            // factors, the sentence and the graph all read these.
+            val asleep = night?.asleep ?: 0L
+            val awake = night?.awake ?: 0L
+            val detected = state.sleepAsDetected
+            val moved = session != null && detected != null && (detected.start != session.start || detected.end != session.end)
+            if (range == Range.Week || session != null) item {
+                RangeCrossfade(range) { shown ->
+                    if (shown == Range.Day && session != null) {
+                        Column(Modifier.padding(top = Space.S8)) {
+                            // Moved, the strap's whole night shows with what's outside the user's times dimmed.
+                            if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
+                            else if (night.spans.isNotEmpty()) DetailStages(night.spans)
+                            night.breakdown?.let { DetailStageShares(it, Modifier.padding(top = Space.S16)) }
+                            // Times extended past the strap's have no stages for the added time, so the page says so.
+                            if (detected != null && state.sleepBreakdown != null) {
+                                SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {
+                                    HaloNote(it, Modifier.padding(top = Space.S12))
+                                }
+                            }
+                            HaloFigures(
+                                listOf(
+                                    clock(session.start) to SleepCopy.FELL_ASLEEP, clock(session.end) to SleepCopy.WOKE,
+                                    Units.duration(asleep) to SleepCopy.ASLEEP,
+                                ),
+                                Modifier.padding(top = Space.S20),
+                            )
+                        }
+                    } else if (shown == Range.Week) {
+                        if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
+                        else Column {
+                            val values = week.map { it.second }
+                            DetailColumns(
+                                values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                                band = normal?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
+                                onScrub = { i ->
+                                    scrub = i?.let { week[it] }?.let { (d, v) ->
+                                        v?.let { Math.round(it) }?.let { score ->
+                                            DetailHeadline(score.toString(), DayWords.short(d), TabCopy.sleepScoreWord(score))
+                                        }
+                                    }
+                                },
+                            )
+                            if (normal == null) HaloNote(DetailCopy.learningNormal(before.size, nightly = true))
+                        }
+                    }
+                }
+            }
             if (range == Range.Day) {
                 val deleted = state.deletedSleep
                 if (session == null && deleted != null) {
                     item { DeletedNight(SleepCopy.deletedNight(clock(deleted.start), clock(deleted.end), isToday)) { editing.restore(deleted.strap) } }
                 } else if (session == null) {
-                    item { DetailEmpty(TabCopy.noNight(state.naps.isNotEmpty(), isToday)) }
+                    // Not before the day has loaded: an empty state isn't "No night".
+                    if (state.loaded) item { DetailEmpty(TabCopy.noNight(state.naps.isNotEmpty(), isToday)) }
                 } else {
-                    val asleep = state.asleepSeconds ?: (session.end - session.start)
-                    val detected = state.sleepAsDetected
-                    val moved = detected != null && (detected.start != session.start || detected.end != session.end)
-                    item {
-                        Column(Modifier.padding(top = 8.dp)) {
-                            // Moved, the strap's whole night shows with what's outside the user's times dimmed.
-                            if (moved && state.strapSleepStages.isNotEmpty()) GlowSleepStages(state.strapSleepStages, 150.dp, kept = session.start..session.end)
-                            else if (state.sleepStages.isNotEmpty()) GlowSleepStages(state.sleepStages, 150.dp)
-                            state.sleepBreakdown?.let { StageBars(it, Modifier.padding(top = 18.dp)) }
-                            // Times extended past the strap's have no stages for the added time, so the page says so.
-                            if (detected != null && state.sleepBreakdown != null) {
-                                SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {
-                                    Caption(it, Modifier.padding(top = 12.dp))
-                                }
-                            }
-                            DetailFigures(
-                                listOf(
-                                    clock(session.start) to SleepCopy.FELL_ASLEEP, clock(session.end) to SleepCopy.WOKE,
-                                    Units.duration(asleep) to SleepCopy.ASLEEP,
-                                ),
-                                Modifier.padding(top = 20.dp),
-                            )
-                            if (detected != null) SleepEditActions(
-                                if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
-                                onAdjust = { adjusting = true }, onDelete = { deleting = true }, Modifier.padding(top = 20.dp),
-                            )
-                        }
-                    }
                     item {
                         val others = state.nights.takeLast(SleepHistory.WEEK_NIGHTS).filter { it.date != state.date }.mapNotNull { it.asleepSeconds }
                         Column {
                             DetailSentence(SleepCopy.night(Narrative.sleepHeadline(session, asleep), asleep, others))
-                            TabCopy.woke(session.wakeCount)?.let { Caption(it, Modifier.padding(top = 6.dp)) }
+                            TabCopy.woke(session.wakeCount)?.let { HaloNote(it, Modifier.padding(top = Space.S8)) }
                         }
                     }
                     // What shaped the score: time asleep against your need and staying asleep, against sleep guidance.
                     val need = r?.sleepNeed ?: Recovery.SLEEP_NEED_MINUTES
-                    val waso = Recovery.wasoMinutes(state.sleepStages.map { Triple(it.start, it.end, it.stage) })
+                    val waso = (awake / SECONDS_PER_MIN).toInt()
                     val factors = SleepCopy.factors(Narrative.sleepContributors(session, asleep, need, waso), asleep, need, waso)
-                    if (factors.isNotEmpty()) item {
-                        ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_sleep_what_shaped)) {
+                    // Without the strap's score there is nothing for the factors to have shaped.
+                    if (factors.isNotEmpty() && score != null) item {
+                        DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_sleep_what_shaped)) {
                             factors.forEachIndexed { i, f ->
                                 ContributorRow(f.name, color, f.word, f.fraction, offNormal = f.off, divider = i > 0, detail = f.detail, onClick = { info = true })
                             }
                         }
                     }
                     item { NightLines(state, session.start..session.end) { scrub = it } }
-                }
-            } else {
-                item {
-                    if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
-                    else Column {
-                        val values = week.map { it.second }
-                        NormalTrend(
-                            values, DetailCopy.levels(values, normal), color, labels = week.map { DayWords.weekdayShort(it.first) },
-                            band = normal?.let { it.low..it.high }, bandLabel = normal?.let { DetailCopy.bandLabel(it) { v -> Math.round(v).toString() } },
-                            onScrub = { i ->
-                                scrub = i?.let { week[it] }?.let { (d, v) ->
-                                    v?.let { Math.round(it) }?.let { score ->
-                                        DetailHeadline(score.toString(), DayWords.short(d), TabCopy.sleepScoreWord(score))
-                                    }
-                                }
-                            },
+                    // Adjusting and deleting come after everything the page reads, not between its figures and its sentence.
+                    if (detected != null) item {
+                        SleepEditActions(
+                            if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
+                            onAdjust = { adjusting = true }, onDelete = { deleting = true }, Modifier.padding(top = Space.S8),
                         )
-                        if (normal == null) Caption(DetailCopy.learningNormal(before.size, nightly = true))
                     }
                 }
+            } else {
                 val values = week.map { it.second }
                 DetailCopy.span(Range.Week, DetailCopy.levels(values, normal), nightly = true, normalKnown = normal != null, days = before.size)?.let {
                     item { DetailSentence(it) }
@@ -276,7 +297,7 @@ internal fun SleepScoreDetail(
     )
     if (deleting && session != null && detected != null) DeleteSleepSheet(
         SleepCopy.deleteTitle(false, isToday), Ranges.of(clock(session.start), clock(session.end)),
-        onDelete = { deleting = false; editing.delete(detected); undo = detected }, onDismiss = { deleting = false },
+        onDelete = { deleting = false; editing.delete(detected); pendingDelete = detected }, onDismiss = { deleting = false },
     )
 }
 
@@ -294,18 +315,21 @@ data class SleepEditing(
 
 /**
  * Under a sleep's or nap's figures: the note that the times are the user's ([note], with a pencil, when they are),
- * then Adjust times and Delete side by side, Delete in the warning colour.
+ * then Adjust times and Delete side by side, Delete a dark pill with red text (HaloDeleteSleepSheet board).
  */
 @Composable
 private fun SleepEditActions(note: String?, onAdjust: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (note != null) EditedNote(note)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PageButton(stringResource(R.string.glow_sleep_adjust_times), onAdjust, Modifier.weight(1f), icon = AppIcons.PencilEdit)
-            PageButton(
-                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), color = MetricColors.warn, icon = AppIcons.Trash,
-            )
-        }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        if (note != null) HaloCard { HaloNote(note, color = Color.White, icon = AppIcons.PencilEdit) }
+        ButtonPair(
+            stringResource(R.string.glow_sleep_adjust_times),
+            onAdjust,
+            stringResource(R.string.glow_delete),
+            onDelete,
+            leftIcon = AppIcons.PencilEdit,
+            rightVariant = HaloButtonVariant.Destructive,
+            rightIcon = AppIcons.Trash,
+        )
     }
 }
 
@@ -315,29 +339,35 @@ private fun SleepEditActions(note: String?, onAdjust: () -> Unit, onDelete: () -
  */
 @Composable
 private fun DeleteSleepSheet(title: String, times: String, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    PageSheet(onDismiss, title) {
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.glow_cancel),
+                onDismiss,
+                stringResource(R.string.glow_delete),
+                onDelete,
+                rightVariant = HaloButtonVariant.Destructive,
+                rightIcon = AppIcons.Trash,
+            )
+        },
+    ) {
         Text(
-            stringResource(R.string.glow_sleep_delete_text, times, SleepCopy.DELETE_WHAT), color = Color.White.copy(alpha = 0.8f),
+            stringResource(R.string.glow_sleep_delete_text, times, SleepCopy.DELETE_WHAT), color = Ink.Strong,
             style = GlowType.body,
         )
-        PageNote(SleepCopy.DELETE_RESTORE)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), color = MetricColors.warn, icon = AppIcons.Trash,
-            )
-        }
+        HaloNote(SleepCopy.DELETE_RESTORE)
     }
 }
 
 /** In a deleted night's place: No sleep recorded, which times were deleted and what Recovery does, and Restore. */
 @Composable
 private fun DeletedNight(text: String, onRestore: () -> Unit) {
-    OutlineCard(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    HaloCard(Modifier.padding(top = Space.S8), tone = CardTone.Outline, verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Text(SleepCopy.NO_SLEEP_TITLE, color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-        Text(text, color = Color.White.copy(alpha = 0.75f), style = GlowType.body)
-        PageButton(
-            stringResource(R.string.glow_sleep_restore), onRestore, Modifier.padding(top = 4.dp), icon = AppIcons.ArrowCounterClockwise,
+        Text(text, color = Ink.Strong, style = GlowType.body)
+        HaloButton(
+            stringResource(R.string.glow_sleep_restore), onRestore, Modifier.padding(top = Space.S4), icon = AppIcons.ArrowCounterClockwise,
         )
     }
 }
@@ -356,20 +386,22 @@ private fun UndoHost(message: String?, contentPadding: PaddingValues, onUndo: ()
                 onGone()
             }
             Row(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = contentPadding.calculateBottomPadding() + 16.dp, start = 16.dp, end = 16.dp)
-                    .fillMaxWidth().height(56.dp).background(SnackbarSurface, CircleShape).padding(start = 22.dp, end = 8.dp),
+                Modifier.align(Alignment.BottomCenter).padding(bottom = contentPadding.calculateBottomPadding() + Space.S16,
+                    start = Space.S16, end = Space.S16)
+                    .fillMaxWidth().height(56.dp).background(SnackbarSurface, CircleShape).padding(start = Space.S20, end = Space.S8),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(message, color = Color.Black, style = GlowType.body, maxLines = 1, modifier = Modifier.weight(1f))
                 Row(
                     Modifier.height(40.dp).clip(CircleShape).background(Color.Black).pressClickable(onUndo, CircleShape)
-                        .semantics { role = Role.Button }.padding(horizontal = 16.dp),
+                        .semantics { role = Role.Button }.padding(horizontal = Space.S16),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    androidx.compose.material3.Icon(AppIcons.ArrowCounterClockwise, null, Modifier.size(16.dp), tint = Color.White)
+                    androidx.compose.material3.Icon(AppIcons.ArrowCounterClockwise, null, Modifier.size(IconSize.GlyphS),
+                        tint = Color.White)
                     Text(
                         stringResource(R.string.glow_sleep_undo), color = Color.White, style = GlowType.body,
-                        modifier = Modifier.padding(start = 6.dp),
+                        modifier = Modifier.padding(start = Space.S8),
                     )
                 }
             }
@@ -380,45 +412,7 @@ private fun UndoHost(message: String?, contentPadding: PaddingValues, onUndo: ()
 /** How long a delete's Undo shows. */
 private const val UNDO_MS = 8_000L
 
-private val SnackbarSurface = Color(0xFFF2F2F4)
-
-/** "Your times. The strap saw 23:20 to 07:21." on the list surface, with a pencil. */
-@Composable
-private fun EditedNote(text: String) {
-    Row(
-        Modifier.fillMaxWidth().background(ListSurface, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        androidx.compose.material3.Icon(AppIcons.PencilEdit, null, Modifier.size(16.dp), tint = Color.White.copy(alpha = 0.7f))
-        Text(text, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(start = 10.dp).weight(1f))
-    }
-}
-
-/**
- * Stage bars (chart kit): each stage's name, a bar in its colour as long as its share of the night, and its time.
- * Under the hypnogram, deepest first.
- */
-@Composable
-private fun StageBars(b: Summaries.SleepBreakdown, modifier: Modifier = Modifier) {
-    val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-    val order = listOf(
-        org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
-        org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
-    )
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        order.forEach { st ->
-            val secs = b.byStage[st] ?: 0L
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(SLEEP_NAMES[st].orEmpty(), color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary, modifier = Modifier.width(56.dp))
-                FillBar(secs.toFloat() / total, stageColor(st), Modifier.weight(1f), height = 10.dp)
-                Text(
-                    Units.duration(secs), color = Color.White, style = GlowType.secondary,
-                    modifier = Modifier.padding(start = 12.dp).width(56.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                )
-            }
-        }
-    }
-}
+private val SnackbarSurface = Ink.Paper
 
 /**
  * The night's heart rate and breathing as lines with scrub (chart kit), each scrub moving the detail's headline
@@ -438,7 +432,12 @@ private fun NightLines(state: DayUiState, window: LongRange, onScrub: (DetailHea
         if (hr.isNotEmpty()) {
             ChartTitle(
                 stringResource(R.string.glow_sleep_heart_rate),
-                stringResource(R.string.glow_sleep_heart_note, hr.minOf { it.y }.toInt(), hr.map { it.y }.average().toInt()),
+                // The lowest stored reading and the night's average, as the Sleep tab says them; not the line's 5-minute averages.
+                stringResource(
+                    R.string.glow_sleep_heart_note,
+                    SleepCopy.lowestHeart(state)?.y?.let(Math::round) ?: Math.round(hr.minOf { it.y }),
+                    SleepCopy.averageHeart(state) ?: Math.round(hr.map { it.y }.average()).toInt(),
+                ),
                 scrubbed = hrAt,
             )
             ScrubLine(hr, window, 130.dp, labels, MetricColors.heart, stringResource(R.string.glow_unit_bpm)) { hrAt = it; onScrub(it) }
@@ -462,8 +461,8 @@ private fun ScrubLine(
     val step = 5 * 60L
     val values = remember(points, window) { bucket(points, window, step) }
     val resources = LocalResources.current
-    GlowLineChart(
-        values, height = height, labels = labels, color = color, showAverage = false,
+    DetailLineChart(
+        values, color, labels, height = height,
         onScrub = { i ->
             val headline = i?.let { values[it] }?.let { v ->
                 val at = resources.getString(R.string.glow_sleep_scrub_at, unit, clock(window.first + i * step))
@@ -509,21 +508,21 @@ internal fun RegularityDetail(
     ) {
         item {
             if (w == null) DetailEmpty(stringResource(R.string.glow_sleep_none_week))
-            else Column(Modifier.padding(top = 8.dp)) {
-                SleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
+            else Column(Modifier.padding(top = Space.S8)) {
+                DetailSleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
                 val night = state.sleep
                 val u = w.usual
-                Caption(
+                HaloNote(
                     if (night == null) SleepCopy.noNight(isToday)
                     else SleepCopy.regularityNight(minutesOf(night.start, zone), minutesOf(night.end, zone), u?.bedtime, isToday),
-                    Modifier.padding(top = 14.dp),
+                    Modifier.padding(top = Space.S12),
                 )
-                if (u != null) DetailFigures(
+                if (u != null) HaloFigures(
                     listOf(
                         TimeOfDay.minutes(u.bedtime) to stringResource(R.string.glow_sleep_usually_asleep),
                         TimeOfDay.minutes(u.wake) to stringResource(R.string.glow_sleep_usually_up),
                     ),
-                    Modifier.padding(top = 18.dp),
+                    Modifier.padding(top = Space.S16),
                 )
             }
         }
@@ -553,10 +552,16 @@ internal fun NapsDetail(
 ) {
     val naps = state.naps.sortedBy { it.start }
     // The nap whose times are being adjusted, or that's being deleted, by its start as shown.
-    var adjusting by remember(state.date) { mutableStateOf<Long?>(null) }
-    var deleting by remember(state.date) { mutableStateOf<Long?>(null) }
-    // The strap's nap just deleted and its start as shown, while its Undo shows.
-    var undo by remember { mutableStateOf<Pair<SleepSession, Long>?>(null) }
+    var adjusting by rememberSaveable(state.date) { mutableStateOf<Long?>(null) }
+    var deleting by rememberSaveable(state.date) { mutableStateOf<Long?>(null) }
+    // As in the Sleep score: the nap asked to be deleted with its start as shown, then, once the day no longer has it,
+    // the same while its Undo shows. For this day only.
+    var pendingDelete by remember(state.date) { mutableStateOf<Pair<SleepSession, Long>?>(null) }
+    var undo by remember(state.date) { mutableStateOf<Pair<SleepSession, Long>?>(null) }
+    SideEffect {
+        val gone = pendingDelete ?: return@SideEffect
+        if (state.napsAsDetected[gone.second] == null) { undo = gone; pendingDelete = null }
+    }
     val total = naps.sumOf { it.end - it.start }
     val color = MetricColors.sleepDeep
     val today = LocalDate.now()
@@ -580,8 +585,8 @@ internal fun NapsDetail(
                     val pictured = naps.map { Nap(it.start, it.end, state.napStages[it.start].orEmpty()) }
                     DetailPicture(height = 28.dp) { m -> NapDay(pictured, span.first, span.last, color, PictureSize.Wide, m) }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Caption(clock(span.first))
-                        Caption(clock(span.last))
+                        HaloNote(clock(span.first))
+                        HaloNote(clock(span.last))
                     }
                 }
             } else null,
@@ -594,8 +599,8 @@ internal fun NapsDetail(
                 naps.forEachIndexed { i, nap ->
                     item(key = nap.start) {
                         Column(
-                            Modifier.fillMaxWidth().padding(top = 12.dp)
-                                .topHairline(i > 0, RowHairline),
+                            Modifier.fillMaxWidth().padding(top = Space.S12)
+                                .topHairline(i > 0, OnSurface.line),
                         ) {
                             ChartTitle(Ranges.of(clock(nap.start), clock(nap.end)), Units.duration(nap.end - nap.start))
                             val detected = state.napsAsDetected[nap.start]
@@ -603,9 +608,9 @@ internal fun NapsDetail(
                             // Heart rate as in the hour before and no deep sleep: maybe sitting still, said, never removed.
                             val deep = state.napBreakdowns[nap.start]?.byStage?.get(org.openstrap.app.data.db.SleepStage.DEEP) ?: 0L
                             SleepEdits.stillHeartRate(state.heartRate.map { it.x to it.y }, nap.start, nap.end, deep)?.let {
-                                Caption(SleepCopy.stillNap(it), Modifier.padding(bottom = 10.dp))
+                                HaloNote(SleepCopy.stillNap(it), Modifier.padding(bottom = Space.S12))
                             }
-                            if (stages.isEmpty()) Caption(SleepCopy.NAP_NO_STAGES)
+                            if (stages.isEmpty()) HaloNote(SleepCopy.NAP_NO_STAGES)
                             else {
                                 StageStrip(stages, height = 8.dp)
                                 state.napBreakdowns[nap.start]?.let { b ->
@@ -613,31 +618,40 @@ internal fun NapsDetail(
                                         org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
                                         org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
                                     ).mapNotNull { st -> b.byStage[st]?.takeIf { it > 0 }?.let { Units.duration(it) to SLEEP_NAMES[st].orEmpty() } }
-                                    if (figures.isNotEmpty()) DetailFigures(figures, Modifier.padding(top = 14.dp))
+                                    if (figures.isNotEmpty()) HaloFigures(figures, Modifier.padding(top = Space.S12))
                                 }
                                 // A nap extended past the strap's times has stages only for what the strap saw.
                                 if (detected != null) SleepCopy.stagesCover(nap.start, nap.end, detected.start, detected.end)?.let {
-                                    Caption(it, Modifier.padding(top = 10.dp))
+                                    HaloNote(it, Modifier.padding(top = Space.S12))
                                 }
                             }
                             if (detected != null) {
                                 val moved = detected.start != nap.start || detected.end != nap.end
                                 SleepEditActions(
                                     if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
-                                    onAdjust = { adjusting = nap.start }, onDelete = { deleting = nap.start }, Modifier.padding(top = 16.dp),
+                                    onAdjust = { adjusting = nap.start }, onDelete = { deleting = nap.start },
+                                        Modifier.padding(top = Space.S16),
                                 )
                             }
                             // The strap sends no average for a nap, so its heart rate is the day's readings in its window.
                             val window = nap.start..nap.end
                             val hr = remember(state.heartRate, window) { state.heartRate.filter { it.x in window } }
+                            val minutes = remember(state.heartMinutes, window) {
+                                HeartReadings.within(state.heartMinutes, window.first, window.last)
+                            }
                             if (hr.isNotEmpty()) {
-                                Box(Modifier.padding(top = 16.dp)) {
+                                Box(Modifier.padding(top = Space.S16)) {
                                     ScrubLine(
                                         hr, window, 100.dp, listOf(clock(nap.start), clock(nap.end)), MetricColors.heart,
                                         stringResource(R.string.glow_unit_bpm),
                                     ) { scrub = it }
                                 }
-                                Caption(SleepCopy.napHeart(hr.minOf { it.y }.toInt(), hr.map { it.y }.average().toInt()), Modifier.padding(top = 6.dp, bottom = 8.dp))
+                                // The nap's lowest and average from the stored readings, not the line's averages.
+                                val low = HeartReadings.lowest(minutes)?.second
+                                val average = HeartReadings.mean(minutes)
+                                if (low != null && average != null) {
+                                    HaloNote(SleepCopy.napHeart(low, average), Modifier.padding(top = Space.S8, bottom = Space.S8))
+                                }
                             }
                         }
                     }
@@ -665,7 +679,8 @@ internal fun NapsDetail(
         if (nap == null || detected == null) androidx.compose.runtime.SideEffect { deleting = null }
         else DeleteSleepSheet(
             SleepCopy.deleteTitle(true, isToday), Ranges.of(clock(nap.start), clock(nap.end)),
-            onDelete = { deleting = null; editing.delete(detected); undo = detected to nap.start }, onDismiss = { deleting = null },
+            onDelete = { deleting = null; editing.delete(detected); pendingDelete = detected to nap.start },
+            onDismiss = { deleting = null },
         )
     }
 }
@@ -680,7 +695,7 @@ private fun SleepTimesSheet(
     onSave: (Long, Long) -> Unit, onDismiss: () -> Unit,
 ) {
     val now = remember { Instant.now().epochSecond }
-    PageSheet(onDismiss, SleepCopy.timesTitle(detected.nap), note = SleepCopy.strapSaw(clock(detected.start), clock(detected.end))) {
+    HaloSheet(onDismiss, SleepCopy.timesTitle(detected.nap), note = SleepCopy.strapSaw(clock(detected.start), clock(detected.end))) {
         SleepTrim(shown, detected, heartRate, others, now, onSave, onDismiss)
     }
 }
@@ -708,7 +723,7 @@ internal fun SleepTrim(
     val points = remember(heartRate, reach) { bucket(heartRate.filter { it.x in reach }, reach, HR_STEP_SECONDS) }
     val problem = SleepEdits.check(detected, start, end, now, others)?.let { SleepEditCopy.text(it, zone) }
     val changed = start != shown.start || end != shown.end
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
         // As the workout's trim: the times and length above the bar.
         Text(SleepCopy.trimLine(detected.nap, clock(start), clock(end), end - start), color = Color.White, style = GlowType.body)
         // Sleep's heart rate sits below zone 2, so the bars are zone 1's colour.
@@ -719,17 +734,17 @@ internal fun SleepTrim(
             length = if (detected.nap) SleepEdits.NAP_MIN_SECONDS..SleepEdits.NAP_MAX_SECONDS
             else SleepEdits.SLEEP_MIN_SECONDS..SleepEdits.SLEEP_MAX_SECONDS,
         )
-        if (problem != null) PageNote(problem, color = MetricColors.warn)
-        else Text(SleepCopy.TIMES_HINT, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onCancel, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.glow_save), { onSave(start, end) }, Modifier.weight(1f), enabled = problem == null && changed,
-                primary = true,
-            )
-        }
+        if (problem != null) HaloNote(problem, color = MetricColors.warn)
+        else Text(SleepCopy.TIMES_HINT, color = Ink.Secondary, style = GlowType.secondary)
+        ButtonPair(
+            stringResource(R.string.glow_cancel),
+            onCancel,
+            stringResource(R.string.glow_save),
+            { onSave(start, end) },
+            rightEnabled = problem == null && changed,
+        )
         if (shown.start != detected.start || shown.end != detected.end) {
-            PageButton(
+            HaloButton(
                 stringResource(R.string.glow_sleep_use_strap_times), { onSave(detected.start, detected.end) }, Modifier.fillMaxWidth(),
                 icon = AppIcons.ArrowCounterClockwise,
             )

@@ -24,9 +24,9 @@ class SummaryHeroTest {
     fun anIndoorWorkoutWithoutHeartRateLeadsWithItsTime() {
         val h = summaryHero(Workouts.Family.IndoorCardio, summary(69, 2), null)
         assertEquals("1", h.value)
-        assertEquals("min", h.unit)
-        assertEquals(listOf("1:09", null, null), h.figures.map { it.first })
-        assertEquals(listOf("Time", "Active kcal", "Peak"), h.figures.map { it.second })
+        assertEquals("min 09", h.unit)
+        assertEquals(listOf("1 min 09", null, null), h.figures.map { it.first })
+        assertEquals(listOf("Time", "Add profile", "Peak bpm"), h.figures.map { it.second })
     }
 
     @Test
@@ -48,7 +48,7 @@ class SummaryHeroTest {
         for (family in listOf(Workouts.Family.Strength, Workouts.Family.Intervals)) {
             val h = summaryHero(family, summary(600, 52), null)
             assertEquals("10", h.value)
-            assertEquals("min", h.unit)
+            assertEquals("min 00", h.unit)
             assertNull(h.figures.last().first)
         }
     }

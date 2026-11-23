@@ -2,7 +2,7 @@ package org.openstrap.app.update
 
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.Stamp
 import org.openstrap.app.presentation.Formatters
 import java.time.ZoneId
 import java.util.Locale
@@ -24,9 +24,9 @@ object UpdateCopy {
     ): String {
         val newest = Releases.newer(state.releases, installed).firstOrNull()
         if (newest != null) return strings.format(R.string.update_summary_ready, newest.versionName)
-        if (state.checking) return strings.get(R.string.update_summary_checking)
+        if (state.check == Check.Checking) return strings.get(R.string.update_summary_checking)
         val checked = state.checkedAt ?: return strings.format(R.string.update_summary_version, installed)
-        return strings.format(R.string.update_summary_up_to_date, DayWords.whenDone(checked, now, zone, locale = locale))
+        return strings.format(R.string.update_summary_up_to_date, Stamp.of(checked, now, zone, locale = locale))
     }
 
     /** The Check now row's value. */
@@ -37,9 +37,9 @@ object UpdateCopy {
         locale: Locale = Locale.getDefault(),
         strings: Strings = Strings.app,
     ): String {
-        if (state.checking) return strings.get(R.string.update_check_checking)
-        val checked = state.checkedAt?.let { DayWords.whenDone(it, now, zone, locale = locale) }
-        if (state.checkFailed) {
+        if (state.check == Check.Checking) return strings.get(R.string.update_check_checking)
+        val checked = state.checkedAt?.let { Stamp.of(it, now, zone, locale = locale) }
+        if (state.check == Check.Failed) {
             return if (checked != null) {
                 strings.format(R.string.update_check_failed_last, checked)
             } else {
@@ -48,6 +48,16 @@ object UpdateCopy {
         }
         return if (checked != null) strings.format(R.string.update_check_last, checked) else strings.get(R.string.update_check_never)
     }
+
+    /** The Updates page's footnote: the check's status, then the version running, as two sentences. */
+    fun footnote(
+        state: UpdateState,
+        installed: String,
+        now: Long,
+        zone: ZoneId = ZoneId.systemDefault(),
+        locale: Locale = Locale.getDefault(),
+        strings: Strings = Strings.app,
+    ): String = strings.format(R.string.you_updates_footnote, checkStatus(state, now, zone, locale, strings), installed)
 
     /** The install row's value for [release]: its size, the download, the hand-over to Android, or why it stopped. */
     fun install(release: Release, install: Install, recording: Boolean, strings: Strings = Strings.app): String {

@@ -61,10 +61,10 @@ class GlowGridTest {
     }
 
     @Test fun `heights line up across rows`() {
-        // A tall is exactly two smalls and the gap between them.
+        // A tall is two units and the gap, 332, and the two smalls beside it split that less the gap: 160 each.
         assertEquals(332f, GlowGrid.height(CardSize.Tall)!!.value, 1e-4f)
-        assertEquals(GlowGrid.height(CardSize.Large), GlowGrid.height(CardSize.Tall))
-        assertEquals(68f, GlowGrid.height(CardSize.Strip)!!.value, 1e-4f)
+        assertEquals(160f, GlowGrid.StackedHeight.value, 1e-4f)
+        assertEquals(64f, GlowGrid.height(CardSize.Strip)!!.value, 1e-4f)
         assertEquals(null, GlowGrid.height(CardSize.List))
     }
 }

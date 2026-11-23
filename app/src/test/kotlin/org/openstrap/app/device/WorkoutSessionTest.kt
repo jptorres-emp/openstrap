@@ -101,9 +101,10 @@ class WorkoutSessionTest {
 
     private fun session(
         leftWaitMs: Long = WorkoutSession.LEFT_WAIT_MS, on: Context = context, settings: SettingsStore = SettingsStore(context),
+        restoreRetryMs: Long = WorkoutSession.RESTORE_RETRY_MS,
     ) = WorkoutSession(
         on, dao, settings, strap, MaxHeartRates(dao, flowOf(profile())), clock = { clock.now }, scope = scope,
-        leftWaitMs = leftWaitMs,
+        leftWaitMs = leftWaitMs, restoreRetryMs = restoreRetryMs,
     )
 
     private fun <T> StateFlow<T>.await(what: String = "state", predicate: (T) -> Boolean): T = runBlocking {
@@ -154,6 +155,112 @@ class WorkoutSessionTest {
         val saved = stored(t0)!!
         assertEquals(t0 + 240, saved.end)
         assertEquals(180, WorkoutRecorder.activeSeconds(saved, saved.end!!))
+    }
+
+    /** Zepp's `bo60.j(2)` on a reconnect: the config, then PAUSE while paused, RESUME once resumed, else START. */
+    @Test
+    fun anEndThatDidNotReachTheStrapGoesOnTheNextConnectOnce() {
+        val s = session()
+        val connected = ConnectionState.Connected(80, "3.27.0.1")
+        strap.connection.value = connected
+        s.start(sportType = 24)
+        s.recording()
+        clock.advance(Duration.ofSeconds(120))
+        // Out of range: the STOP fails.
+        strap.connection.value = ConnectionState.Disconnected
+        strap.sportFails = true
+        s.end()
+        s.state.await { it !is WorkoutState.Recording }
+        runBlocking { withTimeout(WAIT_MS) { while (strap.sportStates.none { it.first == SportSession.State.STOP }) delay(POLL_MS) } }
+        strap.sportFails = false
+        strap.sportStates.clear()
+        // Back in range: the STOP goes once, with nothing recording.
+        strap.connection.value = connected
+        runBlocking { withTimeout(WAIT_MS) { while (strap.sportStates.isEmpty()) delay(POLL_MS) } }
+        Thread.sleep(SETTLE_MS)
+        assertEquals(listOf(SportSession.State.STOP to false), strap.sportStates.toList())
+        // And not again on the next connect.
+        strap.sportStates.clear()
+        strap.connection.value = ConnectionState.Connecting
+        Thread.sleep(SETTLE_MS)
+        strap.connection.value = connected
+        Thread.sleep(SETTLE_MS)
+        assertTrue(strap.sportStates.isEmpty())
+    }
+
+    @Test
+    fun reconnectSendsTheConfigAndOneStateAsZepp() {
+        val s = session()
+        strap.connection.value = ConnectionState.Connected(80, "3.27.0.1")
+        // A login always passes Connecting, so the session sees the link go and come back.
+        fun reconnect(): Pair<SportSession.State, Boolean> {
+            strap.sportStates.clear()
+            strap.connection.value = ConnectionState.Connecting
+            Thread.sleep(SETTLE_MS)
+            strap.connection.value = ConnectionState.Connected(80, "3.27.0.1")
+            return runBlocking {
+                withTimeout(WAIT_MS) {
+                    while (strap.sportStates.none { it.second }) delay(POLL_MS)
+                    strap.sportStates.single { it.second }
+                }
+            }
+        }
+        s.start(sportType = 1)
+        s.recording()
+        assertEquals(SportSession.State.START to true, reconnect())
+        clock.advance(Duration.ofSeconds(60))
+        s.pause()
+        s.recording { it.paused }
+        assertEquals(SportSession.State.PAUSE to true, reconnect())
+        clock.advance(Duration.ofSeconds(60))
+        s.resume()
+        s.recording { !it.paused }
+        assertEquals(SportSession.State.RESUME to true, reconnect())
+        s.end()
+        s.state.await { it is WorkoutState.Ended }
+    }
+
+    /**
+     * Zepp sends the workout once at its start and then only on a new login (`xbc.k`, then `rbc` on AUTH_SUCCESS). A
+     * battery or charging change, a new Connected value here, sends nothing.
+     */
+    @Test
+    fun aBatteryChangeDoesNotSendTheWorkoutAgain() {
+        val s = session()
+        strap.connection.value = ConnectionState.Connected(80, "3.27.0.1")
+        s.start(sportType = 1)
+        s.recording()
+        runBlocking { withTimeout(WAIT_MS) { while (strap.sportStates.isEmpty()) delay(POLL_MS) } }
+        Thread.sleep(SETTLE_MS)
+        assertEquals("the start sends it once", listOf(SportSession.State.START to true), strap.sportStates.toList())
+
+        strap.sportStates.clear()
+        strap.connection.value = ConnectionState.Connected(79, "3.27.0.1")
+        strap.connection.value = ConnectionState.Connected(79, "3.27.0.1", charging = true)
+        Thread.sleep(SETTLE_MS)
+        assertEquals(emptyList<Pair<SportSession.State, Boolean>>(), strap.sportStates.toList())
+        s.end()
+        // Seconds long, so it ends unsaved: Idle, not Ended.
+        s.state.await { it !is WorkoutState.Recording }
+    }
+
+    /** A workout started with the strap away sends it when the strap logs in, as Zepp's connect callback does. */
+    @Test
+    fun aWorkoutStartedWithTheStrapAwaySendsItOnConnect() {
+        val s = session()
+        s.start(sportType = 1)
+        s.recording()
+        Thread.sleep(SETTLE_MS)
+        assertEquals(emptyList<Pair<SportSession.State, Boolean>>(), strap.sportStates.toList())
+        strap.connection.value = ConnectionState.Connecting
+        Thread.sleep(SETTLE_MS)
+        strap.connection.value = ConnectionState.Connected(80, "3.27.0.1")
+        runBlocking { withTimeout(WAIT_MS) { while (strap.sportStates.isEmpty()) delay(POLL_MS) } }
+        Thread.sleep(SETTLE_MS)
+        assertEquals(listOf(SportSession.State.START to true), strap.sportStates.toList())
+        s.end()
+        // Seconds long, so it ends unsaved: Idle, not Ended.
+        s.state.await { it !is WorkoutState.Recording }
     }
 
     @Test
@@ -225,6 +332,112 @@ class WorkoutSessionTest {
             // Left, its 45 recovery minutes would carry into the next workout.
             assertEquals(emptyList<SportEffectRow>(), db.healthDao().sportEffectsOnce(t0, t0 + 3600))
             assertEquals(listOf(t0 + 306), db.healthDao().deletedWorkoutsAll().map { it.effectEnd })
+        }
+    }
+
+    @Test
+    fun discardTakesTheTwinsAndDismissesInOneStep() {
+        val t0 = clock.now
+        runBlocking {
+            db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = t0 + 300, sportType = 1))
+            db.healthDao().insertWorkouts(listOf(Workout(t0 + 3, t0 + 304, 1, 300, null, null, null, null, null, null, null, null, null, 6)))
+            val gone = db.healthDao().discardAppWorkout(t0, clock.now)
+            assertEquals(t0, gone?.start)
+            assertNull(db.healthDao().appWorkoutOnce(t0))
+            assertNull(db.healthDao().workoutOnce(t0 + 3))
+            assertTrue(db.healthDao().dismissedWorkoutsAll().any { it.start == t0 && it.end == t0 + 300 })
+            // A second call finds nothing and changes nothing.
+            assertNull(db.healthDao().discardAppWorkout(t0, clock.now))
+        }
+    }
+
+    @Test
+    fun aStartWithoutGpsAvailableDoesNotClaimGps() {
+        val s = session()
+        val t0 = clock.now
+        s.start(sportType = 1, useGps = true, keepRoute = true)
+        // No location permission in the test: the workout records from steps and says so.
+        assertEquals(false, s.recording().workout.useGps)
+        assertEquals(false, stored(t0)!!.useGps)
+    }
+
+    @Test
+    fun aStartThatFailsHalfWayLeavesNothingBehind() {
+        val s = session()
+        val t0 = clock.now
+        strap.failActive = true
+        s.start(sportType = 1)
+        runBlocking {
+            withTimeout(WAIT_MS) {
+                while (strap.refused == 0 || stored(t0) != null || s.state.value !is WorkoutState.Idle) delay(POLL_MS)
+            }
+        }
+        assertNull(stored(t0))
+        // And the next one starts as usual.
+        strap.failActive = false
+        s.start(sportType = 1)
+        assertEquals(t0, s.recording().workout.start)
+    }
+
+    @Test
+    fun aRestoreThatFailsIsTriedAgainAndKeepsTheRow() {
+        val t0 = clock.now - 600
+        runBlocking { db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1)) }
+        strap.failActive = true
+        val s = session(restoreRetryMs = POLL_MS)
+        s.restore()
+        s.restored.await { it }
+        // Marked restored so nothing waits on it, yet the workout is not ended.
+        assertNull(stored(t0)!!.end)
+        strap.failActive = false
+        assertEquals(t0, s.recording().workout.start)
+    }
+
+    @Test
+    fun aRestartBringsBackTheRestTimeAddedAndTheKcal() {
+        val t0 = clock.now - 600
+        val settings = SettingsStore(context)
+        runBlocking {
+            db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1))
+            settings.setWorkoutLive(org.openstrap.app.data.settings.WorkoutLive(t0, 20, 50f, 120f))
+        }
+        val s = session(settings = settings)
+        s.restore()
+        assertEquals(20L, s.recording().restExtra)
+        assertEquals(WorkoutRecorder.Kcal(50f, 120f), s.kcal.value)
+    }
+
+    @Test
+    fun anotherWorkoutsKeptFiguresAreNotRestored() {
+        val t0 = clock.now - 600
+        val settings = SettingsStore(context)
+        runBlocking {
+            db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1))
+            settings.setWorkoutLive(org.openstrap.app.data.settings.WorkoutLive(t0 - 3_600, 20, 50f, 120f))
+        }
+        val s = session(settings = settings)
+        s.restore()
+        assertEquals(0L, s.recording().restExtra)
+        assertNull(s.kcal.value)
+    }
+
+    @Test
+    fun theLiveKcalIsKeptWhileRecording() {
+        val settings = SettingsStore(context)
+        runBlocking { settings.saveProfile(profile()) }
+        try {
+            val s = session(settings = settings)
+            s.start(sportType = 1)
+            val start = s.recording().workout.start
+            runBlocking {
+                withTimeout(WAIT_MS) {
+                    while (settings.workoutLive(start) == null) delay(POLL_MS)
+                }
+            }
+            s.end()
+            s.state.await { it !is WorkoutState.Recording }
+        } finally {
+            runBlocking { settings.saveProfile(org.openstrap.app.data.settings.UserProfile()) }
         }
     }
 
@@ -436,6 +649,53 @@ class WorkoutSessionTest {
     }
 
     @Test
+    fun aGpsRunLeftRecordingWithNoHeartRateEndsAtItsLastRoutePoint() {
+        // The strap was off: a 20 minute run with its route kept and no heart rate, and the app back five hours on.
+        val t0 = clock.now - 5 * 3600
+        runBlocking {
+            db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1, useGps = true, keepRoute = true))
+            db.healthDao().insertRoutePoints(
+                (0..1200 step 5).map { AppWorkoutRoutePoint.of(t0, org.openstrap.app.data.Route.Point(t0 + it, 51.5 + it * 1e-5, -0.1, 5f)) },
+            )
+        }
+        val s = session(leftWaitMs = SHORT_WAIT_MS)
+        s.restore()
+        assertEquals(WorkoutState.Ended(t0), s.state.await { it is WorkoutState.Ended })
+        val saved = stored(t0)!!
+        assertEquals(t0 + 1200, saved.end)
+        assertEquals(241, runBlocking { db.healthDao().routeOnce(t0) }.size)
+    }
+
+    @Test
+    fun aWorkoutLeftRecordingWithNothingStoredRecordsOnInsteadOfBeingDeleted() {
+        val t0 = clock.now - 5 * 3600
+        runBlocking { db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1)) }
+        val s = session(leftWaitMs = SHORT_WAIT_MS)
+        s.restore()
+        s.restored.await { it }
+        // Past the wait, with nothing from the strap: still there and still recording, for the wearer to end.
+        runBlocking { delay(SHORT_WAIT_MS * 3) }
+        assertEquals(t0, s.recording().workout.start)
+        assertNull(stored(t0)!!.end)
+        // End tapped then ends it where it was recorded to, not by deleting it.
+        s.end()
+        assertEquals(WorkoutState.Ended(t0), s.state.await { it is WorkoutState.Ended })
+        assertEquals(clock.now, stored(t0)!!.end)
+    }
+
+    @Test
+    fun aWorkoutLeftPausedWithNothingStoredComesBackPaused() {
+        val t0 = clock.now - 5 * 3600
+        runBlocking { db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = null, sportType = 1, pausedAt = t0 + 30)) }
+        val s = session()
+        s.restore()
+        s.restored.await { it }
+        val r = s.recording()
+        assertTrue(r.paused)
+        assertNull(stored(t0)!!.end)
+    }
+
+    @Test
     fun aRestartAddsToTheDistanceStoredBeforeIt() {
         val settings = SettingsStore(context)
         runBlocking { settings.saveProfile(profile()) }
@@ -488,6 +748,32 @@ class WorkoutSessionTest {
     }
 
     @Test
+    fun aTrimWorksTheFastestStretchesOutAgainFromTheKeptRoute() {
+        val t0 = clock.now - 7200
+        // A straight line at 3 m/s for twenty minutes, a fix every 10 s: 3.6 km.
+        val route = (0L..1200L step 10).map { Route.Point(t0 + it, 51.5 + it * 3 / 111_195.0, -0.1, 5f) }
+        val first = org.openstrap.app.data.Rewards.Stretch(1000, 333, t0)
+        runBlocking {
+            db.healthDao().upsertAppWorkout(
+                AppWorkout(
+                    start = t0, end = t0 + 1200, sportType = SportTypes.WALK, useGps = true, keepRoute = true,
+                    distanceMeters = Route.distance(route).toFloat(), stretches = first.code,
+                ),
+            )
+            db.healthDao().insertRoutePoints(route.map { AppWorkoutRoutePoint.of(t0, it) })
+        }
+        val s = session()
+        s.trim(t0, from = t0 + 300, to = t0 + 1200)
+        val trimmed = storedOnce(t0) { it?.shownStart == t0 + 300 }!!
+        val kept = org.openstrap.app.data.Rewards.Stretch.parse(trimmed.stretches).single { it.meters == 1000 }
+        assertTrue(kept.start >= t0 + 300)
+        assertEquals(333f, kept.seconds.toFloat(), 5f)
+        s.undoTrim(t0)
+        val back = storedOnce(t0) { it?.shownStart == null }!!
+        assertTrue(org.openstrap.app.data.Rewards.Stretch.parse(back.stretches).any { it.meters == 1000 })
+    }
+
+    @Test
     fun aTrimWithNoRouteLeftKeepsTheShareOfTheDistance() {
         val t0 = clock.now - 3600
         runBlocking { db.healthDao().upsertAppWorkout(AppWorkout(start = t0, end = t0 + 600, sportType = SportTypes.WALK, useGps = true, distanceMeters = 3_000f)) }
@@ -525,6 +811,75 @@ class WorkoutSessionTest {
 
         val paused = s.recording { it.paused }
         assertEquals(t0 + 60, paused.endPrompt)
+    }
+
+    /**
+     * A session whose "Ask to end when I stop" is [ask], recording [sport] since nine minutes ago: a minute of effort,
+     * then eight calm minutes after it, so the wearer has been still since a minute in.
+     */
+    private fun stoppedNineMinutesIn(ask: org.openstrap.app.data.settings.AskToEnd, sport: Int = 1): Pair<WorkoutSession, Long> {
+        val settings = SettingsStore.of(store)
+        runBlocking { settings.setAskToEnd(ask) }
+        val s = session(settings = settings)
+        s.askToEndSetting.await("ask to end") { it == ask }
+        val t0 = clock.now
+        val seed = (1L..60L).map { t0 + it to 170 } + (61L..600L).map { t0 + it to 70 }
+        clock.advance(Duration.ofSeconds(600))
+        s.start(sportType = sport, from = t0, seed = seed)
+        s.recording()
+        // The seed is recorded just after the state turns Recording.
+        s.recent.await("seed") { it.lastOrNull()?.first == t0 + 600 }
+        return s to t0
+    }
+
+    /** The stop question waits the sport's own time: with Most workouts at 10 minutes, nine still minutes don't ask yet. */
+    @Test
+    fun theEndQuestionWaitsTheConfiguredTime() {
+        val (s, t0) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = 10))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+        // Eleven still minutes: past ten, so it asks, ending where the effort stopped.
+        clock.advance(Duration.ofSeconds(120))
+        s.checkStopped()
+        assertEquals(t0 + 60, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** A group set to Off never asks, however long the wearer stays still. */
+    @Test
+    fun anOffGroupNeverAsks() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = null))
+        clock.advance(Duration.ofSeconds(3_600))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    @Test
+    fun theSwitchOffNeverAsks() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(on = false))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** Yoga is Off out of the box: nine still minutes of it don't ask, where a run (8 minutes) would. */
+    @Test
+    fun yogaDoesNotAskByDefault() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(), sport = 53)
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** A change made while the workout records applies to it at once. */
+    @Test
+    fun aChangeAppliesToTheRunningWorkout() {
+        val settings = SettingsStore.of(store)
+        val (s, t0) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = null))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+        val now = org.openstrap.app.data.settings.AskToEnd(most = 5)
+        runBlocking { settings.setAskToEnd(now) }
+        s.askToEndSetting.await("ask to end") { it == now }
+        s.checkStopped()
+        assertEquals(t0 + 60, (s.state.value as WorkoutState.Recording).endPrompt)
     }
 
     @Test
@@ -578,6 +933,88 @@ class WorkoutSessionTest {
     }
 
     @Test
+    fun aFailedEndShowsOnTheLiveStateAndTryAgainEndsIt() {
+        val s = session()
+        val t0 = clock.now
+        s.start(sportType = 1)
+        s.recording()
+        clock.advance(Duration.ofSeconds(300))
+        dao.failing = true
+        s.end()
+        val failed = s.recording { it.endFailed }
+        assertTrue(failed.saveFailed)
+        assertNull(stored(t0)?.end)
+
+        // Try again is End again, and the flag goes once it saves.
+        dao.failing = false
+        s.end()
+        s.state.await { it is WorkoutState.Ended }
+        assertNotNull(stored(t0)?.end)
+    }
+
+    @Test
+    fun aRestDoesNotEndWhilePausedAndEndsOnceResumed() {
+        val s = session()
+        // Strength: only its rest is checked each second.
+        s.start(sportType = SportTypes.STRENGTH_TRAINING)
+        s.recording()
+        s.startSet()
+        s.recording { it.inSet }
+        clock.advance(Duration.ofSeconds(40))
+        s.setDone()
+        s.recording { it.restUntil != null }
+        s.pause()
+        s.recording { it.paused }
+        // Well past the 90 s rest, paused: the once a second check leaves it alone.
+        clock.advance(Duration.ofSeconds(120))
+        runBlocking { delay(2_500) }
+        val paused = s.recording()
+        assertNotNull(paused.restUntil)
+        assertNull(paused.sets.last().restEnd)
+        s.resume()
+        val resumed = s.recording { it.restUntil == null }
+        assertEquals(clock.now, resumed.sets.last().restEnd)
+    }
+
+    @Test
+    fun aLaterSuccessDoesNotHideUnsavedSets() {
+        val s = session()
+        s.start(sportType = 1)
+        s.recording()
+        dao.failingSets = true
+        s.startSet()
+        s.recording { SavePart.Sets in it.failing }
+        // A lap saves the workout fine, and the sets are still unsaved.
+        clock.advance(Duration.ofSeconds(30))
+        s.lap()
+        val r = s.recording { it.workout.lapMarks.isNotEmpty() }
+        assertTrue(SavePart.Sets in r.failing)
+        assertTrue(r.saveFailed)
+
+        dao.failingSets = false
+        clock.advance(Duration.ofSeconds(5))
+        s.setDone()
+        s.recording { it.failing.isEmpty() && !it.saveFailed }
+    }
+
+    @Test
+    fun startSaysWhetherItStartedOrAWorkoutRecordsAlready() {
+        val s = session()
+        assertEquals(StartResult.Started, runBlocking { s.start(sportType = 1).await() })
+        assertTrue(s.inProgress)
+        assertEquals(StartResult.AlreadyRecording, runBlocking { s.start(sportType = 2).await() })
+    }
+
+    @Test
+    fun startFailsWhenTheRowCantBeWritten() {
+        val s = session()
+        dao.failing = true
+        assertEquals(StartResult.Failed, runBlocking { s.start(sportType = 1).await() })
+        assertTrue(!s.inProgress)
+        assertTrue(s.state.value is WorkoutState.Idle)
+    }
+
+    @Test
     fun theSeedIsRecordedBeforeTheLiveReadings() {
         val t0 = clock.now
         clock.advance(Duration.ofSeconds(120))
@@ -624,7 +1061,7 @@ class WorkoutSessionTest {
         s.start(sportType = 1)
         s.recording()
         val n = keepRecording(present = true)!!
-        assertEquals("Keep recording your outdoor run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertEquals("Keep recording your run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
         assertEquals(KeepRecordingNotice.TEXT, n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
         assertEquals(KeepRecordingNotice.CHANNEL, n.channelId)
         // A tap brings the app forward on the live screen.
@@ -672,7 +1109,7 @@ class WorkoutSessionTest {
     fun theSportReadsAsInASentence() {
         assertEquals("Keep recording your mountain hike", KeepRecordingNotice.title(224))
         assertEquals("Keep recording your HYROX training", KeepRecordingNotice.title(222))
-        assertEquals("Keep recording your strength training", KeepRecordingNotice.title(52))
+        assertEquals("Keep recording your strength", KeepRecordingNotice.title(52))
     }
 
     /** A preferences store of the test's own, for settings writes that fail. */
@@ -706,6 +1143,8 @@ class WorkoutSessionTest {
     /** [HealthDao] that can fail every workout save, or hold the next one until released. */
     private class SwitchableDao(private val real: HealthDao) : HealthDao by real {
         @Volatile var failing = false
+        /** Only the sets' saves fail. */
+        @Volatile var failingSets = false
         @Volatile private var gate: Gate? = null
 
         class Gate {
@@ -726,7 +1165,7 @@ class WorkoutSessionTest {
         }
 
         override suspend fun upsertSets(sets: List<org.openstrap.app.data.db.AppWorkoutSet>) {
-            if (failing) throw android.database.sqlite.SQLiteException("disk I/O error")
+            if (failing || failingSets) throw android.database.sqlite.SQLiteException("disk I/O error")
             real.upsertSets(sets)
         }
 
@@ -739,7 +1178,7 @@ class WorkoutSessionTest {
     /** A strap that is never connected, whose live heart rate is [readings], and whose syncs end when [synced] says. */
     private class FakeStrap : StrapController {
         val readings = MutableSharedFlow<Int>(replay = 1, extraBufferCapacity = 64)
-        override val connection: StateFlow<ConnectionState> = MutableStateFlow(ConnectionState.Disconnected)
+        override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
         override val sync: StateFlow<SyncState> = MutableStateFlow(SyncState.Idle)
         override val syncRecord: StateFlow<SyncRecord> = MutableStateFlow(SyncRecord())
         /** A sync's end, for the test to send. */
@@ -762,8 +1201,17 @@ class WorkoutSessionTest {
         override fun disconnect() = Unit
         override fun syncNow() = Unit
         override fun setAppVisible(visible: Boolean) = Unit
-        override fun setWorkoutActive(active: Boolean) = Unit
-        override fun setEffortWatch(active: Boolean) = Unit
+        /** Turning the live stream on fails, as a start that throws half way does. */
+        @Volatile var failActive = false
+        @Volatile var refused = 0
+        override fun setWorkoutActive(active: Boolean) {
+            if (failActive && active) {
+                refused++
+                throw IllegalStateException("strap refused")
+            }
+        }
+        override fun showLiveHeartRate(key: Any, shown: Boolean) = Unit
+        override suspend fun checkCanRestart() = Unit
         override suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (org.openstrap.protocol.firmware.DfuProgress) -> Unit) = Unit
         override suspend fun readAlarms(): Pair<AlarmCapabilities, List<Alarm>> = throw StrapCommandException("not connected")
         override suspend fun saveAlarm(alarm: Alarm, isNew: Boolean) = Unit
@@ -773,7 +1221,15 @@ class WorkoutSessionTest {
         override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) = Unit
         override suspend fun restartStrap() = Unit
         override suspend fun buzz(pattern: List<Int>) = Unit
-        override suspend fun sportSession(state: SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long) = Unit
+        override suspend fun sportSession(state: SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long, reconnect: Boolean) {
+            sportStates += state to reconnect
+            if (sportFails) throw IllegalStateException("not connected")
+        }
+
+        /** Every sport command fails, as with the strap out of range. */
+        @Volatile var sportFails = false
+
+        val sportStates: MutableList<Pair<SportSession.State, Boolean>> = Collections.synchronizedList(mutableListOf())
         override suspend fun sportSessionKeepAlive() = Unit
         override suspend fun startCallBuzz(pulsed: Boolean) = Unit
         override suspend fun stopCallBuzz() = Unit

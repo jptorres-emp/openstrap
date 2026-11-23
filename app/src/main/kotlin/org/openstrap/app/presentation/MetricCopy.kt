@@ -14,7 +14,7 @@ import java.util.Locale
 enum class Metric(@StringRes private val titleId: Int, @StringRes private val unitId: Int, val decimals: Int, val daily: DailyMetric) {
     HeartRate(R.string.core_metric_heart_rate, R.string.core_unit_bpm, 0, DailyMetric.HeartRate),
     RestingHr(R.string.core_metric_resting_hr, R.string.core_unit_bpm, 0, DailyMetric.RestingHr),
-    Hrv(R.string.core_metric_hrv, R.string.core_unit_ms, 0, DailyMetric.Hrv),
+    Hrv(R.string.core_metric_hrv, R.string.core_unit_ms, 0, DailyMetric.SleepHrv),
     Spo2(R.string.core_metric_spo2, 0, 0, DailyMetric.Spo2),
     Stress(R.string.core_metric_stress, 0, 0, DailyMetric.Stress),
     SkinTemperature(R.string.core_metric_skin_temperature, R.string.core_unit_celsius, 1, DailyMetric.SkinTemperature),
@@ -36,6 +36,13 @@ enum class Metric(@StringRes private val titleId: Int, @StringRes private val un
      */
     fun format(v: Float, locale: Locale = Locale.getDefault()): String =
         if (this == Steps) Units.count(Math.round(v).toLong(), locale) else String.format(locale, "%.${decimals}f", v)
+
+    /** [v] with its unit, wherever a value stands outside a labelled figure: "60 bpm", "57 ms", "98%", "799 steps". */
+    fun formatWithUnit(v: Float, locale: Locale = Locale.getDefault()): String = when (unit) {
+        "" -> format(v, locale)
+        "%" -> format(v, locale) + unit
+        else -> "${format(v, locale)} $unit"
+    }
 
     /** A change from your normal, signed with a true minus (spec 2.3): "+0.2", "−0.3"; no sign is lost to rounding. */
     fun formatChange(d: Float, locale: Locale = Locale.getDefault()): String {

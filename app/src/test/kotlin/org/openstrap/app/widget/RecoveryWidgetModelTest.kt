@@ -45,7 +45,7 @@ class RecoveryWidgetModelTest {
         assertNull(m.waiting)
         assertEquals(today, m.date)
         assertEquals(
-            listOf(RecoveryFigure("Resting", "52 bpm"), RecoveryFigure("HRV", "64 ms"), RecoveryFigure("Sleep", "82")),
+            listOf(RecoveryFigure("Resting heart rate", "52 bpm", "Resting HR"), RecoveryFigure("HRV", "64 ms"), RecoveryFigure("Sleep score", "82")),
             m.figures,
         )
     }
@@ -76,7 +76,7 @@ class RecoveryWidgetModelTest {
         assertEquals("91", m.score)
         assertEquals("Strap's estimate", m.word)
         assertEquals("This morning", m.note)
-        assertEquals("unstrap's own score isn't ready yet.", m.sentence)
+        assertEquals("Your own score isn't ready yet.", m.sentence)
     }
 
     @Test fun `before the first night, the title and After your first night`() {

@@ -35,7 +35,7 @@ class NotificationCopyTest {
         assertEquals(3, c.zone)
         assertEquals("Zone 4, threshold", c.zoneLine)
         assertEquals("4.21 km", c.detail)
-        assertEquals("152 bpm. Zone 4, threshold. 4.21 km", c.text)
+        assertEquals("152 bpm, Zone 4, threshold, 4.21 km", c.text)
         assertEquals(3, numbers(c))
         assertEquals("640 m", card(distance = 640f).detail)
         assertEquals("≈ 4.21 km", card(fromSteps = true).detail)
@@ -49,7 +49,7 @@ class NotificationCopyTest {
         assertNull(c.zone)
         assertNull(c.zoneLine)
         assertEquals("4.21 km", c.detail)
-        assertEquals("Paused. 4.21 km", c.text)
+        assertEquals("Paused, 4.21 km", c.text)
         // Without GPS there's nothing more to say while paused.
         assertNull(card(paused = true, gps = false).detail)
     }
@@ -88,7 +88,7 @@ class NotificationCopyTest {
     @Test fun `bpm takes the zone colour, grey without one`() {
         WorkoutColors.ZONES.forEachIndexed { z, color -> assertEquals(color, NotificationCopy.accent(z)) }
         // The app's paused grey, the same as the live screen's, no longer a darker one of the notification's own.
-        assertEquals(0xFF9AA0B4.toInt(), NotificationCopy.accent(null))
+        assertEquals(0xFFA0A0A0.toInt(), NotificationCopy.accent(null))
         assertEquals(WorkoutColors.ZONE_4, NotificationCopy.accent(card().zone))
         assertEquals(WorkoutColors.PAUSED_GREY, NotificationCopy.accent(card(paused = true).zone))
     }
@@ -118,7 +118,7 @@ class NotificationCopyTest {
         assertTrue(c.kcalCollapsed)
         assertTrue(c.kcalExpanded)
         // Its line stays the three figures it was.
-        assertEquals("152 bpm. Zone 4, threshold. 4.21 km", c.text)
+        assertEquals("152 bpm, Zone 4, threshold, 4.21 km", c.text)
         // A long sport name leaves no room on the collapsed line; past the hour the expanded time row is full.
         assertFalse(NotificationCopy.card("Indoor cycling", 1421, false, true, 152, 190, HeartZones.STANDARD, false, null, false, null, zones, false, activeKcal = 286f).kcalCollapsed)
         assertFalse(NotificationCopy.card("Outdoor run", 3721, false, true, 152, 190, HeartZones.STANDARD, true, 4210f, false, null, zones, false, activeKcal = 1286f).kcalExpanded)

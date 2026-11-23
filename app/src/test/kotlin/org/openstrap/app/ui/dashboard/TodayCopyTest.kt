@@ -43,7 +43,7 @@ class TodayCopyTest {
         assertEquals("No sleep recorded that night.", TodayCopy.waking(null, null, false, null, false, false))
         assertEquals("Recovery starts after your first night with the strap.", TodayCopy.waking(null, null, false, learning, true, true))
         val slept = (5 * 60 + 32) * 60L
-        assertEquals("Slept 5 h 32. unstrap is still learning your nights, 5 of 7.", TodayCopy.waking(slept, null, false, learning, false, true))
+        assertEquals("Slept 5 h 32. Still learning your nights, 5 of 7. Your score starts after 7.", TodayCopy.waking(slept, null, false, learning, false, true))
         assertEquals(
             "Slept 5 h 32. Not enough heart data last night for a Recovery score.",
             TodayCopy.waking(slept, null, false, TodayCopy.NoScore.NoHeartData, false, true),
@@ -55,10 +55,10 @@ class TodayCopyTest {
     @Test fun `recovery shows the score, else the strap's estimate, else why not`() {
         assertEquals(TodayCopy.RecoveryShown(78, "Ready", "Recovered enough for your usual training."), TodayCopy.recoveryShown(78, false, null, 90, "No reading yet"))
         assertEquals(
-            TodayCopy.RecoveryShown(90, "Strap's estimate", "unstrap is still learning your nights, 5 of 7.", estimate = true),
+            TodayCopy.RecoveryShown(90, "Strap's estimate", "Still learning your nights, 5 of 7. Your score starts after 7.", estimate = true),
             TodayCopy.recoveryShown(null, false, learning, 90, "No reading yet"),
         )
-        assertEquals(TodayCopy.RecoveryShown(null, null, "unstrap is still learning your nights, 5 of 7."), TodayCopy.recoveryShown(null, false, learning, null, "No reading yet"))
+        assertEquals(TodayCopy.RecoveryShown(null, null, "Still learning your nights, 5 of 7. Your score starts after 7."), TodayCopy.recoveryShown(null, false, learning, null, "No reading yet"))
         assertEquals(TodayCopy.RecoveryShown(null, null, "No reading yet"), TodayCopy.recoveryShown(null, false, null, null, "No reading yet"))
     }
 
@@ -81,9 +81,9 @@ class TodayCopyTest {
 
     @Test fun `workout window names the usual sport and the charge`() {
         assertEquals("Ready for effort", TodayCopy.windowTitle(78))
-        assertEquals("Fine for a steady session", TodayCopy.windowTitle(60))
-        assertEquals("An easy session suits today", TodayCopy.windowTitle(40))
-        assertEquals("Your usual workout time", TodayCopy.windowTitle(null))
+        assertEquals("Steady session", TodayCopy.windowTitle(60))
+        assertEquals("Easy session", TodayCopy.windowTitle(40))
+        assertEquals("Workout time", TodayCopy.windowTitle(null))
         assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window(1, 58))
         assertEquals("You usually work out around now.", TodayCopy.window(null, null))
         assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window(4, 20))
@@ -107,7 +107,7 @@ class TodayCopyTest {
     }
 
     @Test fun `the load line says it's a Load`() {
-        assertEquals("Load, learning your usual", TodayCopy.loadLine(null))
+        assertEquals("Learning your usual", TodayCopy.loadLine(null))
         assertEquals("Load above your usual", TodayCopy.loadLine(LoadBand.Above))
         assertEquals("Load so far today", TodayCopy.loadLine(LoadBand.SoFar))
         assertEquals("Load near your usual", TodayCopy.loadLine(LoadBand.Usual))
@@ -124,8 +124,8 @@ class TodayCopyTest {
         assertEquals("A steady day. A workout and 6,000 steps.", TodayCopy.evening(listOf(OTHER_SPORT), 6_000, 8_000, LoadBand.SoFar, Locale.UK))
         assertEquals("A steady day. A ride and 6,000 steps.", TodayCopy.evening(listOf(4), 6_000, 8_000, null, Locale.UK))
         // The app's hero says the steps against the goal, since it shows the count in dots.
-        assertEquals("A quiet day. Well short of your step goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
-        assertEquals("A full day. A run, past your step goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
+        assertEquals("A quiet day. Steps well short of your goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
+        assertEquals("A full day. A run, steps past your goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
     }
 
     @Test fun `bedtime counts down and stops once passed`() {
@@ -204,14 +204,14 @@ class TodayCopyTest {
     @Test fun `values read against your normal`() {
         assertEquals("Above your normal", TodayCopy.normalWord(1))
         assertEquals("Below your normal", TodayCopy.normalWord(-1))
-        assertEquals("Usual", TodayCopy.normalWord(0))
-        assertEquals("Learning your normal", TodayCopy.normalWord(null))
+        assertEquals("Your normal", TodayCopy.normalWord(0))
+        assertEquals("Learning", TodayCopy.normalWord(null))
     }
 
     @Test fun `the after workout Smalls say a number and a word`() {
         assertEquals("Above your usual", TodayCopy.loadWord(LoadBand.Above))
         assertEquals("So far today", TodayCopy.loadWord(LoadBand.SoFar))
-        assertEquals("Learning your usual", TodayCopy.loadWord(null))
+        assertEquals("Learning usual", TodayCopy.loadWord(null))
         val zone = ZoneId.of("Europe/London")
         val now = ZonedDateTime.of(2026, 10, 23, 18, 0, 0, 0, zone).toEpochSecond()
         assertEquals("14" to "Ready tomorrow", TodayCopy.recoverShort(14 * 3600L, now, zone))
@@ -238,9 +238,9 @@ class TodayCopyTest {
 
     @Test
     fun `steps against the goal read as words`() {
-        assertEquals("well short of your step goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
-        assertEquals("short of your step goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
-        assertEquals("close to your step goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
-        assertEquals("past your step goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
+        assertEquals("steps well short of your goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
+        assertEquals("steps short of your goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
+        assertEquals("steps close to your goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
+        assertEquals("steps past your goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
     }
 }

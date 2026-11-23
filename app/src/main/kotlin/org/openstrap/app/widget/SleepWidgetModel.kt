@@ -35,13 +35,17 @@ data class SleepWidgetNight(
 
     companion object {
         /** The night [main] ended on [date], with its [stages] and the week's [nights] ([SleepHistory.mainSleeps]). */
-        fun of(date: LocalDate, main: SleepSession, stages: List<SleepStage>, nights: Map<LocalDate, SleepSession>): SleepWidgetNight = SleepWidgetNight(
-            date = date,
-            session = main,
-            stages = stages.map { StageSpan(it.start, it.end, it.stage) },
-            breakdown = if (stages.isEmpty()) null else Summaries.sleepBreakdown(stages),
-            others = SleepHistory.weekOthers(nights, date),
-        )
+        fun of(date: LocalDate, main: SleepSession, stages: List<SleepStage>, nights: Map<LocalDate, SleepSession>): SleepWidgetNight {
+            // As the app reads a night: kept to its times, no two rows over the same time ([SleepEdits.clean]).
+            val clean = org.openstrap.app.data.SleepEdits.clean(stages, main.start, main.end)
+            return SleepWidgetNight(
+                date = date,
+                session = main,
+                stages = clean.map { StageSpan(it.start, it.end, it.stage) },
+                breakdown = if (clean.isEmpty()) null else Summaries.sleepBreakdown(clean),
+                others = SleepHistory.weekOthers(nights, date),
+            )
+        }
     }
 }
 
@@ -164,7 +168,7 @@ object SleepLayout {
     val WIDE_DOT = DotSize.Second.dot.value
 
     /** Between the score and its word: the Small's, the Wide's. Before what's on the right of the score row. */
-    const val SMALL_WORD_GAP_DP = 6f
+    const val SMALL_WORD_GAP_DP = 8f
     const val WORD_GAP_DP = 8f
     const val SIDE_GAP_DP = 12f
 
@@ -179,9 +183,9 @@ object SleepLayout {
     /** The legend: Caption size, an 8 dp mark 6 dp before its label, items at least 12 dp apart, rows 6 dp apart. */
     const val LEGEND_SP = WidgetText.CAPTION_SP
     const val MARK_DP = 8f
-    const val MARK_GAP_DP = 6f
+    const val MARK_GAP_DP = 4f
     const val LEGEND_GAP_DP = 12f
-    const val LEGEND_ROW_GAP_DP = 6f
+    const val LEGEND_ROW_GAP_DP = 4f
 
     /**
      * The Large's stage rows: the name in [STAGE_NAME_DP], the bar between, the time in [STAGE_TIME_DP] on the right,
@@ -189,8 +193,8 @@ object SleepLayout {
      */
     const val STAGE_NAME_DP = 52f
     const val STAGE_TIME_DP = 56f
-    const val STAGE_GAP_DP = 10f
-    const val STAGE_ROW_GAP_DP = 6f
+    const val STAGE_GAP_DP = 8f
+    const val STAGE_ROW_GAP_DP = 4f
     const val STAGE_BAR_DP = 6f
     const val MIN_STAGE_TRACK_DP = 48f
 
@@ -198,7 +202,7 @@ object SleepLayout {
     const val SENTENCE_LINES = 3
 
     /** The least room between the blocks that share out the spare height. */
-    const val MIN_GAP_DP = 4f
+    const val MIN_GAP_DP = WidgetGrid.GAP_DP
 
     /* ---------------------------------------------- Legend ---------------------------------------------- */
 

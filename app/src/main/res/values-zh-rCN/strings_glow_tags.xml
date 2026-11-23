@@ -8,10 +8,10 @@
         <item quantity="other">连续 %d 天</item>
     </plurals>
     <string name="glow_tag_goal_met">已达标</string>
-    <string name="glow_tag_above_normal">高于常态</string>
-    <string name="glow_tag_below_normal">低于常态</string>
-    <string name="glow_tag_above_usual">高于平时</string>
-    <string name="glow_tag_below_usual">低于平时</string>
+    <string name="glow_tag_above_normal">高于你的常态</string>
+    <string name="glow_tag_below_normal">低于你的常态</string>
+    <string name="glow_tag_above_usual">高于你的常态</string>
+    <string name="glow_tag_below_usual">低于你的常态</string>
     <string name="glow_tag_short">短时</string>
     <string name="glow_tag_long">长振</string>
     <string name="glow_tag_later">偏晚</string>

@@ -5,16 +5,16 @@
     <string name="core_detail_status_usual">符合常态</string>
     <string name="core_detail_band_label">你的常态，%1$s 到 %2$s</string>
     <plurals name="core_detail_learning_nights">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 晚</item>
+        <item quantity="other">了解中，%1$d/%2$d 晚</item>
     </plurals>
     <plurals name="core_detail_learning_days">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 天</item>
+        <item quantity="other">了解中，%1$d/%2$d 天</item>
     </plurals>
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 晚。</item>
+        <item quantity="other">仍在了解你的常态，%1$d/%2$d 晚。</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 天。</item>
+        <item quantity="other">仍在了解你的常态，%1$d/%2$d 天。</item>
     </plurals>
     <string name="core_detail_number_0">0</string>
     <string name="core_detail_number_1">1</string>
@@ -34,12 +34,22 @@
     </plurals>
     <string name="core_detail_label_bpm_now">当前 bpm</string>
     <string name="core_detail_label_bpm_latest">bpm，最近一次</string>
-    <string name="core_detail_label_bpm_resting">bpm 静息</string>
+    <string name="core_detail_label_bpm_resting">bpm，昨晚</string>
+    <string name="core_detail_label_bpm_resting_that_night">bpm，当晚</string>
+    <string name="core_detail_label_bpm_resting_estimated">bpm，昨晚，估算</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">bpm，当晚，估算</string>
+    <string name="core_detail_label_bpm_up_to">bpm，截至 %1$s</string>
     <string name="core_detail_label_steps_today">步，今日目前</string>
     <string name="core_detail_label_steps">步</string>
     <string name="core_detail_label_breathing">br/min，睡眠期间</string>
     <string name="core_detail_label_day_average">全天平均</string>
     <string name="core_detail_label_unit_day_average">%1$s，全天平均</string>
+    <string name="core_detail_label_stress_latest_at">%1$s，最新于 %2$s</string>
+    <string name="core_detail_skin_above">%1$s，高于你的常态</string>
+    <string name="core_detail_skin_below">%1$s，低于你的常态</string>
+    <string name="core_detail_skin_within">%1$s，符合你的常态</string>
+    <string name="core_detail_label_unit_daytime_latest_at">%1$s，白天，最新于 %2$s</string>
+    <string name="core_detail_label_unit_asleep_latest_at">%1$s，睡眠中，最新于 %2$s</string>
     <string name="core_detail_label_steps_week">每日步数，最近 7 天</string>
     <string name="core_detail_label_steps_month">每日步数，最近 30 天</string>
     <string name="core_detail_label_steps_year">每日步数，最近 12 个月</string>
@@ -99,8 +109,14 @@
     <plurals name="core_detail_inside_days_month">
         <item quantity="other">过去 30 天内，%2$d 天中有 %1$d 天在你的常态范围内。</item>
     </plurals>
-    <string name="core_detail_year_unit">过去 12 个月内，周平均值在 %1$s 到 %2$s %3$s 之间。</string>
-    <string name="core_detail_year">过去 12 个月内，周平均值在 %1$s 到 %2$s 之间。</string>
+    <string name="core_detail_year_unit">%4$s内，周平均值在 %1$s 到 %2$s %3$s 之间。</string>
+    <string name="core_detail_year">%3$s内，周平均值在 %1$s 到 %2$s 之间。</string>
+    <plurals name="core_detail_year_span_weeks">
+        <item quantity="other">过去 %1$d 周</item>
+    </plurals>
+    <plurals name="core_detail_year_span_months">
+        <item quantity="other">过去 %1$d 个月</item>
+    </plurals>
     <string name="core_detail_score_week_one">过去 7 天目前仅有 1 次评分。</string>
     <string name="core_detail_score_week">过去 7 天平均为 %1$d，范围在 %2$d 到 %3$d 之间。</string>
     <string name="core_detail_charge_started">当天开始时为 %1$d，结束时为 %2$d。</string>
@@ -113,6 +129,6 @@
         <item quantity="other">%1$d/%2$d 晚</item>
     </plurals>
     <string name="core_detail_recovery_no_score">暂无分数</string>
-    <string name="core_detail_recovery_no_heart_data">当晚心率数据不足</string>
-    <string name="core_detail_recovery_scored_mornings">每天早晨根据前一晚的数据评分</string>
+    <string name="core_detail_recovery_no_heart_data">心率数据不足</string>
+    <string name="core_detail_recovery_scored_mornings">每天早晨评分</string>
 </resources>

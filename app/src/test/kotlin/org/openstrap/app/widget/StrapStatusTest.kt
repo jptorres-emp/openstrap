@@ -51,11 +51,27 @@ class StrapStatusTest {
         assertNull(strapStatus(true, 80, false, fresh, now, syncing = true))
     }
 
+    @Test fun `a failing sync shows as the app does, over an old one, while syncing reads Syncing`() {
+        assertEquals(StrapStatus.SyncFailed, strapStatus(true, 80, false, fresh, now, failingSince = now - 600))
+        assertEquals(StrapStatus.SyncFailed, strapStatus(true, 80, false, old, now, failingSince = now - 600))
+        assertEquals(StrapStatus.Syncing, strapStatus(true, 80, false, fresh, now, syncing = true, failingSince = now - 600))
+        // A low battery still comes first, and a good sync (no failing time) shows nothing.
+        assertEquals(StrapStatus.LowBattery(5), strapStatus(true, 5, false, fresh, now, failingSince = now - 600))
+        assertNull(strapStatus(true, 80, false, fresh, now, failingSince = null))
+    }
+
+    @Test fun `Bluetooth off comes before everything but not paired`() {
+        assertEquals(StrapStatus.BluetoothOff, strapStatus(true, 5, false, old, now, failingSince = now - 600, bluetoothOff = true))
+        assertEquals(StrapStatus.NotPaired, strapStatus(false, 80, false, fresh, now, bluetoothOff = true))
+        assertEquals("Not synced", strapStatusLine(StrapStatus.SyncFailed, now, zone, Locale.UK))
+        assertEquals("Bluetooth is off", strapStatusLine(StrapStatus.BluetoothOff, now, zone, Locale.UK))
+    }
+
     @Test fun `the words`() {
         fun line(s: StrapStatus) = strapStatusLine(s, now, zone, Locale.UK)
         assertEquals("Pair your strap", line(StrapStatus.NotPaired))
         assertEquals("Strap at 12%", line(StrapStatus.LowBattery(12)))
-        assertEquals("Syncing…", line(StrapStatus.Syncing))
+        assertEquals("Syncing", line(StrapStatus.Syncing))
         assertEquals("Synced 09:10", line(StrapStatus.StaleSync(now - 2 * 3600 - 50 * 60)))
         assertEquals("Synced yesterday", line(StrapStatus.StaleSync(now - 86_400)))
         assertEquals("Synced Tuesday", line(StrapStatus.StaleSync(now - 3 * 86_400)))

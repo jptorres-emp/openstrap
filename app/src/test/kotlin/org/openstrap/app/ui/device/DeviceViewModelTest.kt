@@ -89,16 +89,14 @@ class DeviceViewModelTest {
 
     @Test fun `the strap page's switches write the settings`() = runBlocking {
         vm.setWearReminder(false).join()
-        vm.setAutoStartWorkouts(false).join()
         assertEquals(false, settings.wearReminder.first())
-        assertEquals(false, settings.autoStartWorkouts.first())
     }
 
     @Test fun `save a copy and restore say what the repository did`() = runBlocking {
         val uri = Uri.parse("content://test/backup.zip")
         backups.next = BackupResult.Saved
         vm.exportCsv(uri).join()
-        assertEquals("Saved a copy.", vm.message.value)
+        assertEquals("unstrap saved a copy.", vm.message.value)
 
         backups.next = BackupResult.Failed(SecurityException("denied"))
         vm.exportCsv(uri).join()

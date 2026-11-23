@@ -50,6 +50,7 @@ enum class Page(
     Updates(PageRowKeys.UPDATES),
     Diagnostics(PageRowKeys.DIAGNOSTICS),
     GoalsAndBests(PageRowKeys.GOALS_AND_BESTS),
+    WorkoutSettings(PageRowKeys.WORKOUTS),
     AllBadges,
     WeeklyRecap,
     Strap,
@@ -187,7 +188,13 @@ class AppNavState(initial: Snapshot = Snapshot()) {
 
     /** Opens [page] over the tab, unless it's already on top. */
     fun openPage(page: Page) {
-        if (pages.lastOrNull() != page) pages = pages + page
+        pages = when {
+            // You and Strap are roots, opened from a tab's header: one replaces the other rather than stack on it. Two
+            // taps landing during the page's slide-in stacked [You, Strap], and Back then went to You (audit S21).
+            page in ROOT_PAGES -> listOf(page)
+            pages.lastOrNull() == page -> pages
+            else -> pages + page
+        }
     }
 
     /** Closes the top page. */
@@ -262,6 +269,14 @@ class AppNavState(initial: Snapshot = Snapshot()) {
     /** A workout started: Ready and Choose close. */
     fun workoutStarted() {
         workout = WorkoutOverlay.None
+    }
+
+    /**
+     * The session left Idle, however it started (the app, the tile, the strap): Ready and Choose close, so neither
+     * comes back after the summary. Also closes one a request opened while the summary showed.
+     */
+    fun sessionInProgress() {
+        if (workout != WorkoutOverlay.None) workout = WorkoutOverlay.None
     }
 
     /** Your zones, over Ready. */
@@ -357,6 +372,8 @@ class AppNavState(initial: Snapshot = Snapshot()) {
     fun snapshot(): Snapshot = Snapshot(tab, pages, stacks, allMetricsOpen, editGoals, addingOn, savingStretch, workout)
 
     companion object {
+        /** The pages a tab's header opens, each the root of the pages over the tab. */
+        private val ROOT_PAGES = setOf(Page.You, Page.Strap)
         private const val TAB = "tab"
         private const val PAGES = "pages"
         private const val STACK = "stack."

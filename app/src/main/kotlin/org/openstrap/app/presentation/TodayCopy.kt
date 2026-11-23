@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
@@ -135,23 +136,28 @@ object TodayCopy {
      */
     fun charge(now: Int?, drained: Int?, anchored: Boolean, hour: Int, strings: Strings = Strings.app): String {
         if (now == null || !anchored) return strings.get(R.string.core_today_energy_first_night)
-        val first = when {
+        val level = energyLevel(now)
+        // Each pair of sentences is one string, so a translator sees the whole line.
+        val whole = when {
             drained == null -> null
-            drained >= 1 -> strings.format(
-                if (hour < 12) R.string.core_today_energy_morning_drained else R.string.core_today_energy_day_drained,
-                drained,
-            )
-            else -> strings.get(R.string.core_today_energy_nothing_drained)
+            drained >= 1 -> if (hour < 12) MORNING_DRAINED[level] else DAY_DRAINED[level]
+            else -> NOTHING_DRAINED[level]
         }
-        val left = strings.get(
-            when {
-                now >= 50 -> R.string.core_today_energy_plenty
-                now >= 25 -> R.string.core_today_energy_enough
-                else -> R.string.core_today_energy_low
-            },
-        )
-        return listOfNotNull(first, left).joinToString(" ")
+        return if (whole != null) strings.format(whole, drained ?: 0) else strings.get(ENERGY_LEFT[level])
     }
+
+    private val MORNING_DRAINED = intArrayOf(
+        R.string.core_today_energy_morning_plenty, R.string.core_today_energy_morning_enough, R.string.core_today_energy_morning_low,
+    )
+    private val DAY_DRAINED = intArrayOf(
+        R.string.core_today_energy_day_plenty, R.string.core_today_energy_day_enough, R.string.core_today_energy_day_low,
+    )
+    private val NOTHING_DRAINED = intArrayOf(
+        R.string.core_today_energy_nothing_plenty, R.string.core_today_energy_nothing_enough, R.string.core_today_energy_nothing_low,
+    )
+    private val ENERGY_LEFT = intArrayOf(
+        R.string.core_today_energy_plenty, R.string.core_today_energy_enough, R.string.core_today_energy_low,
+    )
 
     /** The workout window hero's title: what Recovery says about effort now. */
     fun windowTitle(score: Int?, strings: Strings = Strings.app): String = strings.get(
@@ -163,18 +169,89 @@ object TodayCopy {
         },
     )
 
+    /**
+     * The workout window hero's title once there is a usual time: "Your usual run", "Your usual workout" for a sport
+     * with no short name ([sportNoun]).
+     */
+    fun windowUsualTitle(sportType: Int?, strings: Strings = Strings.app): String =
+        strings.format(
+            R.string.core_today_window_title_sport,
+            sportType?.let { sportNoun(it, strings) } ?: strings.get(R.string.core_today_window_noun_workout),
+        )
+
+    /** "Usually around 17:30", beside the title. */
+    fun windowAround(usual: LocalTime, strings: Strings = Strings.app): String =
+        strings.format(R.string.core_today_window_around, TimeOfDay.format(usual))
+
+    /** "Last run 2 days ago": [lastStart] is when the last workout of the sport began, [now] both in epoch seconds. */
+    fun windowLast(sportType: Int?, lastStart: Long, now: Long, zone: ZoneId, strings: Strings = Strings.app): String {
+        val days = ChronoUnit.DAYS.between(
+            Instant.ofEpochSecond(lastStart).atZone(zone).toLocalDate(), Instant.ofEpochSecond(now).atZone(zone).toLocalDate(),
+        ).toInt().coerceAtLeast(0)
+        val ago = when (days) {
+            0 -> strings.get(R.string.core_day_today_in_sentence)
+            1 -> strings.get(R.string.core_day_yesterday_in_sentence)
+            else -> strings.plural(R.plurals.core_today_window_days_ago, days, days)
+        }
+        val noun = sportType?.let { sportNoun(it, strings) } ?: strings.get(R.string.core_today_window_noun_workout)
+        return strings.format(R.string.core_today_window_last, noun, ago)
+    }
+
+    /** The workout window hero's sentence: what Recovery says about effort, then Energy left ([window]'s second half). */
+    fun windowSentence(score: Int?, charge: Int?, strings: Strings = Strings.app): String {
+        val say = when {
+            score == null -> -1
+            score >= RecoveryBands.READY_FROM -> 0
+            score >= RecoveryBands.MODERATE_FROM -> 1
+            else -> 2
+        }
+        // Each pair of sentences is one string, so a translator sees the whole line.
+        if (charge != null) {
+            val level = energyLevel(charge)
+            return strings.format(if (say >= 0) WINDOW_SAY_LEFT[say][level] else WINDOW_ENERGY[level], charge)
+        }
+        // Before a first night there is neither: the hero still says why it has no figure.
+        return if (say >= 0) strings.get(WINDOW_SAY[say]) else strings.get(R.string.core_today_window_first_night)
+    }
+
+    private fun energyLevel(energy: Int): Int = when {
+        energy >= ENERGY_PLENTY_FROM -> 0
+        energy >= ENERGY_ENOUGH_FROM -> 1
+        else -> 2
+    }
+
+    private const val ENERGY_PLENTY_FROM = 50
+    private const val ENERGY_ENOUGH_FROM = 25
+
+    private val WINDOW_SAY = intArrayOf(
+        R.string.core_today_window_say_ready, R.string.core_today_window_say_steady, R.string.core_today_window_say_easy,
+    )
+    private val WINDOW_ENERGY = intArrayOf(
+        R.string.core_today_window_energy_plenty, R.string.core_today_window_energy_enough, R.string.core_today_window_energy_low,
+    )
+    private val WINDOW_SAY_LEFT = arrayOf(
+        intArrayOf(
+            R.string.core_today_window_say_ready_plenty, R.string.core_today_window_say_ready_enough,
+            R.string.core_today_window_say_ready_low,
+        ),
+        intArrayOf(
+            R.string.core_today_window_say_steady_plenty, R.string.core_today_window_say_steady_enough,
+            R.string.core_today_window_say_steady_low,
+        ),
+        intArrayOf(
+            R.string.core_today_window_say_easy_plenty, R.string.core_today_window_say_easy_enough,
+            R.string.core_today_window_say_easy_low,
+        ),
+    )
+    private val WINDOW_USUALLY_ENERGY = intArrayOf(
+        R.string.core_today_window_usually_energy_plenty, R.string.core_today_window_usually_energy_enough,
+        R.string.core_today_window_usually_energy_low,
+    )
+
     /** "You usually run around now. Energy is 58, plenty left." [sportType] is the usual sport, null for none. */
     fun window(sportType: Int?, charge: Int?, strings: Strings = Strings.app): String {
-        val usual = sportUsually(sportType, strings)
-        val left = charge?.let {
-            val id = when {
-                it >= 50 -> R.string.core_today_window_energy_plenty
-                it >= 25 -> R.string.core_today_window_energy_enough
-                else -> R.string.core_today_window_energy_low
-            }
-            " " + strings.format(id, it)
-        }
-        return usual + left.orEmpty()
+        charge ?: return sportUsually(sportType, strings)
+        return strings.format(WINDOW_USUALLY_ENERGY[energyLevel(charge)], sportVerb(sportType, strings), charge)
     }
 
     /** After a workout: how the heart is coming down, from the latest reading against resting. */
@@ -195,6 +272,13 @@ object TodayCopy {
     fun loadStatus(load: Float, usual: Float?, endOfDay: Boolean): LoadBand? = LoadBands.of(load, usual, endOfDay)
 
     /**
+     * How [evening] reads the day: [counted] of the workouts count toward the kind of day (a session under
+     * [SHORT_SESSION_S] is listed but doesn't make it "steady"), and at [night] the verdict leads into winding down in
+     * one sentence ("Time to wind down after a full day.").
+     */
+    data class DayRead(val counted: Int, val night: Boolean = false)
+
+    /**
      * The evening hero: what kind of day it was, then what made it. [workouts] are the sport types of the day's
      * workouts. Without [stepCount] the steps are said against the goal ([stepsAgainstGoal]), for
      * the app's hero, which shows the count in dots under the sentence; the widget keeps the count.
@@ -202,11 +286,15 @@ object TodayCopy {
     fun evening(
         workouts: List<Int>, steps: Int, stepGoal: Int, load: LoadBand?, locale: Locale = Locale.getDefault(), stepCount: Boolean = true,
         strings: Strings = Strings.app,
+        /** How the day is read; the workouts all count and it is the evening unless said. */
+        read: DayRead = DayRead(workouts.size),
     ): String {
         val head = when {
-            workouts.isNotEmpty() && (steps >= stepGoal || load == LoadBand.Above) -> R.string.core_today_evening_full
-            workouts.isEmpty() && steps < stepGoal / 2 -> R.string.core_today_evening_quiet
-            else -> R.string.core_today_evening_steady
+            read.counted > 0 && (steps >= stepGoal || load == LoadBand.Above) ->
+                if (read.night) R.string.core_today_night_full else R.string.core_today_evening_full
+            read.counted == 0 && steps < stepGoal / 2 ->
+                if (read.night) R.string.core_today_night_quiet else R.string.core_today_evening_quiet
+            else -> if (read.night) R.string.core_today_night_steady else R.string.core_today_evening_steady
         }
         val parts = listOfNotNull(
             when (workouts.size) {
@@ -234,6 +322,9 @@ object TodayCopy {
         }
         return strings.format(head, list.replaceFirstChar { it.uppercase() })
     }
+
+    /** A workout shorter than this is in the day's list but doesn't count toward what kind of day it was. */
+    const val SHORT_SESSION_S = 15 * 60
 
     /** The day's [steps] against the [goal] in words: under half is well short, from 80% close, the goal itself past. */
     fun stepsAgainstGoal(steps: Int, goal: Int, strings: Strings = Strings.app): String = strings.get(

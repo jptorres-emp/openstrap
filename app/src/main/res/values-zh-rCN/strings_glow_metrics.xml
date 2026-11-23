@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="glow_metrics_all_metrics">全部指标</string>
+    <string name="glow_metrics_search">搜索指标</string>
+    <string name="glow_metrics_no_match">没有名为“%1$s”的指标</string>
     <string name="glow_metrics_recovery">恢复</string>
     <string name="glow_metrics_sleep">睡眠</string>
     <string name="glow_metrics_group_heart">心脏</string>
@@ -17,6 +19,7 @@
     <string name="glow_metrics_stress">压力</string>
     <string name="glow_metrics_steps">步数</string>
     <string name="glow_metrics_workouts">运动记录</string>
+    <string name="glow_metrics_active_kcal">活动千卡</string>
     <plurals name="glow_metrics_learning_nights">
         <item quantity="other">正在了解，%1$d/%2$d 晚</item>
     </plurals>
@@ -26,6 +29,7 @@
     <string name="glow_metrics_end_of_day">日终值</string>
     <string name="glow_metrics_latest_reading">最新读数</string>
     <string name="glow_metrics_for_the_day">全天值</string>
+    <string name="glow_metrics_for_the_day_estimated">全天值，估算</string>
     <string name="glow_metrics_day_average">全天平均</string>
     <string name="glow_metrics_night_average">睡眠平均</string>
     <string name="glow_metrics_last_7_days">最近 7 天</string>
@@ -37,14 +41,16 @@
     <string name="glow_metrics_show_day">显示%1$s</string>
     <string name="glow_metrics_showing">当前显示</string>
     <string name="glow_metrics_last_7_nights">最近 7 晚</string>
-    <string name="glow_metrics_none_last_7_nights">最近 7 晚暂无数据。</string>
-    <string name="glow_metrics_none_in_range">此范围内暂无数据。</string>
-    <string name="glow_metrics_none_asleep">睡眠期间暂无读数。</string>
-    <string name="glow_metrics_none_this_day">当天暂无数据。</string>
+    <string name="glow_metrics_none_last_7_nights">最近 7 晚还没有读数。</string>
+    <string name="glow_metrics_none_in_range">此范围内还没有读数。</string>
+    <string name="glow_metrics_none_asleep">睡眠期间没有读数。</string>
+    <string name="glow_metrics_first_reading">第一次读数在 %1$s，那时你已进入稳定睡眠。</string>
+    <string name="glow_metrics_spo2_mostly_asleep">多为睡眠期间，最近一次在 %1$s</string>
+    <string name="glow_metrics_none_this_day">当天没有读数。</string>
     <string name="glow_metrics_breathing_in_sleep">呼吸频率在睡眠期间测量。</string>
     <string name="glow_metrics_unit_day">%1$s，%2$s</string>
-    <string name="glow_metrics_unit_at_time">%1$s 于 %2$s</string>
-    <string name="glow_metrics_at_time">于 %1$s</string>
+    <string name="glow_metrics_unit_average_from_time">%1$s，%3$s 起 %2$d 分钟平均</string>
+    <string name="glow_metrics_average_from_time">%2$s 起 %1$d 分钟平均</string>
     <string name="glow_metrics_steps_hours">步，%1$s</string>
     <string name="glow_metrics_week_of">%1$s 当周</string>
     <string name="glow_metrics_related">相关指标</string>
@@ -52,5 +58,44 @@
     <string name="glow_metrics_zone_title">%1$s，%2$s</string>
     <string name="glow_metrics_zone_lower">%1$s调低</string>
     <string name="glow_metrics_zone_higher">%1$s调高</string>
-    <string name="glow_metrics_zone_bpm">%1$d bpm</string>
+    <string name="glow_detail_band_note">色带为你的常态</string>
+    <string name="glow_detail_your_normal">你的常态</string>
+    <string name="glow_detail_low">低</string>
+    <string name="glow_detail_high">高</string>
+    <string name="glow_detail_average">平均</string>
+    <string name="glow_detail_seven_night_average">7 晚平均</string>
+    <string name="glow_detail_vs_normal">与常态相比</string>
+    <string name="glow_detail_of_goal">目标 %1$s</string>
+    <string name="glow_zones_bpm_value">%1$d bpm</string>
+    <string name="glow_zones_worked_out_from">计算依据</string>
+    <string name="glow_zones_heading">区间</string>
+    <string name="glow_detail_worse">更差</string>
+    <string name="glow_detail_better">更好</string>
+    <string name="glow_detail_against_normal">对照你的常态</string>
+    <string name="glow_detail_since_woke">醒来以来</string>
+    <string name="glow_detail_through_day">全天变化</string>
+    <string name="glow_detail_at_waking_note">醒来时 %1$d</string>
+    <string name="glow_detail_seven_day_average">7 天平均</string>
+    <string name="glow_detail_vs_yesterday">较昨天</string>
+    <string name="glow_detail_goal">目标</string>
+    <string name="glow_detail_best_day">最佳一天</string>
+    <string name="glow_detail_daily_average">日均</string>
+    <string name="glow_detail_hr_calm">平静</string>
+    <string name="glow_detail_hr_raised">偏高</string>
+    <string name="glow_detail_spo2_normal">正常</string>
+    <string name="glow_detail_spo2_slightly_low">略低</string>
+    <string name="glow_detail_spo2_low">偏低</string>
+    <string name="glow_detail_steps_below_goal">未达目标</string>
+    <string name="glow_detail_steps_goal_reached">已达目标</string>
+    <string name="glow_detail_steps_to_go">还差 %1$s 步达到目标。</string>
+    <string name="glow_detail_steps_done">你已达到目标。</string>
+    <string name="glow_detail_steps_so_far_to">今天截至 %1$s</string>
+    <string name="glow_detail_live">实时</string>
+    <string name="glow_detail_asleep_note">睡眠中</string>
+    <string name="glow_detail_spo2_day_today">今天截至目前在 %1$d%% 至 %2$d%% 之间。</string>
+    <string name="glow_detail_spo2_day_past">当天在 %1$d%% 到 %2$d%% 之间。</string>
+    <string name="glow_detail_stress_calm">平静</string>
+    <string name="glow_detail_stress_high">偏高</string>
+    <string name="glow_detail_last_night_estimated">昨晚，估算</string>
+    <string name="glow_detail_that_night_estimated">当晚，估算</string>
 </resources>

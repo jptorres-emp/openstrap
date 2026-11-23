@@ -73,24 +73,31 @@ class UnitsTest(private val locale: Locale) {
 
     @Test
     fun kmFigureAlone() {
-        assertEquals(n("5.21"), Units.km(5210f, Precision.Workout))
-        assertEquals(n("0.8"), Units.km(820f, Precision.Day))
+        assertEquals(n("5.21"), Units.major(5210f, Precision.Workout))
+        assertEquals(n("0.8"), Units.major(820f, Precision.Day))
     }
 
     @Test
     fun dotFontKeepsTheDotAndAsciiDigits() {
         val dotted = listOf(
-            Units.km(5210f, Precision.Workout, Units.DOT_LOCALE),
+            Units.major(5210f, Precision.Workout, Units.DOT_LOCALE),
             Units.count(23_410, Units.DOT_LOCALE),
             Units.workoutClock(3723, Units.DOT_LOCALE),
-            Units.clockDuration(27_600, Units.DOT_LOCALE),
             Pace.clock(324.0, Units.DOT_LOCALE)!!,
             dotFormat("%.1f", 14.25),
             dotFormat("%02d", 7),
             dotFormat("%,d", 1_234_567),
         )
-        assertEquals(listOf("5.21", "23,410", "1:02:03", "7:40", "5:24", "14.3", "07", "1,234,567"), dotted)
+        assertEquals(listOf("5.21", "23\u2009410", "1:02:03", "5:24", "14.3", "07", "1\u2009234\u2009567"), dotted)
         dotted.forEach(::assertDots)
+    }
+
+    @Test
+    fun dotNumbersGroupFromFiveDigitsBySpace() {
+        assertEquals("8225", Units.count(8_225, Units.DOT_LOCALE))
+        assertEquals("26\u2009120", Units.count(26_120, Units.DOT_LOCALE))
+        assertEquals("950", Units.count(950, Units.DOT_LOCALE))
+        assertEquals("12\u2009345.67891", Units.dotGrouped("12,345.67891"))
     }
 
     @Test
@@ -112,10 +119,11 @@ class UnitsTest(private val locale: Locale) {
     }
 
     @Test
-    fun clockDurationLooksLikeAClock() {
-        assertEquals(n("7:40"), Units.clockDuration(7 * 3600L + 40 * 60).kept())
-        assertEquals(n("0:05"), Units.clockDuration(5 * 60L))
-        assertEquals(n("12:00"), Units.clockDuration(12 * 3600L))
+    fun clockDurationIsADuration() {
+        assertEquals(n("7") + " h " + n("40"), Units.clockDuration(7 * 3600L + 40 * 60).kept())
+        assertEquals(n("5") + " min", Units.clockDuration(5 * 60L))
+        assertEquals(n("12") + " h", Units.clockDuration(12 * 3600L))
+        assertEquals(n("0") + " min", Units.clockDuration(0))
     }
 
     @Test
@@ -134,8 +142,10 @@ class UnitsTest(private val locale: Locale) {
         assertEquals(n("45") + " s", Units.secondsOrClock(45).kept())
         assertEquals(n("0") + " s", Units.secondsOrClock(0))
         assertEquals(n("59") + " s", Units.secondsOrClock(59))
-        assertEquals(n("1:00"), Units.secondsOrClock(60))
-        assertEquals(n("1:02:03"), Units.secondsOrClock(3723))
+        assertEquals(n("1") + " min " + n("00"), Units.secondsOrClock(60))
+        assertEquals(n("1") + " min " + n("44"), Units.length(104))
+        assertEquals(n("59") + " min " + n("59"), Units.length(3599))
+        assertEquals(n("1") + " h " + n("02"), Units.secondsOrClock(3723))
     }
 
     @Test

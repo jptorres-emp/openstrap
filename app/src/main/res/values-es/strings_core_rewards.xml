@@ -1,118 +1,92 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="core_rewards_best_fastest">Más rápido<xliff:g id="distance" example="5 km">%1$s</xliff:g></string>
-    
-    <string name="core_rewards_best_heaviest">Más pesado<xliff:g id="exercise" example="bench press">%1$s</xliff:g></string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_rewards_best_fastest">%1$s más rápido</string>
+    <string name="core_rewards_best_heaviest">Peso máximo en %1$s</string>
     <string name="core_rewards_best_longest_run">Carrera más larga</string>
     <string name="core_rewards_best_longest_workout">Entrenamiento más largo</string>
     <string name="core_rewards_best_most_steps">Más pasos en un día</string>
+    <string name="core_rewards_best_most_rounds">Más rondas</string>
+    <plurals name="core_rewards_rounds">
+        <item quantity="one">%1$s ronda</item>
+        <item quantity="many">%1$s rondas</item>
+        <item quantity="other">%1$s rondas</item>
+    </plurals>
     <string name="core_rewards_best_personal">Mejor marca personal</string>
-    
     <string name="core_rewards_half_marathon">medio maratón</string>
-    
-    <string name="core_rewards_km"><xliff:g id="km" example="5">%1$d</xliff:g> km</string>
-    
-    <string name="core_rewards_kg"><xliff:g id="kg" example="62.5">%1$s</xliff:g> kg</string>
-    
-    <string name="core_rewards_meters"><xliff:g id="meters" example="0">%1$s</xliff:g> m</string>
-
-    
-    <string name="core_rewards_beat_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> mas rápido</string>
-    
-    <string name="core_rewards_beat_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> mas kg</string>
-    
-    <string name="core_rewards_beat_farther"><xliff:g id="distance" example="1.23 km">%1$s</xliff:g> más lejos</string>
-    
-    <string name="core_rewards_beat_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> mas minutos</string>
-    
-    <string name="core_rewards_beat_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> mas pasos</string>
-    
-    <string name="core_rewards_beat_line_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> faster than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
-    <string name="core_rewards_beat_line_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> kg more than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
-    <string name="core_rewards_beat_line_farther"><xliff:g id="distance" example="1.23 km">%1$s</xliff:g> farther than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
-    <string name="core_rewards_beat_line_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> min longer than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
-    <string name="core_rewards_beat_line_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> more steps than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
-
-    
+    <string name="core_rewards_km">%1$d km</string>
+    <string name="core_rewards_kg">%1$s kg</string>
+    <string name="core_rewards_meters">%1$s m</string>
+    <string name="core_rewards_beat_faster">%1$s mas rápido</string>
+    <string name="core_rewards_beat_kg_more">%1$s mas kg</string>
+    <string name="core_rewards_beat_farther">%1$s más lejos</string>
+    <string name="core_rewards_beat_longer">%1$d mas minutos</string>
+    <string name="core_rewards_beat_more">%1$s mas pasos</string>
+    <string name="core_rewards_beat_rounds">%1$s más</string>
+    <string name="core_rewards_beat_line_faster">%1$s más rápido que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_kg_more">%1$s kg más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_farther">%1$s más lejos que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_longer">%1$d min más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_more">%1$s pasos más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_rounds">%1$s más que tu mejor marca de %2$s.</string>
     <plurals name="core_rewards_goal_weeks_in_a_row">
-        <item quantity="one"><xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row</item>
-        <item quantity="other"><xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row</item>
+        <item quantity="one">%1$d semana seguida</item>
+        <item quantity="many">%1$d semanas seguidas</item>
+        <item quantity="other">%1$d semanas seguidas</item>
     </plurals>
-    
     <string name="core_rewards_goal_met_this_week">Meta cumplida esta semana</string>
-    
     <plurals name="core_rewards_goal_to_go">
-        <item quantity="one"><xliff:g id="left" example="1">%1$d</xliff:g> more to go this week</item>
-        <item quantity="other"><xliff:g id="left" example="2">%1$d</xliff:g> more to go this week</item>
+        <item quantity="one">Falta %1$d más esta semana</item>
+        <item quantity="many">Faltan %1$d más esta semana</item>
+        <item quantity="other">Faltan %1$d más esta semana</item>
     </plurals>
-    
     <string name="core_rewards_goal_met">Meta semanal cumplida</string>
-    
     <string name="core_rewards_goal">Meta semanal</string>
-    
-    <string name="core_rewards_goal_count"><xliff:g id="count" example="3">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g></string>
-    
-    <string name="core_rewards_new_best">Nuevo récord,<xliff:g id="by" example="22 s faster">%1$s</xliff:g></string>
-    
+    <string name="core_rewards_goal_count">%1$d de %2$d</string>
+    <string name="core_rewards_new_best">Nuevo récord,%1$s</string>
     <string name="core_rewards_new_badge">Nueva insignia</string>
-
-    
     <plurals name="core_rewards_moment_weeks">
-        <item quantity="one"><xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row. Rest days never count against you.</item>
-        <item quantity="other"><xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row. Rest days never count against you.</item>
+        <item quantity="one">%1$d semana seguida. Los días de descanso nunca cuentan en tu contra.</item>
+        <item quantity="many">%1$d semanas seguidas. Los días de descanso nunca cuentan en tu contra.</item>
+        <item quantity="other">%1$d semanas seguidas. Los días de descanso nunca cuentan en tu contra.</item>
     </plurals>
-    
     <string name="core_rewards_moment_first">Tu primera semana con la meta cumplida. Los días de descanso nunca te penalizan.</string>
-
-    
-    <string name="core_rewards_when_morning"><xliff:g id="date" example="Thursday, 30 October 2026">%1$s</xliff:g>, morning <xliff:g id="sport" example="run">%2$s</xliff:g></string>
-    <string name="core_rewards_when_afternoon"><xliff:g id="date" example="Thursday, 30 October 2026">%1$s</xliff:g>, afternoon <xliff:g id="sport" example="run">%2$s</xliff:g></string>
-    <string name="core_rewards_when_evening"><xliff:g id="date" example="Thursday, 30 October 2026">%1$s</xliff:g>, evening <xliff:g id="sport" example="run">%2$s</xliff:g></string>
-    <string name="core_rewards_when_night"><xliff:g id="date" example="Thursday, 30 October 2026">%1$s</xliff:g>, night <xliff:g id="sport" example="run">%2$s</xliff:g></string>
-
-    
-    
+    <string name="core_rewards_when_morning">%1$s, %2$s de la mañana</string>
+    <string name="core_rewards_when_afternoon">%1$s, %2$s de la tarde</string>
+    <string name="core_rewards_when_evening">%1$s, %2$s al anochecer</string>
+    <string name="core_rewards_when_night">%1$s, %2$s de noche</string>
     <plurals name="core_rewards_run_best_is">
-        <item quantity="one">Meta cumplida<xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row. Your best is <xliff:g id="best" example="9">%2$d</xliff:g>.</item>
-        <item quantity="other">Meta cumplida<xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row. Your best is <xliff:g id="best" example="9">%2$d</xliff:g>.</item>
+        <item quantity="one">Meta cumplida %1$d semana seguida, la mejor es %2$d</item>
+        <item quantity="many">Meta cumplida %1$d semanas seguidas, la mejor es %2$d</item>
+        <item quantity="other">Meta cumplida %1$d semanas seguidas, la mejor es %2$d</item>
     </plurals>
-    
     <plurals name="core_rewards_run_best_yet">
-        <item quantity="one">Meta cumplida<xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row, your best yet.</item>
-        <item quantity="other">Meta cumplida<xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row, your best yet.</item>
+        <item quantity="one">Meta cumplida %1$d semana seguida, la mejor hasta ahora</item>
+        <item quantity="many">Meta cumplida %1$d semanas seguidas, la mejor hasta ahora</item>
+        <item quantity="other">Meta cumplida %1$d semanas seguidas, la mejor hasta ahora</item>
     </plurals>
-    
     <plurals name="core_rewards_run_best_was">
-        <item quantity="one">Tu mejor marca es<xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row.</item>
-        <item quantity="other">Tu mejor marca es<xliff:g id="weeks" example="9">%1$d</xliff:g> weeks in a row.</item>
+        <item quantity="one">La mejor racha es de %1$d semana seguida</item>
+        <item quantity="many">La mejor racha es de %1$d semanas seguidas</item>
+        <item quantity="other">La mejor racha es de %1$d semanas seguidas</item>
     </plurals>
-    
-    <string name="core_rewards_run_none">Cumple tu meta para iniciar una racha de semanas.</string>
-
-    
-    <string name="core_rewards_progress_km"><xliff:g id="have" example="4.2">%1$s</xliff:g> of <xliff:g id="need" example="5">%2$s</xliff:g> km</string>
-    
-    <string name="core_rewards_progress_steps"><xliff:g id="have" example="8,432">%1$s</xliff:g> of <xliff:g id="need" example="10,000">%2$s</xliff:g> steps</string>
-    
-    <string name="core_rewards_progress_workouts"><xliff:g id="have" example="3">%1$s</xliff:g> of <xliff:g id="need" example="10">%2$s</xliff:g> workouts</string>
-    
-    <string name="core_rewards_progress_weeks"><xliff:g id="have" example="3">%1$s</xliff:g> of <xliff:g id="need" example="12">%2$s</xliff:g> weeks</string>
-
-    
+    <string name="core_rewards_run_none">Aún sin semanas seguidas</string>
+    <string name="core_rewards_progress_km">%1$s de %2$s km</string>
+    <string name="core_rewards_progress_steps">%1$s de %2$s pasos</string>
+    <string name="core_rewards_progress_workouts">%1$s de %2$s entrenamientos</string>
+    <string name="core_rewards_progress_weeks">%1$s de %2$s semanas</string>
     <plurals name="core_rewards_recap">
-        <item quantity="one"><xliff:g id="count" example="0">%2$d</xliff:g> of <xliff:g id="goal" example="1">%1$d</xliff:g> workout.</item>
-        <item quantity="other"><xliff:g id="count" example="2">%2$d</xliff:g> of <xliff:g id="goal" example="4">%1$d</xliff:g> workouts.</item>
+        <item quantity="one">%2$d de %1$d entrenamiento</item>
+        <item quantity="many">%2$d de %1$d entrenamientos</item>
+        <item quantity="other">%2$d de %1$d entrenamientos</item>
     </plurals>
-    
     <plurals name="core_rewards_recap_met">
-        <item quantity="one"><xliff:g id="count" example="4">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g> workout, goal met.</item>
-        <item quantity="other"><xliff:g id="count" example="4">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g> workouts, goal met.</item>
+        <item quantity="one">%1$d de %2$d entrenamiento, meta cumplida</item>
+        <item quantity="many">%1$d de %2$d entrenamientos, meta cumplida</item>
+        <item quantity="other">%1$d de %2$d entrenamientos, meta cumplida</item>
     </plurals>
-    
     <plurals name="core_rewards_recap_met_in_a_row">
-        <item quantity="one"><xliff:g id="count" example="4">%2$d</xliff:g> of <xliff:g id="goal" example="4">%3$d</xliff:g> workouts, goal met. <xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row.</item>
-        <item quantity="other"><xliff:g id="count" example="4">%2$d</xliff:g> of <xliff:g id="goal" example="4">%3$d</xliff:g> workouts, goal met. <xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row.</item>
+        <item quantity="one">%2$d de %3$d entrenamientos, %1$d semana seguida</item>
+        <item quantity="many">%2$d de %3$d entrenamientos, %1$d semanas seguidas</item>
+        <item quantity="other">%2$d de %3$d entrenamientos, %1$d semanas seguidas</item>
     </plurals>
 </resources>

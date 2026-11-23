@@ -1,158 +1,89 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="system_channel_auto_detected">Entrenamientos detectados automáticamente</string>
-    
     <string name="system_channel_health">Alertas de salud</string>
-    
     <string name="system_channel_keep_recording">Seguir grabando</string>
-    
-    <string name="system_channel_keep_recording_description">Te pide que abras la correa cuando Android pueda detener un entrenamiento.</string>
-    
-    <string name="system_channel_strap">Conexión de la correa</string>
-    
+    <string name="system_channel_keep_recording_description">Te pide que abras la banda cuando Android pueda detener un entrenamiento.</string>
+    <string name="system_channel_strap">Conexión de la banda</string>
     <string name="system_channel_saved">Entrenamiento guardado</string>
-    
-    <string name="system_channel_offer">Entrenamiento detectado</string>
-    
     <string name="system_channel_workout">Entrenamiento</string>
-    
     <string name="system_channel_wear">Recordatorios de uso</string>
-    
-    <string name="system_channel_recap">Resumen semanal</string>
-
-    
-    <string name="system_auto_detected_title"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g> detected, <xliff:g id="times" example="10:02 to 10:40">%2$s</xliff:g></string>
-    
-    <string name="system_auto_detected_text">La correa lo detectó y lo grabó por ti.</string>
-
-    
+    <string name="system_channel_recap">Tu semana</string>
+    <string name="system_auto_detected_title">Detectado: %1$s, %2$s</string>
+    <string name="system_auto_detected_text">La banda lo grabó por ti</string>
     <string name="system_alert_high_heart_rate_title">Frecuencia cardíaca alta</string>
-    <string name="system_alert_high_heart_rate_text">Tu frecuencia cardíaca alcanzó<xliff:g id="bpm" example="165">%1$d</xliff:g> bpm.</string>
+    <string name="system_alert_high_heart_rate_text">La frecuencia cardíaca llegó a %1$d lpm</string>
     <string name="system_alert_low_heart_rate_title">Frecuencia cardíaca baja</string>
-    <string name="system_alert_low_heart_rate_text">Tu frecuencia cardíaca bajó a<xliff:g id="bpm" example="38">%1$d</xliff:g> bpm.</string>
+    <string name="system_alert_low_heart_rate_text">La frecuencia cardíaca bajó a %1$d lpm</string>
     <string name="system_alert_high_stress_title">Estrés alto</string>
-    
-    <string name="system_alert_high_stress_text">Tu nivel de estrés está en<xliff:g id="stress" example="82">%1$d</xliff:g>.</string>
+    <string name="system_alert_high_stress_text">El estrés está en %1$d</string>
     <string name="system_alert_low_spo2_title">Oxígeno en sangre bajo</string>
-    <string name="system_alert_low_spo2_text">Tu oxígeno en sangre fue<xliff:g id="percent" example="88">%1$d</xliff:g>%%.</string>
+    <string name="system_alert_low_spo2_text">El oxígeno en sangre fue %1$d%%</string>
     <string name="system_alert_irregular_rhythm_title">Ritmo cardíaco irregular</string>
-    
-    <string name="system_alert_irregular_rhythm_text">La correa detectó un ritmo cardíaco irregular a las<xliff:g id="time" example="14:05">%1$s</xliff:g>.</string>
-
-    
-    <string name="system_keep_recording_title">Sigue grabando tu<xliff:g id="sport" example="outdoor run">%1$s</xliff:g></string>
-    
-    <string name="system_keep_recording_text">Android puede detenerlo mientras la correa esté cerrada. Toca para continuar.</string>
-
-    
-    <string name="system_strap_title" translatable="false">Helio Strap</string>
-    
-    <string name="system_strap_title_both">Recuperación<xliff:g id="recovery" example="72">%1$d</xliff:g>, Energy <xliff:g id="energy" example="58">%2$d</xliff:g></string>
-    <string name="system_strap_title_recovery">Recuperación<xliff:g id="recovery" example="72">%1$d</xliff:g></string>
-    <string name="system_strap_title_energy">Energía<xliff:g id="energy" example="58">%1$d</xliff:g></string>
-    
-    <string name="system_strap_title_moment"><xliff:g id="moment" example="Evening">%1$s</xliff:g>, <xliff:g id="number" example="Energy 35">%2$s</xliff:g></string>
-    
-    <string name="system_strap_connecting">Conectando…</string>
-    
-    <string name="system_strap_authenticating">Comprobando la clave…</string>
-    
-    <string name="system_strap_failed">No se pudo conectar con la correa</string>
-    <string name="system_strap_not_connected">Correa no conectada</string>
-    
-    <string name="system_strap_syncing"><xliff:g id="step" example="Syncing heart rate (3/12)">%1$s</xliff:g></string>
-    
-    <string name="system_strap_low_battery">Batería de la correa <xliff:g id="percent" example="12">%1$d</xliff:g>%%. Cargala esta noche.</string>
-    <string name="system_strap_connected">Correa conectada</string>
-    <string name="system_strap_charging">Correa cargando</string>
-    
-    <string name="system_strap_connected_battery">Correa conectada, batería<xliff:g id="percent" example="80">%1$d</xliff:g>%%</string>
-    <string name="system_strap_charging_battery">Correa cargando, batería<xliff:g id="percent" example="80">%1$d</xliff:g>%%</string>
-    
+    <string name="system_alert_irregular_rhythm_text">Ritmo irregular a las %1$s</string>
+    <string name="system_keep_recording_title">Sigue grabando tu %1$s</string>
+    <string name="system_keep_recording_text">Abre unstrap para que Android no lo detenga</string>
+    <string name="system_strap_title_both">Recuperación %1$d, Energía %2$d</string>
+    <string name="system_strap_title_recovery">Recuperación %1$d</string>
+    <string name="system_strap_title_energy">Energía %1$d</string>
+    <string name="system_strap_title_moment">%1$s, %2$s</string>
+    <string name="system_strap_connecting">Conectando</string>
+    <string name="system_strap_authenticating">Comprobando la clave</string>
+    <string name="system_strap_failed">No se pudo conectar con la banda</string>
+    <string name="system_strap_not_connected">Banda no conectada</string>
+    <string name="system_strap_bluetooth_off">El Bluetooth está desactivado</string>
+    <string name="system_strap_syncing">%1$s</string>
+    <string name="system_strap_low_battery">Batería de la banda %1$d%%, cárgala esta noche</string>
+    <string name="system_strap_connected">Banda conectada</string>
+    <string name="system_strap_charging">Banda cargando</string>
+    <string name="system_strap_connected_battery">Banda conectada, batería %1$d%%</string>
+    <string name="system_strap_charging_battery">Banda cargando, batería %1$d%%</string>
     <string name="system_strap_synced">Sincronizado</string>
-    
-    <string name="system_strap_header_battery">Correa<xliff:g id="percent" example="71">%1$d</xliff:g>%%</string>
-    <string name="system_strap_header_charging">Correa cargando,<xliff:g id="percent" example="71">%1$d</xliff:g>%%</string>
-    
-    <string name="system_strap_header_synced"><xliff:g id="strap" example="Strap 71%">%1$s</xliff:g>, synced</string>
-    
+    <string name="system_strap_header_battery">Banda %1$d%%</string>
+    <string name="system_strap_header_charging">Banda cargando,%1$d%%</string>
+    <string name="system_strap_header_synced">%1$s, sincronizada</string>
     <string name="system_strap_action_retry">Reintentar</string>
+    <string name="system_strap_action_turn_on">Activar</string>
     <string name="system_strap_action_start_workout">Iniciar entrenamiento</string>
     <string name="system_strap_action_sync">Sincronizar ahora</string>
-
-    
     <string name="system_workout_paused_chip">En pausa</string>
-    
     <string name="system_workout_not_saved">Aún no se ha guardado</string>
-    
     <string name="system_workout_action_pause">Pausar</string>
     <string name="system_workout_action_resume">Reanudar</string>
     <string name="system_workout_action_lap">Vuelta</string>
     <string name="system_workout_action_end">Finalizar</string>
-    
     <string name="system_workout_action_end_yes">Sí, finalizar</string>
     <string name="system_workout_action_end_cancel">Cancelar</string>
-
-    
-    <string name="system_saved_average_bpm"><xliff:g id="bpm" example="142">%1$d</xliff:g> lpm medio</string>
-    
-    <string name="system_saved_cut">"<xliff:g id="figures" example="42:10, 5.2 km, 142 bpm avg">%1$s</xliff:g>\nEnded at <xliff:g id="time" example="18:50">%2$s</xliff:g>, when you\'d stopped. The <xliff:g id="minutes" example="12">%3$d</xliff:g> min after were left out."</string>
-    
-    <string name="system_saved_title"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g> saved</string>
+    <string name="system_saved_average_bpm">Promedio %1$d lpm</string>
+    <string name="system_saved_cut">"%1$s\nTerminó a las %2$s, cuando paraste. Los %3$d min posteriores se dejaron fuera."</string>
+    <string name="system_saved_title">Guardado: %1$s</string>
     <string name="system_saved_action_view">Ver</string>
-    
     <string name="system_saved_action_undo">Deshacer</string>
-
-    
-    <string name="system_strength_set">Serie <xliff:g id="set" example="3">%1$d</xliff:g></string>
-    <string name="system_strength_resting">Descanso después de la serie <xliff:g id="set" example="2">%1$d</xliff:g></string>
-    
-    <string name="system_strength_ready"><xliff:g id="sport" example="Strength">%1$s</xliff:g>, listo para primera serie</string>
-    <string name="system_strength_rest_over" tools:ignore="PluralsCandidate">Fin del descanso, serie<xliff:g id="set" example="3">%1$d</xliff:g> next</string>
-    
-    <string name="system_strength_strap_gone"><xliff:g id="waiting" example="Waiting for the strap">%1$s</xliff:g>. Still recording.</string>
-    <string name="system_strength_bpm"><xliff:g id="bpm" example="128">%1$d</xliff:g> bpm</string>
-    
+    <string name="system_strength_set">Serie %1$d</string>
+    <string name="system_strength_resting">Descanso después de la serie %1$d</string>
+    <string name="system_strength_ready">%1$s, listo para primera serie</string>
+    <string name="system_strength_rest_over" tools:ignore="PluralsCandidate">Descanso terminado, sigue la serie %1$d</string>
+    <string name="system_strength_strap_gone">%1$s, sigue grabando</string>
+    <string name="system_strength_bpm">%1$d lpm</string>
     <plurals name="system_strength_sets">
-        <item quantity="one"><xliff:g id="done" example="2">%1$d</xliff:g> of <xliff:g id="target" example="4">%2$d</xliff:g> set</item>
-        <item quantity="other"><xliff:g id="done" example="2">%1$d</xliff:g> of <xliff:g id="target" example="4">%2$d</xliff:g> sets</item>
+        <item quantity="one">%1$d de %2$d serie</item>
+        <item quantity="many">%1$d de %2$d series</item>
+        <item quantity="other">%1$d de %2$d series</item>
     </plurals>
-    
-    <string name="system_strength_action_start_set">Iniciar serie<xliff:g id="set" example="3">%1$d</xliff:g></string>
-    
+    <string name="system_strength_action_start_set">Iniciar serie %1$d</string>
     <string name="system_strength_action_extend">+30 s</string>
     <string name="system_strength_action_set_done">Serie completada</string>
-
-    
     <string name="system_stopped_title">Parece que te detuviste</string>
-    <string name="system_stopped_text">Tu frecuencia cardíaca ha estado cerca del nivel de reposo desde<xliff:g id="time" example="18:50">%1$s</xliff:g>. End the <xliff:g id="sport" example="run">%2$s</xliff:g> at <xliff:g id="time" example="18:50">%1$s</xliff:g>?</string>
-    
+    <string name="system_stopped_text">Tu frecuencia cardíaca está cerca del reposo desde las %1$s. ¿Terminar tu %2$s a las %1$s?</string>
     <string name="system_stopped_car_title">Parece que estás en un auto</string>
-    <string name="system_stopped_car_text">Te moviste por última vez a<xliff:g id="time" example="18:50">%1$s</xliff:g>. End the <xliff:g id="sport" example="run">%2$s</xliff:g> there, so the drive isn\'t counted?</string>
-    
+    <string name="system_stopped_car_text">Te moviste por última vez a las %1$s. ¿Terminar tu %2$s ahí, para que no cuente el trayecto en coche?</string>
     <string name="system_stopped_chip">¿Finalizar?</string>
-    <string name="system_stopped_action_end_at">Finalizar a<xliff:g id="time" example="18:50">%1$s</xliff:g></string>
+    <string name="system_stopped_action_end_at">Terminar a las %1$s</string>
     <string name="system_stopped_action_keep">Continuar</string>
-
-    
-    <string name="system_offer_title">Parece que es un entrenamiento</string>
-    <string name="system_offer_text">Tu frecuencia cardíaca ha estado elevada desde <xliff:g id="time" example="17:40">%1$s</xliff:g>, <xliff:g id="bpm" example="138">%2$d</xliff:g> media de lpm. Record en <xliff:g id="sport" example="run">%3$s</xliff:g> desde <xliff:g id="time" example="17:40">%1$s</xliff:g>?</string>
-    <string name="system_offer_action_record">Registrar</string>
-    
-    <string name="system_offer_action_decline">Ahora no</string>
-
-    
     <string name="system_wear_title">La banda está quitada</string>
     <string name="system_wear_text">El seguimiento de la frecuencia cardíaca y el sueño está pausado hasta que te la vuelvas a poner.</string>
-
-    
-    <string name="system_recap_title">Tu semana,<xliff:g id="range" example="20 to 26 Oct">%1$s</xliff:g></string>
-
-    
+    <string name="system_recap_title">Tu semana,%1$s</string>
     <string name="system_tile_recording">Grabando</string>
     <string name="system_tile_paused">En pausa</string>
-
-    
     <string name="system_workout_too_short">Menos de un minuto, por lo que no se guardó</string>
 </resources>

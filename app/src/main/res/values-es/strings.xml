@@ -1,13 +1,11 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Unstrap</string>
     <string name="shortcut_run">Iniciar carrera</string>
     <string name="shortcut_strength">Iniciar fuerza</string>
-    
     <string name="shortcut_run_long">Iniciar una carrera</string>
     <string name="shortcut_strength_long">Iniciar un entrenamiento de fuerza</string>
     <string name="tile_workout">Iniciar entrenamiento</string>
-    
     <string name="widget_moment_name">Momento</string>
     <string name="widget_moment_description">Lo que importa ahora, cambiando a lo largo del día</string>
     <string name="widget_recovery_name">Recupera</string>

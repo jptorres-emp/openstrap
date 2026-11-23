@@ -1,75 +1,47 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="day_calories_row_line">Activo de<xliff:g id="goal" example="450">%1$s</xliff:g>. <xliff:g id="total" example="1,468">%2$s</xliff:g> total</string>
-    
-    <string name="day_calories_row_line_met">Activo, meta cumplida. Total<xliff:g id="total" example="2,140">%1$s</xliff:g></string>
-
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="day_calories_row_line">Activas de %1$s, %2$s en total</string>
+    <string name="day_calories_row_line_met">Meta activa cumplida, %1$s en total</string>
     <string name="day_calories_day_label_today">kcal activas hasta ahora hoy</string>
-    
     <string name="day_calories_day_label">kcal activas</string>
-    
-    <string name="day_calories_to_goal"><xliff:g id="left" example="102">%1$s</xliff:g> to your goal of <xliff:g id="goal" example="450">%2$s</xliff:g></string>
-    
-    <string name="day_calories_to_goal_met">Meta de<xliff:g id="goal" example="450">%1$s</xliff:g> met</string>
-    
-    <string name="day_calories_peak">Pico a las <xliff:g id="hour" example="07:00">%1$s</xliff:g>, <xliff:g id="kcal" example="228">%2$s</xliff:g> kcal</string>
-    
-    <string name="day_calories_hour_label">kcal activas,<xliff:g id="hours" example="07:00 to 08:00">%1$s</xliff:g></string>
-
-    
-    <string name="day_calories_source_workout_line"><xliff:g id="time" example="07:10">%1$s</xliff:g>, <xliff:g id="length" example="42 min">%2$s</xliff:g></string>
-    
+    <string name="day_calories_to_goal">%1$s para tu meta de %2$s</string>
+    <string name="day_calories_to_goal_met">Meta de %1$s cumplida</string>
+    <string name="day_calories_peak">Pico a las %1$s, %2$s kcal</string>
+    <string name="day_calories_hour_label">kcal activas,%1$s</string>
+    <string name="day_calories_source_workout_line">%1$s, %2$s</string>
     <string name="day_calories_source_walking">Caminata</string>
-    
     <string name="day_calories_source_everyday">Movimiento diario</string>
-    
     <string name="day_calories_source_everyday_line">De pie, tareas y desplazamientos</string>
-    
     <string name="day_calories_walking_none">Sin caminata fuera de los entrenamientos</string>
-    
     <plurals name="day_calories_walking">
-        <item quantity="one"><xliff:g id="minutes" example="1">%1$d</xliff:g> min walking or running, outside workouts</item>
-        <item quantity="other"><xliff:g id="minutes" example="38">%1$d</xliff:g> min walking or running, outside workouts</item>
+        <item quantity="one">%1$d min caminando o corriendo, fuera de los entrenamientos</item>
+        <item quantity="many">%1$d min caminando o corriendo, fuera de los entrenamientos</item>
+        <item quantity="other">%1$d min caminando o corriendo, fuera de los entrenamientos</item>
     </plurals>
-
-    
     <string name="day_calories_range_label_year">kcal activas al día, últimos 12 meses</string>
-    
     <plurals name="day_calories_range_label">
-        <item quantity="one">kcal activas al día, últimos<xliff:g id="days" example="1">%1$d</xliff:g> day</item>
-        <item quantity="other">kcal activas al día, últimos<xliff:g id="days" example="7">%1$d</xliff:g> days</item>
+        <item quantity="one">kcal activas al día, último %1$d día</item>
+        <item quantity="many">kcal activas al día, últimos %1$d días</item>
+        <item quantity="other">kcal activas al día, últimos %1$d días</item>
     </plurals>
-    
-    <string name="day_calories_goal_days">Meta cumplida el<xliff:g id="met" example="4">%1$d</xliff:g> of <xliff:g id="days" example="7 days">%2$s</xliff:g></string>
-    
+    <string name="day_calories_goal_days">Meta cumplida en %1$d de %2$s</string>
     <plurals name="day_calories_days">
-        <item quantity="one"><xliff:g id="days" example="1">%1$d</xliff:g> day</item>
-        <item quantity="other"><xliff:g id="days" example="7">%1$d</xliff:g> days</item>
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
     </plurals>
-    
     <string name="day_calories_vs_year">vs. el año anterior</string>
-    
     <plurals name="day_calories_vs_days">
-        <item quantity="one">vs. el<xliff:g id="days" example="1">%1$d</xliff:g> day before</item>
-        <item quantity="other">vs. el<xliff:g id="days" example="7">%1$d</xliff:g> days before</item>
+        <item quantity="one">vs. %1$d día antes</item>
+        <item quantity="many">vs. %1$d días antes</item>
+        <item quantity="other">vs. %1$d días antes</item>
     </plurals>
-    
-    <string name="day_calories_range_workouts">Entrenamientos realizados<xliff:g id="percent" example="18">%1$d</xliff:g>%% of your active kcal. The rest came from walking and moving about.</string>
-    
-    <string name="day_calories_range_busiest">Tu día más activo fue<xliff:g id="day" example="Mon 26 Oct">%1$s</xliff:g>, with <xliff:g id="kcal" example="500">%2$s</xliff:g> active kcal.</string>
-
-    
-    <string name="day_calories_in_your_day_phone_today">Este<xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of today\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
-    
-    <string name="day_calories_in_your_day_phone_yesterday">Este<xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of yesterday\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
-    
-    <string name="day_calories_in_your_day_phone_that_day">Este <xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
-    
-    <string name="day_calories_in_your_day_strap_today">Este<xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of today\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
-    
-    <string name="day_calories_in_your_day_strap_yesterday">Este<xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of yesterday\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
-    
-    <string name="day_calories_in_your_day_strap_that_day">Este <xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
+    <string name="day_calories_range_workouts">Los entrenamientos aportaron el %1$d%% de tus kcal activas. El resto vino de caminar y moverte.</string>
+    <string name="day_calories_range_busiest">Tu día más activo fue %1$s, con %2$s kcal activas.</string>
+    <string name="day_calories_in_your_day_phone_today">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de hoy. Tu día cuenta la misma cifra.</string>
+    <string name="day_calories_in_your_day_phone_yesterday">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de ayer. Tu día cuenta la misma cifra.</string>
+    <string name="day_calories_in_your_day_phone_that_day">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de ese día. Tu día cuenta la misma cifra.</string>
+    <string name="day_calories_in_your_day_strap_today">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de hoy. El día lo cuenta con la cifra propia de la banda.</string>
+    <string name="day_calories_in_your_day_strap_yesterday">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de ayer. El día lo cuenta con la cifra propia de la banda.</string>
+    <string name="day_calories_in_your_day_strap_that_day">Esta sesión de %1$s aporta %2$s de las %3$s kcal activas de ese día. El día lo cuenta con la cifra propia de la banda.</string>
 </resources>

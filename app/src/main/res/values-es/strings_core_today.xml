@@ -1,245 +1,195 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="core_first_night_after">Después de tu primera noche</string>
-
-    
     <string name="core_header_during_workout">Entrenamiento</string>
-    
     <string name="core_header_after_workout">Después de tu entrenamiento</string>
-    
-    <string name="core_header_after_sport">Después de tu <xliff:g id="sport" example="run">%1$s</xliff:g></string>
-    
+    <string name="core_header_after_sport">Después de tu %1$s</string>
     <string name="core_header_workout_window">Hora de entrenar</string>
-    
     <string name="core_header_waking">Al despertar</string>
-    
     <string name="core_header_night">Noche</string>
-    
     <string name="core_header_evening">Tarde</string>
-    
     <string name="core_header_midday">Mediodía</string>
-
-    
     <string name="core_header_sport_run">carrera</string>
-    
     <string name="core_header_sport_walk">caminata</string>
-    
     <string name="core_header_sport_ride">ciclismo</string>
-    
     <string name="core_header_sport_swim">natación</string>
-    
     <string name="core_header_sport_hike">senderismo</string>
-    
     <string name="core_header_sport_row">remo</string>
-    
     <string name="core_header_doing_run">Carrera</string>
-    
     <string name="core_header_doing_walk">Caminata</string>
-    
     <string name="core_header_doing_ride">Ciclismo</string>
-    
     <string name="core_header_doing_swim">Natación</string>
-    
     <string name="core_header_doing_hike">Senderismo</string>
-    
     <string name="core_header_doing_row">Remo</string>
-
-    
-    <string name="core_today_normal_learning">Aprendiendo tu estado normal</string>
-    
+    <string name="core_today_normal_learning">Aprendiendo</string>
     <string name="core_today_normal_above">Por encima de lo normal</string>
-    
     <string name="core_today_normal_below">Por debajo de lo normal</string>
-    
-    <string name="core_today_normal_usual">Habitual</string>
-
-    
+    <string name="core_today_normal_usual">Tu normal</string>
     <string name="core_today_meaning_alert">Algunas señales nocturnas están fuera de lo normal. Un día suave puede ayudar.</string>
-    
     <string name="core_today_meaning_ready_for_more">Bien recuperado/a. Un buen día para una sesión intensa.</string>
-    
     <string name="core_today_meaning_ready">Suficientemente recuperado/a para tu entrenamiento habitual.</string>
-    
     <string name="core_today_meaning_moderate">No te has recuperado del todo. Mantén un esfuerzo moderado.</string>
-    
     <string name="core_today_meaning_low">En recuperación. Un día suave ayuda.</string>
-
-    
-    <string name="core_today_no_score_learning">Unstrap aún está aprendiendo sobre tus noches, <xliff:g id="nights" example="5">%1$d</xliff:g> de <xliff:g id="needed" example="7">%2$d</xliff:g> obtenidas.</string>
-    
+    <string name="core_today_meaning_alert_phrase">Señales fuera de tu normal, ve suave</string>
+    <string name="core_today_meaning_ready_for_more_phrase">Bien recuperado, listo para más</string>
+    <string name="core_today_meaning_ready_phrase">Recuperado para entrenar como sueles</string>
+    <string name="core_today_meaning_moderate_phrase">Sin recuperar del todo, ve moderado</string>
+    <string name="core_today_meaning_low_phrase">Aún recuperándote, ve suave</string>
+    <string name="core_today_no_score_learning">Aún aprendiendo tus noches, %1$d de %2$d. Tu puntuación empieza tras %2$d.</string>
+    <plurals name="core_today_no_score_learning_small">
+        <item quantity="one">%1$d de %2$d noche</item>
+        <item quantity="many">%1$d de %2$d noches</item>
+        <item quantity="other">%1$d de %2$d noches</item>
+    </plurals>
+    <plurals name="core_today_no_score_learning_phrase">
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
+    </plurals>
     <string name="core_today_no_score_heart">No hubo suficientes datos cardíacos la noche pasada para obtener una puntuación de recuperación.</string>
-
-    
-    <string name="core_today_slept">Dormido <xliff:g id="duration" example="7 h 40">%1$s</xliff:g>.</string>
-    
+    <string name="core_today_no_score_heart_phrase">Muy pocas lecturas cardíacas</string>
+    <string name="core_today_slept">Dormido %1$s.</string>
     <string name="core_today_no_sleep_that_night">No se registró sueño esa noche.</string>
-    
-    <string name="core_today_recovery_first_night">La recuperación comienza después de tu primera noche con la correa.</string>
-    
-    <string name="core_today_no_sleep">No se registró sueño anoche. ¿Llevabas puesta la correa?</string>
-    
+    <string name="core_today_recovery_first_night">La recuperación comienza después de tu primera noche con la banda.</string>
+    <string name="core_today_no_sleep">No se registró sueño anoche. ¿Llevabas puesta la banda?</string>
     <string name="core_today_deleted_last_night">Eliminaste el sueño de anoche.</string>
-    
     <string name="core_today_deleted_that_night">Eliminaste el sueño de esa noche.</string>
-    
-    <string name="core_today_strap_estimate">Estimación de la correa</string>
-    
-    <string name="core_today_own_score_not_ready">La propia puntuación de unstrap aún no está lista.</string>
-
-    
+    <string name="core_today_strap_estimate">Estimación de la banda</string>
+    <string name="core_today_own_score_not_ready">Tu propia puntuación aún no está lista.</string>
+    <string name="core_today_own_score_not_ready_phrase">Tu puntuación no está lista</string>
     <string name="core_today_energy_first_night">La energía empieza después de tu primera noche. El sueño es lo que la recarga.</string>
-    
-    <string name="core_today_energy_morning_drained">La mañana te ha agotado<xliff:g id="amount" example="22">%1$d</xliff:g>.</string>
-    
-    <string name="core_today_energy_day_drained">El día te ha agotado <xliff:g id="amount" example="40">%1$d</xliff:g> hasta ahora.</string>
-    
-    <string name="core_today_energy_nothing_drained">No has gastado energía desde que te despertaste.</string>
-    
     <string name="core_today_energy_plenty">Te sobra energía para esta noche.</string>
-    
     <string name="core_today_energy_enough">Tienes suficiente para una tarde tranquila.</string>
-    
     <string name="core_today_energy_low">Te estás quedando sin energía. Irse a la cama temprano ayuda.</string>
-
-    
-    <string name="core_today_window_title_usual">Tu hora habitual de entrenamiento</string>
-    
+    <string name="core_today_window_title_usual">Hora de entrenar</string>
     <string name="core_today_window_title_ready">Listo para exigirte</string>
-    
-    <string name="core_today_window_title_steady">Bien para una sesión constante</string>
-    
-    <string name="core_today_window_title_easy">Una sesión suave va bien para hoy</string>
-    
+    <string name="core_today_window_title_steady">Sesión constante</string>
+    <string name="core_today_window_title_easy">Sesión suave</string>
     <string name="core_today_window_usually_run">Suele gustarte correr a esta hora.</string>
     <string name="core_today_window_usually_walk">Suele gustarte caminar a esta hora.</string>
     <string name="core_today_window_usually_ride">Suele gustarte salir en bici a esta hora.</string>
     <string name="core_today_window_usually_swim">Suele gustarte nadar a esta hora.</string>
     <string name="core_today_window_usually_hike">Suele gustarte hacer senderismo a esta hora.</string>
     <string name="core_today_window_usually_row">Suele gustarte remar a esta hora.</string>
-    
     <string name="core_today_window_usually_workout">Suele gustarte entrenar a esta hora.</string>
-    
-    <string name="core_today_window_energy_plenty">La energía es<xliff:g id="energy" example="58">%1$d</xliff:g>, muy buen nivel.</string>
-    
-    <string name="core_today_window_energy_enough">La energía es<xliff:g id="energy" example="30">%1$d</xliff:g>, suficiente para algo suave.</string>
-    
-    <string name="core_today_window_energy_low">La energía es<xliff:g id="energy" example="20">%1$d</xliff:g>, es baja.</string>
-
-    
+    <string name="core_today_window_energy_plenty">La Energía es %1$d, queda de sobra.</string>
+    <string name="core_today_window_energy_enough">La Energía es %1$d, alcanza para algo suave.</string>
+    <string name="core_today_window_energy_low">La Energía es %1$d, queda poca.</string>
+    <string name="core_today_window_title_sport">Tu %1$s habitual</string>
+    <string name="core_today_window_noun_workout">entrenamiento</string>
+    <string name="core_today_window_around">Normalmente a las %1$s</string>
+    <string name="core_today_window_last">Última vez: %1$s %2$s</string>
+    <plurals name="core_today_window_days_ago">
+        <item quantity="one">hace %1$d día</item>
+        <item quantity="many">hace %1$d días</item>
+        <item quantity="other">hace %1$d días</item>
+    </plurals>
+    <string name="core_today_window_say_ready">Recuperado y listo para esforzarte.</string>
+    <string name="core_today_window_say_steady">Bien para una sesión constante.</string>
+    <string name="core_today_window_say_easy">Hoy va bien una sesión suave.</string>
+    <string name="core_today_window_resting">En reposo, %1$d lpm</string>
     <string name="core_today_after_waiting">La frecuencia cardíaca de tu entrenamiento aparecerá cuando la banda la envíe.</string>
-    
-    <string name="core_today_after_now" tools:ignore="PluralsCandidate">Frecuencia cardíaca <xliff:g id="bpm" example="74">%1$d</xliff:g>.</string>
-    
+    <string name="core_today_after_now" tools:ignore="PluralsCandidate">Frecuencia cardíaca %1$d.</string>
     <string name="core_today_after_settled">Frecuencia cardíaca de nuevo cerca del reposo.</string>
-    
     <string name="core_today_after_settling">Frecuencia cardíaca estabilizándose.</string>
-
-    
-    <string name="core_today_evening_full">Un día completo.<xliff:g id="list" example="A run, 13,860 steps and a Load above your usual">%1$s</xliff:g>.</string>
-    
-    <string name="core_today_evening_quiet">Un día tranquilo.<xliff:g id="list" example="2,100 steps and a Load below your usual">%1$s</xliff:g>.</string>
-    
-    <string name="core_today_evening_steady">Un día constante.<xliff:g id="list" example="A workout and 6,000 steps">%1$s</xliff:g>.</string>
-    
+    <string name="core_today_evening_full">Un día completo.%1$s.</string>
+    <string name="core_today_evening_quiet">Un día tranquilo.%1$s.</string>
+    <string name="core_today_evening_steady">Un día constante.%1$s.</string>
     <string name="core_today_evening_one_run">una carrera</string>
     <string name="core_today_evening_one_walk">una caminata</string>
     <string name="core_today_evening_one_ride">un recorrido en bici</string>
     <string name="core_today_evening_one_swim">un baño</string>
     <string name="core_today_evening_one_hike">una ruta</string>
     <string name="core_today_evening_one_row">un entrenamiento de remo</string>
-    
     <string name="core_today_evening_one_workout">un entrenamiento</string>
-    
     <plurals name="core_today_evening_workouts">
-        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> entrenamiento</item>
-        <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> entrenamientos</item>
+        <item quantity="one">%d entrenamiento</item>
+        <item quantity="many">%d entrenamientos</item>
+        <item quantity="other">%d entrenamientos</item>
     </plurals>
-    
     <plurals name="core_today_evening_steps">
-        <item quantity="one"><xliff:g id="count" example="1">%1$s</xliff:g> paso</item>
-        <item quantity="other"><xliff:g id="count" example="13,860">%1$s</xliff:g> pasos</item>
+        <item quantity="one">%1$s paso</item>
+        <item quantity="many">%1$s pasos</item>
+        <item quantity="other">%1$s pasos</item>
     </plurals>
-    
     <string name="core_today_evening_load_above">una carga superior a la habitual</string>
-    
     <string name="core_today_evening_load_below">una carga inferior a la habitual</string>
-    
     <string name="core_today_evening_load_usual">una carga cercana a la habitual</string>
-    
-    <string name="core_today_list_comma"><xliff:g id="first" example="a run">%1$s</xliff:g>, <xliff:g id="next" example="13,860 steps">%2$s</xliff:g></string>
-    
-    <string name="core_today_list_and"><xliff:g id="first" example="a run, 13,860 steps">%1$s</xliff:g> and <xliff:g id="last" example="a Load above your usual">%2$s</xliff:g></string>
-
-    
-    <string name="core_today_goal_past">superaste tu meta de pasos</string>
-    
-    <string name="core_today_goal_close">cerca de tu meta de pasos</string>
-    
-    <string name="core_today_goal_short">cerca de tu meta de pasos</string>
-    
-    <string name="core_today_goal_well_short">muy lejos de tu meta de pasos</string>
-
-    
-    <string name="core_today_bedtime_in">Hora de dormir en <xliff:g id="duration" example="1 h 10">%1$s</xliff:g></string>
-
-    
+    <string name="core_today_list_comma">%1$s, %2$s</string>
+    <string name="core_today_list_and">%1$s y %2$s</string>
+    <string name="core_today_goal_past">pasos por encima de tu meta</string>
+    <string name="core_today_goal_close">pasos cerca de tu meta</string>
+    <string name="core_today_goal_short">pasos por debajo de tu meta</string>
+    <string name="core_today_goal_well_short">pasos muy por debajo de tu meta</string>
+    <string name="core_today_evening_nothing">Aún no hay nada registrado hoy.</string>
+    <string name="core_today_bedtime_in">Hora de dormir en %1$s</string>
     <string name="core_today_recovered">Recuperado</string>
-    
     <plurals name="core_today_recover_by">
-        <item quantity="one">Falta una hora, listo a las<xliff:g id="time" example="19:30">%1$s</xliff:g></item>
-        <item quantity="other">Faltan %1$d horas, listo a las<xliff:g id="time" example="20:30">%1$s</xliff:g></item>
+        <item quantity="one">Hora restante, listo a las %1$s</item>
+        <item quantity="many">Horas restantes, listo a las %1$s</item>
+        <item quantity="other">Horas restantes, listo a las %1$s</item>
     </plurals>
-    
     <plurals name="core_today_recover_tomorrow">
-        <item quantity="one">Falta una hora, listo mañana a las</item>
-        <item quantity="other">Faltan %1$d horas, listo mañana a las</item>
+        <item quantity="one">Hora restante, listo mañana</item>
+        <item quantity="many">Horas restantes, listo mañana</item>
+        <item quantity="other">Horas restantes, listo mañana</item>
     </plurals>
-    
     <plurals name="core_today_recover_day">
-        <item quantity="one">Falta una hora, listo<xliff:g id="weekday" example="Friday">%1$s</xliff:g></item>
-        <item quantity="other">Faltan %1$d horas, listo<xliff:g id="weekday" example="Friday">%1$s</xliff:g></item>
+        <item quantity="one">Hora restante, listo el %1$s</item>
+        <item quantity="many">Horas restantes, listo el %1$s</item>
+        <item quantity="other">Horas restantes, listo el %1$s</item>
     </plurals>
-    
-    <string name="core_today_recover_short_by">Listo a las<xliff:g id="time" example="20:00">%1$s</xliff:g></string>
-    
+    <string name="core_today_recover_short_by">Listo a las %1$s</string>
     <string name="core_today_recover_short_tomorrow">Listo mañana</string>
-    
-    <string name="core_today_recover_short_day">Listo<xliff:g id="weekday" example="Friday">%1$s</xliff:g></string>
-
-    
-    <string name="core_today_load_line_learning">Carga, aprendiendo tu nivel habitual</string>
-    
+    <string name="core_today_recover_short_day">Listo el %1$s</string>
+    <string name="core_today_load_line_learning">Aprendiendo tu habitual</string>
     <string name="core_today_load_line_above">Carga por encima de tu nivel habitual</string>
-    
     <string name="core_today_load_line_usual">Carga cercana a tu nivel habitual</string>
-    
     <string name="core_today_load_line_below">Carga por debajo de tu nivel habitual</string>
-    
     <string name="core_today_load_line_so_far">Carga hasta ahora hoy</string>
-    
-    <string name="core_today_load_word_learning">Aprendiendo tu nivel habitual</string>
-
-    
-    <string name="core_today_week_first">Las comparaciones semana a semana comienzan el próximo<xliff:g id="weekday" example="Monday">%1$s</xliff:g>.</string>
-    
-    <string name="core_today_steps_up">Pasos arriba<xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
-    
-    <string name="core_today_steps_down">Pasos abajo<xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
-    
+    <string name="core_today_load_word_learning">Aprendiendo</string>
+    <string name="core_today_week_first">Las comparaciones semana a semana empiezan el próximo %1$s.</string>
+    <string name="core_today_steps_up">Pasos suben %1$d%%</string>
+    <string name="core_today_steps_down">Pasos bajan %1$d%%</string>
     <string name="core_today_steps_steady">Pasos sin cambios</string>
-
-    
-    <string name="core_today_last_night_score">Puntuación <xliff:g id="score" example="83">%2$d</xliff:g>, <xliff:g id="duration" example="7 h 40">%1$s</xliff:g></string>
-
-    
+    <string name="core_today_last_night_score">Puntuación %2$d, %1$s</string>
     <string name="core_today_heart_note_band">Mantén presionada la línea para leer cualquier momento. La banda es tu rango de descanso.</string>
-    
     <string name="core_today_heart_note">Mantén presionada la línea para leer cualquier momento.</string>
-    
     <string name="core_today_heart_live">En tiempo real</string>
-    
-    <string name="core_today_heart_at">A las <xliff:g id="time" example="20:52">%1$s</xliff:g></string>
-    
-    <string name="core_today_heart_waiting">Esperando la correa</string>
+    <string name="core_today_heart_at">A las %1$s</string>
+    <string name="core_today_heart_average_from">Promedio de %1$d min desde las %2$s</string>
+    <string name="core_today_heart_waiting">Esperando la banda</string>
+    <string name="core_today_night_wind_down">Hora de relajarse.</string>
+    <string name="core_today_night_full">Hora de relajarse tras un día completo. %1$s.</string>
+    <string name="core_today_night_quiet">Hora de relajarse tras un día tranquilo. %1$s.</string>
+    <string name="core_today_night_steady">Hora de relajarse tras un día constante. %1$s.</string>
+    <string name="core_today_window_first_night">Recuperación y Energía empiezan tras tu primera noche.</string>
+    <string name="core_today_energy_morning_plenty">La mañana gastó %1$d. Queda de sobra para esta tarde.</string>
+    <string name="core_today_energy_morning_enough">La mañana gastó %1$d. Queda suficiente para una tarde tranquila.</string>
+    <string name="core_today_energy_morning_low">La mañana gastó %1$d. Queda poca. Acostarte temprano ayuda.</string>
+    <string name="core_today_energy_day_plenty">El día ha gastado %1$d hasta ahora. Queda de sobra para esta tarde.</string>
+    <string name="core_today_energy_day_enough">El día ha gastado %1$d hasta ahora. Queda suficiente para una tarde tranquila.</string>
+    <string name="core_today_energy_day_low">El día ha gastado %1$d hasta ahora. Queda poca. Acostarte temprano ayuda.</string>
+    <string name="core_today_energy_nothing_plenty">No se ha gastado nada desde que despertaste. Queda de sobra para esta tarde.</string>
+    <string name="core_today_energy_nothing_enough">No se ha gastado nada desde que despertaste. Queda suficiente para una tarde tranquila.</string>
+    <string name="core_today_energy_nothing_low">No se ha gastado nada desde que despertaste. Queda poca. Acostarte temprano ayuda.</string>
+    <string name="core_today_window_say_ready_plenty">Recuperado y listo para esforzarte. La Energía es %1$d, queda de sobra.</string>
+    <string name="core_today_window_say_ready_enough">Recuperado y listo para esforzarte. La Energía es %1$d, alcanza para algo suave.</string>
+    <string name="core_today_window_say_ready_low">Recuperado y listo para esforzarte. La Energía es %1$d, queda poca.</string>
+    <string name="core_today_window_say_steady_plenty">Bien para una sesión constante. La Energía es %1$d, queda de sobra.</string>
+    <string name="core_today_window_say_steady_enough">Bien para una sesión constante. La Energía es %1$d, alcanza para algo suave.</string>
+    <string name="core_today_window_say_steady_low">Bien para una sesión constante. La Energía es %1$d, queda poca.</string>
+    <string name="core_today_window_say_easy_plenty">Hoy va bien una sesión suave. La Energía es %1$d, queda de sobra.</string>
+    <string name="core_today_window_say_easy_enough">Hoy va bien una sesión suave. La Energía es %1$d, alcanza para algo suave.</string>
+    <string name="core_today_window_say_easy_low">Hoy va bien una sesión suave. La Energía es %1$d, queda poca.</string>
+    <string name="core_today_window_verb_run">correr</string>
+    <string name="core_today_window_verb_walk">caminar</string>
+    <string name="core_today_window_verb_ride">salir en bici</string>
+    <string name="core_today_window_verb_swim">nadar</string>
+    <string name="core_today_window_verb_hike">hacer senderismo</string>
+    <string name="core_today_window_verb_row">remar</string>
+    <string name="core_today_window_verb_workout">entrenar</string>
+    <string name="core_today_window_usually_energy_plenty">Sueles %1$s a esta hora. La Energía es %2$d, queda de sobra.</string>
+    <string name="core_today_window_usually_energy_enough">Sueles %1$s a esta hora. La Energía es %2$d, alcanza para algo suave.</string>
+    <string name="core_today_window_usually_energy_low">Sueles %1$s a esta hora. La Energía es %2$d, queda poca.</string>
 </resources>

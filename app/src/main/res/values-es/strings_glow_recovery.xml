@@ -1,91 +1,47 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="glow_recovery_title">Recuperación</string>
-    
     <string name="glow_recovery_about">Acerca de Recuperación</string>
-    
-    <string name="glow_recovery_scored_each_morning">La Recuperación se calcula cada mañana a partir del sueño de la noche.</string>
-    
+    <string name="glow_recovery_scored_each_morning">Recuperación aparece cuando se sincroniza el sueño de anoche.</string>
     <string name="glow_recovery_yesterday">Ayer</string>
-    
     <string name="glow_recovery_what_drove">Qué la influenció</string>
-    
-    <string name="glow_recovery_drivers_all">Factores: <xliff:g id="count" example="7">%1$d</xliff:g></string>
-    
+    <string name="glow_recovery_driver_hrv">%1$d ms, tu normal %2$d</string>
+    <string name="glow_recovery_driver_resting">%1$d lpm, tu normal %2$d</string>
+    <string name="glow_recovery_driver_resting_alone">%1$d lpm</string>
+    <string name="glow_recovery_drivers_all">Factores: %1$d</string>
     <string name="glow_recovery_waiting_night">Esperando una noche</string>
-    
-    <string name="glow_recovery_drivers_waiting">Qué influenció la Recuperación se muestra aquí cada mañana</string>
-    
+    <string name="glow_recovery_drivers_waiting">Aparece aquí cada mañana</string>
     <string name="glow_recovery_energy">Energía</string>
-    
-    
     <string name="glow_recovery_now">Ahora</string>
-    
-    <string name="glow_recovery_charge_at_start"><xliff:g id="energy" example="82">%1$d</xliff:g> al empezar</string>
-    
-    <string name="glow_recovery_charge_at_waking"><xliff:g id="energy" example="82">%1$d</xliff:g> al despertar</string>
-    
+    <string name="glow_recovery_charge_at_start">%1$d al empezar</string>
+    <string name="glow_recovery_charge_at_waking">%1$d al despertar</string>
     <string name="glow_recovery_recharged">Recargado</string>
-    
     <string name="glow_recovery_drained">Agotado</string>
-    
-    <string name="glow_recovery_overnight">Durante la noche, desde <xliff:g id="bedtime" example="34">%1$d</xliff:g> a <xliff:g id="waking" example="72">%2$d al despertar.</xliff:g></string>
-    
+    <string name="glow_recovery_overnight">Durante la noche, desde %1$d a %2$d al despertar.</string>
     <string name="glow_recovery_skin_temperature">Temperatura en piel</string>
-    
     <string name="glow_recovery_breathing_rate">Frecuencia respiratoria</string>
-    
     <string name="glow_recovery_blood_oxygen">Oxígeno en sangre</string>
-    
     <string name="glow_recovery_stress">Estrés</string>
-    
     <string name="glow_recovery_body_signals">Señales corporales</string>
-    
-    <string name="glow_recovery_against_normal">Diferente de lo habitual</string>
-    
-    <string name="glow_recovery_skin_close">Cerca de tu normalidad</string>
-
-    
     <string name="glow_recovery_week_average">Promedio de los últimos 7 días</string>
-    
     <string name="glow_recovery_no_scores">Sin puntuaciones</string>
-    
     <string name="glow_recovery_in_last_7_days">En los últimos 7 días</string>
-    
     <string name="glow_recovery_this_morning">esta mañana</string>
-    
     <string name="glow_recovery_that_morning">esa mañana</string>
-    
-    <string name="glow_recovery_strap_estimate">La estimación de la correa</string>
-    
+    <string name="glow_recovery_strap_estimate">Estimación de la banda</string>
     <string name="glow_recovery_none_week">Aún no hay puntuaciones de Recuperación en los últimos 7 días.</string>
-    
     <string name="glow_recovery_waiting">Esperando</string>
-    
     <string name="glow_recovery_after_first_night">Después de tu primera noche</string>
-    
     <string name="glow_recovery_needs_heart_rate">Necesita unas horas de frecuencia cardíaca</string>
-    
-    <string name="glow_recovery_at_time">a las<xliff:g id="time" example="14:30">%1$s</xliff:g></string>
-    
+    <string name="glow_recovery_at_time">a las %1$s</string>
     <string name="glow_recovery_now_lower">ahora</string>
-    
     <string name="glow_recovery_end_of_day">al final del día</string>
-    
     <string name="glow_recovery_at_start">Al inicio</string>
-    
     <string name="glow_recovery_at_waking">Al despertar</string>
-    
-    <string name="glow_recovery_highest">Más alta</string>
-    
-    <string name="glow_recovery_lowest">Más baja</string>
-    
-    <string name="glow_recovery_where_it_went">Cómo evolucionó</string>
-    
+    <string name="glow_recovery_highest">Alta</string>
+    <string name="glow_recovery_lowest">Baja</string>
     <string name="glow_recovery_last_night">Anoche</string>
-    
     <string name="glow_recovery_no_sleep">No se registró sueño</string>
-    
     <string name="glow_recovery_asleep">Durmiendo</string>
+    <string name="glow_recovery_temp_change">%1$s frente a tu normal</string>
 </resources>

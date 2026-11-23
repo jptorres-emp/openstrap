@@ -1,34 +1,18 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    
-    <string name="core_healthspan_habit_strength">Entrenamiento de fuerza</string>
-    
-    <string name="core_healthspan_habit_vo2max">Condición física (VO2 máx.)</string>
-    
+    <string name="core_healthspan_habit_strength">Fuerza</string>
+    <string name="core_healthspan_habit_vo2max">VO2 max</string>
     <string name="core_healthspan_habit_steps">Pasos</string>
-    
     <string name="core_healthspan_habit_regularity">Regularidad del sueño</string>
-    
     <string name="core_healthspan_habit_resting_hr">Frecuencia cardíaca en reposo</string>
-    
     <string name="core_healthspan_habit_time_asleep">Tiempo dormido</string>
-
-    
-    <string name="core_healthspan_withheld_no_age">Agrega tu año de nacimiento en tu perfil para ver tu Edad de hábitos.</string>
-    
-    <string name="core_healthspan_withheld_age">La Edad de hábitos es para personas de 20 a 79 años.</string>
-    
-    <string name="core_healthspan_withheld_sex">Agrega tu sexo en tu perfil: los valores típicos difieren entre mujeres y hombres.</string>
-    
-    <string name="core_healthspan_withheld_medication">No se muestra si tomas betabloqueantes o durante el embarazo: en esos casos, la frecuencia cardíaca en reposo no refleja la condición física.</string>
-    
-    <string name="core_healthspan_withheld_learning">Requiere 30 días de uso antes de una primera estimación.</string>
-    
-    <string name="core_healthspan_withheld_resting_hr">Requiere la frecuencia cardíaca en reposo en aproximadamente la mitad de las noches recientes.</string>
-    
-    <string name="core_healthspan_withheld_steps">Requiere haber usado el dispositivo unas 10 horas o más durante aproximadamente la mitad de los días recientes.</string>
-    
-    <string name="core_healthspan_withheld_regularity">Se necesitan más semanas de regularidad del sueño.</string>
-    
-    <string name="core_healthspan_withheld_sleep">Requiere registro de sueño en aproximadamente la mitad de las noches recientes.</string>
+    <string name="core_healthspan_withheld_no_age">Agrega tu año de nacimiento a tu perfil</string>
+    <string name="core_healthspan_withheld_age">La Edad de hábitos es para edades de 20 a 79 años</string>
+    <string name="core_healthspan_withheld_sex">Agrega tu sexo a tu perfil</string>
+    <string name="core_healthspan_withheld_medication">No se muestra con betabloqueantes o embarazo</string>
+    <string name="core_healthspan_withheld_learning">Requiere 30 días de uso</string>
+    <string name="core_healthspan_withheld_resting_hr">Requiere más frecuencia cardíaca en reposo</string>
+    <string name="core_healthspan_withheld_steps">Requiere más días completos de uso</string>
+    <string name="core_healthspan_withheld_regularity">Requiere más semanas de regularidad</string>
+    <string name="core_healthspan_withheld_sleep">Requiere sueño registrado en más noches</string>
 </resources>

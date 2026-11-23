@@ -1,23 +1,13 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    
     <string name="core_settings_buzz_single">Simple</string>
-    
     <string name="core_settings_buzz_double">Doble</string>
-    
     <string name="core_settings_buzz_triple">Triple</string>
-    
     <string name="core_settings_buzz_long">Largo</string>
-    
     <string name="core_settings_call_steady">Constante</string>
-    
     <string name="core_settings_call_pulsed">Pulsado</string>
-    
     <string name="core_settings_call_5s">5 s</string>
-    
     <string name="core_settings_call_10s">10 s</string>
-    
     <string name="core_settings_call_15s">15 s</string>
-    
-    <string name="core_settings_call_until_answered">Anillo completo</string>
+    <string name="core_settings_call_until_answered">Hasta contestar</string>
 </resources>

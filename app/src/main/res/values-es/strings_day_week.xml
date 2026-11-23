@@ -1,42 +1,35 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <plurals name="day_week_active_minutes">
-        <item quantity="one"><xliff:g id="minutes" example="1">%1$d</xliff:g> active minute</item>
-        <item quantity="other"><xliff:g id="minutes" example="42">%1$d</xliff:g> active minutes</item>
+        <item quantity="one">%1$d minuto activo</item>
+        <item quantity="many">%1$d minutos activos</item>
+        <item quantity="other">%1$d minutos activos</item>
     </plurals>
-    
-    <string name="day_week_asleep"><xliff:g id="time" example="7 h 40">%1$s</xliff:g> dormido</string>
-    
+    <string name="day_week_asleep">%1$s dormido</string>
     <plurals name="day_week_busiest">
-        <item quantity="one">Mayor actividad el<xliff:g id="day" example="Thursday">%2$s</xliff:g>, <xliff:g id="steps" example="1">%1$s</xliff:g> step.</item>
-        <item quantity="other">Mayor actividad el<xliff:g id="day" example="Thursday">%2$s</xliff:g>, <xliff:g id="steps" example="12,400">%1$s</xliff:g> steps.</item>
+        <item quantity="one">Más actividad el %2$s, %1$s paso.</item>
+        <item quantity="many">Más actividad el %2$s, %1$s pasos.</item>
+        <item quantity="other">Más actividad el %2$s, %1$s pasos.</item>
     </plurals>
-    
     <string name="day_week_workouts_none">No hay entrenamientos esta semana ni la anterior.</string>
-    
     <plurals name="day_week_workouts_same">
-        <item quantity="one"><xliff:g id="workouts" example="1">%1$d</xliff:g> workout, as many as the week before.</item>
-        <item quantity="other"><xliff:g id="workouts" example="2">%1$d</xliff:g> workouts, as many as the week before.</item>
+        <item quantity="one">%1$d entrenamiento, igual que la semana anterior.</item>
+        <item quantity="many">%1$d entrenamientos, igual que la semana anterior.</item>
+        <item quantity="other">%1$d entrenamientos, igual que la semana anterior.</item>
     </plurals>
-    
     <plurals name="day_week_workouts_more">
-        <item quantity="one"><xliff:g id="workouts" example="1">%1$d</xliff:g> workout, <xliff:g id="more" example="1">%2$d</xliff:g> more than the week before.</item>
-        <item quantity="other"><xliff:g id="workouts" example="3">%1$d</xliff:g> workouts, <xliff:g id="more" example="2">%2$d</xliff:g> more than the week before.</item>
+        <item quantity="one">%1$d entrenamiento, %2$d más que la semana anterior.</item>
+        <item quantity="many">%1$d entrenamientos, %2$d más que la semana anterior.</item>
+        <item quantity="other">%1$d entrenamientos, %2$d más que la semana anterior.</item>
     </plurals>
-    
     <plurals name="day_week_workouts_fewer">
-        <item quantity="one"><xliff:g id="workouts" example="1">%1$d</xliff:g> workout, <xliff:g id="fewer" example="1">%2$d</xliff:g> fewer than the week before.</item>
-        <item quantity="other"><xliff:g id="workouts" example="2">%1$d</xliff:g> workouts, <xliff:g id="fewer" example="3">%2$d</xliff:g> fewer than the week before.</item>
+        <item quantity="one">%1$d entrenamiento, %2$d menos que la semana anterior.</item>
+        <item quantity="many">%1$d entrenamientos, %2$d menos que la semana anterior.</item>
+        <item quantity="other">%1$d entrenamientos, %2$d menos que la semana anterior.</item>
     </plurals>
-    
-    <string name="day_week_steps_up">Más pasos que<xliff:g id="percent" example="12">%1$d</xliff:g>%% on the week before.</string>
-    
-    <string name="day_week_steps_down">Menos pasos que<xliff:g id="percent" example="3">%1$d</xliff:g>%% on the week before.</string>
-    
+    <string name="day_week_steps_up">Pasos un %1$d%% por encima de la semana anterior.</string>
+    <string name="day_week_steps_down">Pasos un %1$d%% por debajo de la semana anterior.</string>
     <string name="day_week_steps_steady">Los pasos se mantuvieron estables respecto a la semana anterior.</string>
-    
-    <string name="day_week_label">pasos al día,<xliff:g id="dates" example="12 to 18 Oct">%1$s</xliff:g></string>
-    
+    <string name="day_week_label">pasos al día,%1$s</string>
     <string name="day_week_nothing">Sin registros</string>
 </resources>

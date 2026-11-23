@@ -1,18 +1,10 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="core_recovery_quality_hrv">VFC<xliff:g id="ours" example="48">%1$d</xliff:g> ms here, <xliff:g id="strap" example="61">%2$d</xliff:g> ms from the strap</string>
-    
-    <string name="core_recovery_quality_rhr">Frecuencia cardíaca en reposo <xliff:g id="ours" example="52">%1$d</xliff:g> lpm, <xliff:g id="strap" example="56">%2$d</xliff:g> lpm desde la pulsera</string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_recovery_quality_hrv">VFC %1$d ms aquí, %2$d ms de la banda</string>
+    <string name="core_recovery_quality_rhr">Frecuencia cardíaca en reposo %1$d lpm, %2$d lpm desde la pulsera</string>
     <string name="core_recovery_cause_hard_day">un día de entrenamiento duro</string>
-
-    
     <string name="core_regularity_irregular">Irregular</string>
-    
     <string name="core_regularity_fair">Aceptable</string>
-    
     <string name="core_regularity_regular">Normal</string>
-    
     <string name="core_regularity_very_regular">Bueno</string>
 </resources>

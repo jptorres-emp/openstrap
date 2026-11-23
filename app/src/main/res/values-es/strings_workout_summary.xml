@@ -1,159 +1,87 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="workout_sentences"><xliff:g id="first" example="5.21 km, average 142 bpm.">%1$s</xliff:g> <xliff:g id="second" example="Paused 4 min.">%2$s</xliff:g></string>
-
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="workout_sentences">%1$s %2$s</string>
     <string name="workout_summary_drop_meaning">Lo que baja tu frecuencia cardíaca en el primer minuto después de parar. Una mayor caída suele indicar un corazón más en forma, y menos de 12 lpm se considera bajo. Solo es relevante tras un esfuerzo intenso.</string>
-    
     <string name="workout_summary_watching">Monitoreando la bajada de tu frecuencia cardíaca.</string>
-    
     <string name="workout_summary_no_drop_data">No hay frecuencia cardíaca al final, así que esta vez no hay bajada.</string>
-    
     <string name="workout_summary_no_drop">Sin descenso en el primer minuto.</string>
-    
-    <string name="workout_summary_drop">Bajo <xliff:g id="bpm" example="34">%1$d</xliff:g> in the first minute.</string>
-    
-    <string name="workout_summary_drop_easy_finish">Bajo <xliff:g id="bpm" example="12">%1$d</xliff:g> in the first minute, from an easy finish.</string>
-    
-    <string name="workout_summary_drop_quick">Bajo <xliff:g id="bpm" example="34">%1$d</xliff:g> in the first minute. A quick drop for you.</string>
-    
-    <string name="workout_summary_drop_slow">Bajo <xliff:g id="bpm" example="16">%1$d</xliff:g> in the first minute. A slow drop for you.</string>
-    
-    <string name="workout_summary_drop_usual">Bajo <xliff:g id="bpm" example="28">%1$d</xliff:g> in the first minute. About usual for you.</string>
-
-    
-    <string name="workout_summary_load_above">Por encima de tu promedio de<xliff:g id="load" example="80">%1$d</xliff:g></string>
-    
-    <string name="workout_summary_load_below">Por debajo de tu promedio de<xliff:g id="load" example="80">%1$d</xliff:g></string>
-    
+    <string name="workout_summary_drop">Bajó %1$d en el primer minuto.</string>
+    <string name="workout_summary_drop_easy_finish">Bajó %1$d en el primer minuto, tras un final suave.</string>
+    <string name="workout_summary_drop_quick">Bajó %1$d en el primer minuto. Una bajada rápida para ti.</string>
+    <string name="workout_summary_drop_slow">Bajó %1$d en el primer minuto. Una bajada lenta para ti.</string>
+    <string name="workout_summary_drop_usual">Bajó %1$d en el primer minuto. Más o menos lo habitual para ti.</string>
+    <string name="workout_summary_load_above">Por encima de tu habitual de %1$d</string>
+    <string name="workout_summary_load_below">Por debajo de tu habitual de %1$d</string>
     <string name="workout_summary_load_usual">Cerca de tu promedio</string>
-    
     <string name="workout_summary_load_learning">Aprendiendo tu promedio</string>
-    
-    <string name="workout_summary_load_title">De esto<xliff:g id="sport" example="run">%1$s</xliff:g></string>
-    
+    <string name="workout_summary_load_title">De tu %1$s</string>
     <string name="workout_summary_load_title_workout">De este entrenamiento</string>
-    
-    <string name="workout_summary_time_to_recover">Tiempo para recuperar<xliff:g id="time" example="14 h">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_carried_over"><xliff:g id="own" example="40 min">%1$s</xliff:g> from this <xliff:g id="sport" example="walk">%2$s</xliff:g>, <xliff:g id="total" example="16 h">%3$s</xliff:g> in all with what\'s left from earlier</string>
-    
-    <string name="workout_summary_carried_over_workout"><xliff:g id="own" example="40 min">%1$s</xliff:g> from this workout, <xliff:g id="total" example="16 h">%2$s</xliff:g> in all with what\'s left from earlier</string>
-    
-    <string name="workout_summary_carried_over_nothing">nada de esto<xliff:g id="sport" example="walk">%1$s</xliff:g>, <xliff:g id="total" example="16 h">%2$s</xliff:g> left from earlier</string>
-    
-    <string name="workout_summary_carried_over_nothing_workout">nada de este entrenamiento,<xliff:g id="total" example="16 h">%1$s</xliff:g> left from earlier</string>
-    
-    <string name="workout_summary_minutes"><xliff:g id="minutes" example="40">%1$d</xliff:g> min</string>
-    
-    <string name="workout_summary_hours"><xliff:g id="hours" example="14">%1$d</xliff:g> h</string>
-
-    
-    <string name="workout_summary_line_distance_average"><xliff:g id="distance" example="5.21 km">%1$s</xliff:g>, average <xliff:g id="bpm" example="142">%2$d</xliff:g> bpm.</string>
-    
-    <string name="workout_summary_line_distance"><xliff:g id="distance" example="5.21 km">%1$s</xliff:g>.</string>
-    
-    <string name="workout_summary_line_average">Promedio <xliff:g id="bpm" example="142">%1$d</xliff:g> lpm.</string>
-    
-    <string name="workout_summary_line_paused">Pausado<xliff:g id="minutes" example="4">%1$d</xliff:g> min.</string>
-    
-    <string name="workout_summary_target_reached_at">Objetivo<xliff:g id="kcal" example="400">%1$s</xliff:g> kcal, reached at <xliff:g id="time" example="38:10">%2$s</xliff:g></string>
-    
-    <string name="workout_summary_target_reached">Objetivo<xliff:g id="kcal" example="300">%1$s</xliff:g> kcal, reached</string>
-    
-    <string name="workout_summary_target_short">Objetivo no alcanzado,<xliff:g id="burned" example="212">%1$s</xliff:g> of <xliff:g id="kcal" example="300">%2$s</xliff:g> kcal</string>
-    
-    <string name="workout_summary_target_not_reached">Objetivo<xliff:g id="kcal" example="300">%1$s</xliff:g> kcal, not reached</string>
-    
-    <string name="workout_summary_lap_distance_average"><xliff:g id="distance" example="1.02 km">%1$s</xliff:g>, a una media de <xliff:g id="bpm" example="150">%2$d</xliff:g> lpm</string>
-    
-    <string name="workout_summary_lap_average">Promedio <xliff:g id="bpm" example="150">%1$d</xliff:g> lpm</string>
-    
-    <string name="workout_summary_trim_recorded">Registrado<xliff:g id="range" example="18:02 to 18:40">%1$s</xliff:g>.</string>
-    
+    <string name="workout_summary_time_to_recover">Tiempo de recuperación %1$s</string>
+    <string name="workout_summary_carried_over">%1$s de tu %2$s, %3$s en total con lo que queda de antes</string>
+    <string name="workout_summary_carried_over_workout">%1$s de este entrenamiento, %2$s en total con lo que queda de antes</string>
+    <string name="workout_summary_carried_over_nothing">nada de tu %1$s, %2$s que quedan de antes</string>
+    <string name="workout_summary_carried_over_nothing_workout">nada de este entrenamiento, %1$s que quedan de antes</string>
+    <string name="workout_summary_minutes">%1$d min</string>
+    <string name="workout_summary_hours">%1$d h</string>
+    <string name="workout_summary_line_distance_average">%1$s, promedio de %2$d lpm.</string>
+    <string name="workout_summary_line_distance">%1$s.</string>
+    <string name="workout_summary_line_average">Promedio %1$d lpm.</string>
+    <string name="workout_summary_line_paused">Pausa de %1$d min.</string>
+    <string name="workout_summary_target_reached_at">Objetivo %1$s kcal, alcanzado a los %2$s</string>
+    <string name="workout_summary_target_reached">Objetivo %1$s kcal, alcanzado</string>
+    <string name="workout_summary_target_short">Objetivo no alcanzado,%1$s of %2$s kcal</string>
+    <string name="workout_summary_target_not_reached">Objetivo %1$s kcal, no alcanzado</string>
+    <string name="workout_summary_lap_distance_average">%1$s, a una media de %2$d lpm</string>
+    <string name="workout_summary_lap_average">Promedio %1$d lpm</string>
+    <string name="workout_summary_trim_recorded">Registrado %1$s.</string>
     <string name="workout_summary_trim_hint">Arrastra los controles hasta donde realmente empezó y terminó el entrenamiento. No se borra nada de lo registrado.</string>
-    
-    <string name="workout_summary_split_km">Km<xliff:g id="number" example="3">%1$d</xliff:g></string>
-    
-    <string name="workout_summary_split_last">Último<xliff:g id="distance" example="430 m">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_meters"><xliff:g id="meters" example="0">%1$d</xliff:g> m</string>
-
-    
-    <string name="workout_summary_when_morning">Esta mañana,<xliff:g id="time" example="07:12">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_when_evening">Esta tarde,<xliff:g id="time" example="19:05">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_when_today">Hoy,<xliff:g id="time" example="14:00">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_when_yesterday">Ayer, <xliff:g id="time" example="10:00">%1$s</xliff:g></string>
-    
-    <string name="workout_summary_when_day"><xliff:g id="day" example="Tuesday">%1$s</xliff:g>, <xliff:g id="time" example="10:00">%2$s</xliff:g></string>
-
-    
-    <string name="workout_summary_set_reps_kg"><xliff:g id="reps" example="10">%1$d</xliff:g> × <xliff:g id="kg" example="60">%2$s</xliff:g> kg</string>
-    
+    <string name="workout_summary_split_km">km %1$d</string>
+    <string name="workout_summary_split_mile">Milla %1$d</string>
+    <string name="workout_summary_split_last">Último %1$s</string>
+    <string name="workout_summary_when_morning">Esta mañana,%1$s</string>
+    <string name="workout_summary_when_evening">Esta tarde,%1$s</string>
+    <string name="workout_summary_when_today">Hoy,%1$s</string>
+    <string name="workout_summary_when_yesterday">Ayer, %1$s</string>
+    <string name="workout_summary_when_day">%1$s, %2$s</string>
+    <string name="workout_summary_set_skipped">Omitida</string>
+    <string name="workout_summary_set_reps_kg">%1$d × %2$s kg</string>
     <plurals name="workout_summary_set_reps">
-        <item quantity="one"><xliff:g id="reps" example="12">%1$d</xliff:g> rep</item>
-        <item quantity="other"><xliff:g id="reps" example="12">%1$d</xliff:g> reps</item>
+        <item quantity="one">%1$d repetición</item>
+        <item quantity="many">%1$d repeticiones</item>
+        <item quantity="other">%1$d repeticiones</item>
     </plurals>
-    
-    <string name="workout_summary_rest">Tu frecuencia cardíaca bajó de <xliff:g id="bpm" example="110">%1$d</xliff:g> en <xliff:g id="time" example="41 s">%2$s</xliff:g> de media.</string>
-    
-    <string name="workout_summary_rest_faster">Tu frecuencia cardíaca bajó de <xliff:g id="bpm" example="110">%1$d</xliff:g> en <xliff:g id="time" example="41 s">%2$s</xliff:g> de media., <xliff:g id="diff" example="9 s">%3$s</xliff:g> mas rápìdo que la última vez.</string>
-    
-    <string name="workout_summary_rest_slower">Tu frecuencia cardíaca bajó de <xliff:g id="bpm" example="110">%1$d</xliff:g> en <xliff:g id="time" example="41 s">%2$s</xliff:g> on average, <xliff:g id="diff" example="9 s">%3$s</xliff:g> slower than last time.</string>
-    
-    <string name="workout_summary_rest_same">Tu frecuencia cardíaca bajó de <xliff:g id="bpm" example="110">%1$d</xliff:g> en <xliff:g id="time" example="41 s">%2$s</xliff:g> on average, about the same as last time.</string>
-    
-    <string name="workout_summary_rounds_recovered">La frecuencia cardíaca bajó <xliff:g id="bpm" example="13">%1$d</xliff:g> lpm  de media por cada <xliff:g id="time" example="10 s">%2$s</xliff:g> descanso.</string>
-    
-    <string name="workout_summary_rounds_recovered_each">La frecuencia cardíaca bajó <xliff:g id="bpm" example="13">%1$d</xliff:g> lpm en cada descanso, de media.</string>
-    
-    <string name="workout_summary_rounds_hardest" tools:ignore="PluralsCandidate">Ronda<xliff:g id="number" example="6">%1$d</xliff:g> was your hardest.</string>
-    
-    <string name="workout_summary_settled">Tu corazón se calmó desde<xliff:g id="from" example="96">%1$d</xliff:g> to <xliff:g id="to" example="66">%2$d</xliff:g>.</string>
-    
-    <string name="workout_summary_held">Tu corazón se mantuvo cerca<xliff:g id="bpm" example="72">%1$d</xliff:g>.</string>
-    
-    <string name="workout_summary_settled_short">Corazón calmado<xliff:g id="from" example="96">%1$d</xliff:g> to <xliff:g id="to" example="66">%2$d</xliff:g></string>
-    
-    <string name="workout_summary_held_short">Corazón cerca<xliff:g id="bpm" example="72">%1$d</xliff:g></string>
-    
-    <string name="workout_summary_game_faded">Tu esfuerzo bajó un poco después de<xliff:g id="minutes" example="70">%1$d</xliff:g> min.</string>
-    
+    <string name="workout_summary_rest">Tu frecuencia cardíaca bajó de %1$d en %2$s de media.</string>
+    <string name="workout_summary_rest_faster">Tu frecuencia cardíaca bajó de %1$d en %2$s de media., %3$s mas rápìdo que la última vez.</string>
+    <string name="workout_summary_rest_slower">Tu frecuencia cardíaca bajó de %1$d en %2$s de media, %3$s más lento que la última vez.</string>
+    <string name="workout_summary_rest_same">Tu frecuencia cardíaca bajó de %1$d en %2$s de media, casi igual que la última vez.</string>
+    <string name="workout_summary_rounds_recovered">La frecuencia cardíaca bajó %1$d lpm  de media por cada %2$s descanso.</string>
+    <string name="workout_summary_rounds_recovered_each">La frecuencia cardíaca bajó %1$d lpm en cada descanso, de media.</string>
+    <string name="workout_summary_rounds_hardest" tools:ignore="PluralsCandidate">La ronda %1$d fue la más dura.</string>
+    <string name="workout_summary_settled">Tu corazón se calmó de %1$d a %2$d.</string>
+    <string name="workout_summary_held">Tu corazón se mantuvo cerca de %1$d.</string>
+    <string name="workout_summary_settled_short">Corazón calmado de %1$d a %2$d</string>
+    <string name="workout_summary_held_short">Corazón cerca de %1$d</string>
+    <string name="workout_summary_game_faded">Tu esfuerzo bajó un poco después de %1$d min.</string>
     <string name="workout_summary_game_stronger">Terminaste con más fuerza de la que empezaste.</string>
-    
     <string name="workout_summary_game_kept_up">Mantuviste tu esfuerzo hasta el final.</string>
-    
     <plurals name="workout_summary_week_goal_met">
-        <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> workout this week, goal met.</item>
-        <item quantity="other"><xliff:g id="count" example="4">%1$d</xliff:g> workouts this week, goal met.</item>
+        <item quantity="one">%1$d entrenamiento esta semana, meta cumplida.</item>
+        <item quantity="many">%1$d entrenamientos esta semana, meta cumplida.</item>
+        <item quantity="other">%1$d entrenamientos esta semana, meta cumplida.</item>
     </plurals>
-    
     <plurals name="workout_summary_week_goal_more">
-        <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> workout this week, <xliff:g id="more" example="3">%2$d</xliff:g> more for your goal.</item>
-        <item quantity="other"><xliff:g id="count" example="3">%1$d</xliff:g> workouts this week, <xliff:g id="more" example="1">%2$d</xliff:g> more for your goal.</item>
+        <item quantity="one">%1$d entrenamiento esta semana, %2$d más para tu meta.</item>
+        <item quantity="many">%1$d entrenamientos esta semana, %2$d más para tu meta.</item>
+        <item quantity="other">%1$d entrenamientos esta semana, %2$d más para tu meta.</item>
     </plurals>
-    
-    <string name="workout_summary_mostly_zone">Mayormente en zona<xliff:g id="zone" example="3">%1$d</xliff:g></string>
-    
-    <string name="workout_summary_versus_lower">Frecuencia cardíaca media<xliff:g id="bpm" example="4">%1$d</xliff:g> bpm lower than <xliff:g id="day" example="Monday">%2$s</xliff:g>, over a similar time.</string>
-    
-    <string name="workout_summary_versus_higher">Frecuencia cardíaca promedio<xliff:g id="bpm" example="4">%1$d</xliff:g> bpm higher than <xliff:g id="day" example="Monday">%2$s</xliff:g>, over a similar time.</string>
-    
-    <string name="workout_summary_versus_same">Casi la misma frecuencia cardíaca promedio que <xliff:g id="day" example="Monday">%1$s</xliff:g>, durante un periodo de tiempo similar.</string>
-    
+    <string name="workout_summary_mostly_zone">Sobre todo zona %1$d</string>
+    <string name="workout_summary_versus_lower">Frecuencia cardíaca promedio %1$d lpm más baja que el %2$s, en un tiempo similar.</string>
+    <string name="workout_summary_versus_higher">Frecuencia cardíaca promedio %1$d lpm más alta que el %2$s, en un tiempo similar.</string>
+    <string name="workout_summary_versus_same">Casi la misma frecuencia cardíaca promedio que %1$s, durante un periodo de tiempo similar.</string>
     <string name="workout_summary_load_label">Carga</string>
-    
     <string name="workout_summary_load_label_hard">Carga, por encima de lo habitual</string>
-    
     <string name="workout_summary_load_label_light">Carga, por debajo de lo habitual</string>
-    
-    <string name="workout_summary_load_line">Carga de trabajo<xliff:g id="load" example="80">%1$d</xliff:g></string>
-    
-    <string name="workout_summary_load_line_hard">Carga<xliff:g id="load" example="130">%1$d</xliff:g>, above usual</string>
-    
-    <string name="workout_summary_load_line_light">Carga<xliff:g id="load" example="60">%1$d</xliff:g>, below usual</string>
+    <string name="workout_summary_load_line">Carga %1$d</string>
+    <string name="workout_summary_load_line_hard">Carga %1$d, por encima de tu habitual</string>
+    <string name="workout_summary_load_line_light">Carga %1$d, por debajo de tu habitual</string>
 </resources>

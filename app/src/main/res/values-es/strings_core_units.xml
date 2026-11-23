@@ -1,39 +1,33 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="core_unit_meters"><xliff:g id="meters" example="820">%1$s</xliff:g> m</string>
-    
-    <string name="core_unit_km"><xliff:g id="km" example="5.21">%1$s</xliff:g> km</string>
-    
-    <string name="core_unit_minutes"><xliff:g id="minutes" example="40">%1$s</xliff:g> min</string>
-    
-    <string name="core_unit_hours"><xliff:g id="hours" example="7">%1$s</xliff:g> h</string>
-    
-    <string name="core_unit_hours_minutes"><xliff:g id="hours" example="7">%1$s</xliff:g> h <xliff:g id="minutes" example="40">%2$s</xliff:g></string>
-    
-    <string name="core_unit_seconds"><xliff:g id="seconds" example="45">%1$s</xliff:g> s</string>
-    
-    <string name="core_unit_pace"><xliff:g id="pace" example="5:24">%1$s</xliff:g>/km</string>
-    
-    <string name="core_unit_kcal"><xliff:g id="kcal" example="312">%1$s</xliff:g> kcal</string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_unit_meters">%1$s m</string>
+    <string name="core_unit_ft">%1$s ft</string>
+    <string name="core_unit_km">%1$s km</string>
+    <string name="core_unit_mi">%1$s mi</string>
+    <string name="core_unit_minutes">%1$s min</string>
+    <string name="core_unit_hours">%1$s h</string>
+    <string name="core_unit_hours_minutes">%1$s h %2$s</string>
+    <string name="core_unit_minutes_seconds">%1$s min %2$s</string>
+    <string name="core_unit_seconds">%1$s s</string>
+    <string name="core_unit_pace">%1$s/km</string>
+    <string name="core_unit_pace_mi">%1$s/mi</string>
+    <string name="core_unit_kcal">%1$s kcal</string>
     <string name="core_unit_bpm">lpm</string>
-    
     <string name="core_unit_ms">ms</string>
-    
     <string name="core_unit_celsius">°C</string>
-    
     <string name="core_unit_breaths">res/min</string>
-    
     <string name="core_unit_steps">pasos</string>
-    
-    <string name="core_unit_lb"><xliff:g id="pounds" example="165">%1$d</xliff:g> lb</string>
-    
-    <string name="core_unit_kg"><xliff:g id="kilograms" example="75">%1$d</xliff:g> kg</string>
-    
-    <string name="core_unit_feet_inches"><xliff:g id="feet" example="5">%1$d</xliff:g>′<xliff:g id="inches" example="10">%2$d</xliff:g>″</string>
-    
-    <string name="core_unit_cm"><xliff:g id="centimeters" example="178">%1$d</xliff:g> cm</string>
-    
-    <string name="core_range"><xliff:g id="from" example="22:58">%1$s</xliff:g> to <xliff:g id="to" example="06:56">%2$s</xliff:g></string>
+    <string name="core_unit_lb">%1$d lb</string>
+    <string name="core_unit_kg">%1$d kg</string>
+    <string name="core_unit_feet_inches">%1$d′%2$d″</string>
+    <string name="core_unit_cm">%1$d cm</string>
+    <string name="core_unit_label_km">km</string>
+    <string name="core_unit_label_mi">mi</string>
+    <string name="core_unit_label_m">m</string>
+    <string name="core_unit_label_ft">ft</string>
+    <string name="core_unit_label_per_km">/km</string>
+    <string name="core_unit_label_per_mi">/mi</string>
+    <string name="core_unit_label_kmh">km/h</string>
+    <string name="core_unit_label_mph">mph</string>
+    <string name="core_range">%1$s a %2$s</string>
 </resources>

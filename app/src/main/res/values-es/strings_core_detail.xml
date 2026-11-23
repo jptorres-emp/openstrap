@@ -1,80 +1,76 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="core_detail_status_above">Por encima de tu valor normal</string>
     <string name="core_detail_status_below">Por debajo de tu valor normal</string>
-    <string name="core_detail_status_usual">Habitual</string>
-
-    
-    <string name="core_detail_band_label">Tu valor normal, <xliff:g id="low" example="44">%1$s</xliff:g> a <xliff:g id="high" example="58">%2$s</xliff:g></string>
-    
+    <string name="core_detail_status_usual">Tu normal</string>
+    <string name="core_detail_band_label">Tu valor normal, %1$s a %2$s</string>
     <plurals name="core_detail_learning_nights">
-        <item quantity="one">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
     </plurals>
-    
     <plurals name="core_detail_learning_days">
-        <item quantity="one">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day</item>
-        <item quantity="other">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days</item>
+        <item quantity="one">Aprendiendo, %1$d de %2$d día</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d días</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d días</item>
     </plurals>
-    
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="one">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night.</item>
-        <item quantity="other">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights.</item>
+        <item quantity="one">Aún aprendiendo tu normal, %1$d de %2$d noche.</item>
+        <item quantity="many">Aún aprendiendo tu normal, %1$d de %2$d noches.</item>
+        <item quantity="other">Aún aprendiendo tu normal, %1$d de %2$d noches.</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="one">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day.</item>
-        <item quantity="other">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days.</item>
+        <item quantity="one">Aún aprendiendo tu normal, %1$d de %2$d día.</item>
+        <item quantity="many">Aún aprendiendo tu normal, %1$d de %2$d días.</item>
+        <item quantity="other">Aún aprendiendo tu normal, %1$d de %2$d días.</item>
     </plurals>
-
-    
-    <string name="core_detail_number_0">no</string>
-    <string name="core_detail_number_1">uno</string>
-    <string name="core_detail_number_2">dos</string>
-    <string name="core_detail_number_3">tres</string>
-    <string name="core_detail_number_4">cuatro</string>
-    <string name="core_detail_number_5">cinco</string>
-    <string name="core_detail_number_6">seis</string>
-    <string name="core_detail_number_7">siete</string>
-    <string name="core_detail_number_8">ocho</string>
-    <string name="core_detail_number_9">nueve</string>
-    
+    <string name="core_detail_number_0">0</string>
+    <string name="core_detail_number_1">1</string>
+    <string name="core_detail_number_2">2</string>
+    <string name="core_detail_number_3">3</string>
+    <string name="core_detail_number_4">4</string>
+    <string name="core_detail_number_5">5</string>
+    <string name="core_detail_number_6">6</string>
+    <string name="core_detail_number_7">7</string>
+    <string name="core_detail_number_8">8</string>
+    <string name="core_detail_number_9">9</string>
     <plurals name="core_detail_nights">
-        <item quantity="one"><xliff:g id="count" example="one">%1$s</xliff:g> night</item>
-        <item quantity="other"><xliff:g id="count" example="three">%1$s</xliff:g> nights</item>
+        <item quantity="one">%1$s noche</item>
+        <item quantity="many">%1$s noches</item>
+        <item quantity="other">%1$s noches</item>
     </plurals>
-    
     <plurals name="core_detail_days">
-        <item quantity="one"><xliff:g id="count" example="one">%1$s</xliff:g> day</item>
-        <item quantity="other"><xliff:g id="count" example="three">%1$s</xliff:g> days</item>
+        <item quantity="one">%1$s día</item>
+        <item quantity="many">%1$s días</item>
+        <item quantity="other">%1$s días</item>
     </plurals>
-
-    
     <string name="core_detail_label_bpm_now">lpm ahora</string>
     <string name="core_detail_label_bpm_latest">lpm, último</string>
-    <string name="core_detail_label_bpm_resting">lpm en reposo</string>
+    <string name="core_detail_label_bpm_resting">lpm, anoche</string>
+    <string name="core_detail_label_bpm_resting_that_night">lpm, esa noche</string>
+    <string name="core_detail_label_bpm_resting_estimated">lpm, anoche, estimado</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">lpm, esa noche, estimado</string>
+    <string name="core_detail_label_bpm_up_to">lpm, hasta las %1$s</string>
     <string name="core_detail_label_steps_today">pasos hasta ahora hoy</string>
     <string name="core_detail_label_steps">pasos</string>
-    
     <string name="core_detail_label_breathing">resp/min durante el sueño</string>
-    
     <string name="core_detail_label_day_average">Promedio del día</string>
-    
-    <string name="core_detail_label_unit_day_average"><xliff:g id="unit" example="ms">%1$s</xliff:g>, media diaria</string>
-    
+    <string name="core_detail_label_unit_day_average">%1$s, media diaria</string>
+    <string name="core_detail_label_stress_latest_at">%1$s, última a las %2$s</string>
+    <string name="core_detail_skin_above">%1$s, por encima de tu normal</string>
+    <string name="core_detail_skin_below">%1$s, por debajo de tu normal</string>
+    <string name="core_detail_skin_within">%1$s, dentro de tu normal</string>
+    <string name="core_detail_label_unit_daytime_latest_at">%1$s, durante el día, última a las %2$s</string>
+    <string name="core_detail_label_unit_asleep_latest_at">%1$s, mientras dormías, última a las %2$s</string>
     <string name="core_detail_label_steps_week">pasos al día, últimos 7 días</string>
     <string name="core_detail_label_steps_month">pasos al día, últimos 30 días</string>
     <string name="core_detail_label_steps_year">pasos al día, últimos 12 meses</string>
-    
     <string name="core_detail_label_average_week">Promedio de los últimos 7 días</string>
     <string name="core_detail_label_average_month">Promedio de los últimos 30 días</string>
     <string name="core_detail_label_average_year">Promedio de los últimos 12 meses</string>
-    
-    <string name="core_detail_label_unit_average_week"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 7 dias</string>
-    <string name="core_detail_label_unit_average_month"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 30 dias</string>
-    <string name="core_detail_label_unit_average_year"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 12 meses</string>
-
-    
+    <string name="core_detail_label_unit_average_week">%1$s, de media los últimos 7 días</string>
+    <string name="core_detail_label_unit_average_month">%1$s, de media los últimos 30 días</string>
+    <string name="core_detail_label_unit_average_year">%1$s, de media los últimos 12 meses</string>
     <string name="core_detail_day_night_today_above">Anoche, por encima de tu valor normal.</string>
     <string name="core_detail_day_night_today_below">Anoche, por debajo de tu valor normal.</string>
     <string name="core_detail_day_night_today_within">Anoche, dentro de tu valor normal.</string>
@@ -93,26 +89,18 @@
     <string name="core_detail_day_so_far_past_above">Ese día, por encima de tu rango normal.</string>
     <string name="core_detail_day_so_far_past_below">Ese día, por debajo de tu rango normal.</string>
     <string name="core_detail_day_so_far_past_within">Ese día, dentro de tu rango normal.</string>
-
-    
     <string name="core_detail_none_during_sleep">Medido durante el sueño</string>
-    <string name="core_detail_none_last_night">De la noche pasada</string>
-    <string name="core_detail_none_that_night">De esa noche</string>
+    <string name="core_detail_none_last_night">Anoche</string>
+    <string name="core_detail_none_that_night">Esa noche</string>
     <string name="core_detail_none_so_far_today">Hasta ahora hoy</string>
-    <string name="core_detail_none_that_day">De ese día</string>
+    <string name="core_detail_none_that_day">Ese día</string>
     <string name="core_detail_none_week">En los últimos 7 días</string>
     <string name="core_detail_none_month">En los últimos 30 días</string>
     <string name="core_detail_none_year">En los últimos 12 meses</string>
-
-    
-    <string name="core_detail_heart_day_today" tools:ignore="PluralsCandidate">Entre<xliff:g id="low" example="52">%1$d</xliff:g> y <xliff:g id="high" example="148">%2$d</xliff:g> lpm hoy.</string>
-    <string name="core_detail_heart_day_past" tools:ignore="PluralsCandidate">Entre <xliff:g id="low" example="52">%1$d</xliff:g> y <xliff:g id="high" example="148">%2$d</xliff:g> lpm ese dia..</string>
-
-    
-    <string name="core_detail_run_above">Por encima de tu rango normal para<xliff:g id="count" example="three nights">%1$s</xliff:g>.</string>
-    
-    <string name="core_detail_run_below">Por debajo de tu rango normal para<xliff:g id="count" example="three nights">%1$s</xliff:g>.</string>
-    
+    <string name="core_detail_heart_day_today" tools:ignore="PluralsCandidate">Entre %1$d y %2$d lpm hasta ahora hoy.</string>
+    <string name="core_detail_heart_day_past" tools:ignore="PluralsCandidate">Entre %1$d y %2$d lpm ese día..</string>
+    <string name="core_detail_run_above">Por encima de tu normal durante %1$s.</string>
+    <string name="core_detail_run_below">Por debajo de tu normal durante %1$s.</string>
     <string name="core_detail_every_night">Dentro de tu rango normal todas las noches.</string>
     <string name="core_detail_every_night_with_data">Dentro de tu rango normal todas las noches con datos.</string>
     <string name="core_detail_every_night_month">Dentro de tu rango normal todas las noches en los últimos 30 días.</string>
@@ -121,56 +109,52 @@
     <string name="core_detail_every_day_with_data">Dentro de tu rango normal todos los días con datos.</string>
     <string name="core_detail_every_day_month">Dentro de tu rango normal todos los días en los últimos 30 días.</string>
     <string name="core_detail_every_day_with_data_month">Dentro de tu rango normal todos los días con datos en los últimos 30 días.</string>
-    
     <plurals name="core_detail_inside_nights">
-        <item quantity="one">Dentro de tu rango normal el<xliff:g id="inside" example="6">%1$d</xliff:g> of <xliff:g id="total" example="7">%2$d</xliff:g> night.</item>
-        <item quantity="other">Dentro de tu rango normal el<xliff:g id="inside" example="6">%1$d</xliff:g> of <xliff:g id="total" example="7">%2$d</xliff:g> nights.</item>
+        <item quantity="one">Dentro de tu normal en %1$d de %2$d noche.</item>
+        <item quantity="many">Dentro de tu normal en %1$d de %2$d noches.</item>
+        <item quantity="other">Dentro de tu normal en %1$d de %2$d noches.</item>
     </plurals>
     <plurals name="core_detail_inside_nights_month">
-        <item quantity="one">Dentro de tu rango normal el<xliff:g id="inside" example="24">%1$d</xliff:g> of <xliff:g id="total" example="30">%2$d</xliff:g> night in the last 30 days.</item>
-        <item quantity="other">Dentro de tu rango normal el<xliff:g id="inside" example="24">%1$d</xliff:g> of <xliff:g id="total" example="30">%2$d</xliff:g> nights in the last 30 days.</item>
+        <item quantity="one">Dentro de tu normal en %1$d de %2$d noche en los últimos 30 días.</item>
+        <item quantity="many">Dentro de tu normal en %1$d de %2$d noches en los últimos 30 días.</item>
+        <item quantity="other">Dentro de tu normal en %1$d de %2$d noches en los últimos 30 días.</item>
     </plurals>
     <plurals name="core_detail_inside_days">
-        <item quantity="one">Dentro de tu rango normal el<xliff:g id="inside" example="6">%1$d</xliff:g> of <xliff:g id="total" example="7">%2$d</xliff:g> day.</item>
-        <item quantity="other">Dentro de tu rango normal el<xliff:g id="inside" example="6">%1$d</xliff:g> of <xliff:g id="total" example="7">%2$d</xliff:g> days.</item>
+        <item quantity="one">Dentro de tu normal en %1$d de %2$d día.</item>
+        <item quantity="many">Dentro de tu normal en %1$d de %2$d días.</item>
+        <item quantity="other">Dentro de tu normal en %1$d de %2$d días.</item>
     </plurals>
     <plurals name="core_detail_inside_days_month">
-        <item quantity="one">Dentro de tu rango normal el<xliff:g id="inside" example="24">%1$d</xliff:g> of <xliff:g id="total" example="30">%2$d</xliff:g> day in the last 30 days.</item>
-        <item quantity="other">Dentro de tus valores normales en<xliff:g id="inside" example="24">%1$d</xliff:g> of <xliff:g id="total" example="30">%2$d</xliff:g> days in the last 30 days.</item>
+        <item quantity="one">Dentro de tu normal en %1$d de %2$d día en los últimos 30 días.</item>
+        <item quantity="many">Dentro de tu normal en %1$d de %2$d días en los últimos 30 días.</item>
+        <item quantity="other">Dentro de tu normal en %1$d de %2$d días en los últimos 30 días.</item>
     </plurals>
-
-    
-    <string name="core_detail_year_unit">En los últimos 12 meses, los promedios semanales oscilaron entre <xliff:g id="lowest" example="48">%1$s</xliff:g> a <xliff:g id="highest" example="61">%2$s</xliff:g> <xliff:g id="unit" example="ms">%3$s</xliff:g>.</string>
-    
-    <string name="core_detail_year">En los últimos 12 meses, los promedios semanales oscilaron entre <xliff:g id="lowest" example="20">%1$s</xliff:g> a <xliff:g id="highest" example="41">%2$s</xliff:g>.</string>
-
-    
+    <string name="core_detail_year_unit">Durante %4$s, los promedios semanales fueron de %1$s a %2$s %3$s.</string>
+    <string name="core_detail_year">Durante %3$s, los promedios semanales fueron de %1$s a %2$s.</string>
+    <plurals name="core_detail_year_span_weeks">
+        <item quantity="one">la última semana</item>
+        <item quantity="many">las últimas %1$d semanas</item>
+        <item quantity="other">las últimas %1$d semanas</item>
+    </plurals>
+    <plurals name="core_detail_year_span_months">
+        <item quantity="one">el último mes</item>
+        <item quantity="many">los últimos %1$d meses</item>
+        <item quantity="other">los últimos %1$d meses</item>
+    </plurals>
     <string name="core_detail_score_week_one">Un puntaje en los últimos 7 días hasta ahora.</string>
-    
-    <string name="core_detail_score_week" tools:ignore="PluralsCandidate">Promedio <xliff:g id="average" example="74">%1$d</xliff:g> de los últimos 7 dias, desde <xliff:g id="lowest" example="61">%2$d</xliff:g> a <xliff:g id="highest" example="84">%3$d</xliff:g>.</string>
-
-    
-    <string name="core_detail_charge_started" tools:ignore="PluralsCandidate">Comenzó el día en <xliff:g id="start" example="84">%1$d</xliff:g> y terminó en <xliff:g id="end" example="30">%2$d</xliff:g>.</string>
-    
-    <string name="core_detail_charge_ended">Terminó el día en <xliff:g id="end" example="30">%1$d</xliff:g>.</string>
-
-    
+    <string name="core_detail_score_week" tools:ignore="PluralsCandidate">Promedio %1$d de los últimos 7 días, desde %2$d a %3$d.</string>
+    <string name="core_detail_charge_started" tools:ignore="PluralsCandidate">Comenzó el día en %1$d y terminó en %2$d.</string>
+    <string name="core_detail_charge_ended">Terminó el día en %1$d.</string>
     <string name="core_detail_recovery_waiting">Esperando</string>
-    
     <string name="core_detail_recovery_for_last_night">Para el sueño de la noche pasada</string>
-    
     <string name="core_detail_recovery_no_sleep">No hay sueño registrado esa noche</string>
-    
     <string name="core_detail_recovery_learning">Aprendiendo</string>
-    
     <plurals name="core_detail_recovery_nights">
-        <item quantity="one"><xliff:g id="have" example="6">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other"><xliff:g id="have" example="6">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">%1$d de %2$d noche</item>
+        <item quantity="many">%1$d de %2$d noches</item>
+        <item quantity="other">%1$d de %2$d noches</item>
     </plurals>
-    
     <string name="core_detail_recovery_no_score">Sin puntuación</string>
-    
-    <string name="core_detail_recovery_no_heart_data">No hay suficientes datos cardíacos esa noche</string>
-    
-    <string name="core_detail_recovery_scored_mornings">Puntuado cada mañana a partir de la noche anterior</string>
+    <string name="core_detail_recovery_no_heart_data">No hay suficientes datos cardíacos</string>
+    <string name="core_detail_recovery_scored_mornings">Puntuada cada mañana</string>
 </resources>

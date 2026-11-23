@@ -1,69 +1,36 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="core_data_recovery_hrv"><xliff:g id="ms" example="52">%1$s</xliff:g> ms, <xliff:g id="change" example="+4">%2$s</xliff:g>%% vs habitual</string>
-    
-    <string name="core_data_recovery_resting_hr"><xliff:g id="bpm" example="54">%1$s</xliff:g> lpm, <xliff:g id="change" example="−3">%2$s</xliff:g> vs habitual</string>
-    
-    <string name="core_data_recovery_asleep"><xliff:g id="duration" example="7 h 40">%1$s</xliff:g> dormido</string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_data_recovery_hrv">%1$s ms, %2$s%% vs tu normal</string>
+    <string name="core_data_recovery_resting_hr">%1$s lpm, %2$s vs tu normal</string>
+    <string name="core_data_recovery_asleep">%1$s dormido</string>
     <string name="core_data_recovery_no_debt">Sin deuda de sueño</string>
-    
-    <string name="core_data_recovery_debt"><xliff:g id="duration" example="1 h 10">%1$s</xliff:g> de deuda de sueño</string>
-    
-    <string name="core_data_recovery_lowest_hr">Frecuencia cardíaca más baja <xliff:g id="duration" example="40 min">%1$s</xliff:g> antes de despertarse</string>
-    
-    <string name="core_data_recovery_temperature"><xliff:g id="change" example="+0.3">%1$s</xliff:g> °C vs habitual</string>
-    
-    <string name="core_data_recovery_breathing"><xliff:g id="change" example="−0.4">%1$s</xliff:g>/min vs habitual</string>
-    
-    <string name="core_data_recovery_blood_oxygen"><xliff:g id="percent" example="96.3">%1$s</xliff:g>%%, <xliff:g id="change" example="−1.2">%2$s</xliff:g> vs habitual</string>
-    
-    <string name="core_data_recovery_load">Carga <xliff:g id="yesterday" example="62">%1$s</xliff:g>, normalmente: <xliff:g id="usual" example="45">%2$s</xliff:g></string>
-
-    
+    <string name="core_data_recovery_debt">%1$s de deuda de sueño</string>
+    <string name="core_data_recovery_lowest_hr">Frecuencia cardíaca más baja %1$s antes de despertarse</string>
+    <string name="core_data_recovery_temperature">%1$s °C vs tu normal</string>
+    <string name="core_data_recovery_breathing">%1$s/min vs tu normal</string>
+    <string name="core_data_recovery_blood_oxygen">%1$s%%, %2$s vs tu normal</string>
+    <string name="core_data_recovery_load">Carga %1$s, normalmente: %2$s</string>
     <string name="core_data_edit_wake_before_sleep">Despertarse debe ocurrir después de dormirse.</string>
-    
     <string name="core_data_edit_nap_too_short">Una siesta necesita al menos 5 minutos.</string>
-    
     <string name="core_data_edit_sleep_too_short">El sueño necesita al menos una hora.</string>
-    
     <string name="core_data_edit_nap_too_long">Una siesta puede durar 4 horas como máximo.</string>
-    
     <string name="core_data_edit_sleep_too_long">El sueño puede durar 16 horas como máximo.</string>
-    
     <string name="core_data_edit_future">Eso es más tarde que ahora.</string>
-    
-    <string name="core_data_edit_too_far">Mantenlo dentro de las 3 horas de lo que registró la correa.</string>
-    
-    <string name="core_data_edit_runs_into_nap">Eso se cruza con tu siesta a las <xliff:g id="time" example="13:00">%1$s</xliff:g>.</string>
-    
-    <string name="core_data_edit_runs_into_sleep">Eso te quita horas de sueño a las <xliff:g id="time" example="23:10">%1$s</xliff:g>.</string>
-
-    
+    <string name="core_data_edit_too_far">Mantenlo dentro de las 3 horas de lo que registró la banda.</string>
+    <string name="core_data_edit_runs_into_nap">Eso se cruza con tu siesta a las %1$s.</string>
+    <string name="core_data_edit_runs_into_sleep">Eso te quita horas de sueño a las %1$s.</string>
     <string name="core_data_vo2_needs_age">Necesita una edad entre 20 y 79 años.</string>
-    
-    <string name="core_data_vo2_needs_sex">Necesita tu sexo: la ecuación es diferente para mujeres y hombres.</string>
-    
+    <string name="core_data_vo2_needs_sex">Necesita tu sexo, porque la ecuación es distinta para mujeres y hombres.</string>
     <string name="core_data_vo2_needs_body">Necesita un peso y una altura ingresados en los últimos 90 días.</string>
-    
-    <string name="core_data_vo2_needs_activity">Responde la pregunta de actividad (se pregunta cada 6 meses).</string>
-    
-    <string name="core_data_vo2_medication">No se muestra mientras tomas betabloqueantes o durante el embarazo: la frecuencia cardíaca en reposo no refleja tu condición física en esos momentos.</string>
-    
+    <string name="core_data_vo2_needs_activity">Responde la pregunta de actividad, que se hace cada 6 meses.</string>
+    <string name="core_data_vo2_medication">No se muestra con betabloqueantes ni durante el embarazo, porque entonces la frecuencia cardíaca en reposo no refleja la condición física.</string>
     <string name="core_data_vo2_needs_resting_hr">Necesita al menos 5 noches de frecuencia cardíaca en reposo en las últimas 2 semanas.</string>
-    
     <string name="core_data_vo2_band_below_30">Por debajo del percentil 30</string>
     <string name="core_data_vo2_band_30_50">Percentil 30 a 50</string>
     <string name="core_data_vo2_band_50_70">Percentil 50 a 70</string>
     <string name="core_data_vo2_band_70_90">Percentil 70 a 90</string>
-    
-    <string name="core_data_vo2_band_top_10">Superior <xliff:g id="percent" example="10">%1$d</xliff:g>%%</string>
-    
-    <string name="core_data_vo2_estimate_rest">a <xliff:g id="high" example="45">%1$s</xliff:g> ml/kg/min</string>
-
-    
-    <string name="core_data_goal_summary"><xliff:g id="steps" example="8,000">%1$s</xliff:g> pasos, <xliff:g id="kcal" example="300">%2$s</xliff:g> kcal de actividad, <xliff:g id="sleep" example="8 h">%3$s</xliff:g> sueño, <xliff:g id="hours" example="10">%4$s</xliff:g> horas activas</string>
-    
-    <string name="core_data_goal_out_of_range">Elige un número del <xliff:g id="low" example="200">%1$s</xliff:g> a <xliff:g id="high" example="3,000">%2$s</xliff:g></string>
+    <string name="core_data_vo2_band_top_10">Superior %1$d%%</string>
+    <string name="core_data_vo2_estimate_rest">a %1$s ml/kg/min</string>
+    <string name="core_data_goal_summary">%1$s pasos, %2$s kcal de actividad, %3$s sueño, %4$s horas activas</string>
+    <string name="core_data_goal_out_of_range">Elige un número del %1$s a %2$s</string>
 </resources>

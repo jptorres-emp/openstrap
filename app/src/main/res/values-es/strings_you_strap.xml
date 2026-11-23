@@ -1,133 +1,89 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="you_strap_state_charging">Cargando. Los datos del sensor se pausarán hasta que te lo vuelvas a poner.</string>
-    <string name="you_strap_state_syncing">Conectado. Sincronizando…</string>
-    
-    <string name="you_strap_state_synced">Conectado. Sincronizado<xliff:g id="ago" example="2 min ago">%1$s</xliff:g></string>
-    <string name="you_strap_state_not_synced">Conectado. No sincronizado</string>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="you_strap_state_charging">Cargando, datos de uso en pausa</string>
+    <string name="you_strap_state_syncing">Conectada, sincronizando</string>
+    <string name="you_strap_state_synced">Conectada, sincronizada %1$s</string>
+    <string name="you_strap_state_not_synced">Conectada, sin sincronizar</string>
     <string name="you_strap_state_connected">Conectado</string>
-    <string name="you_strap_state_connecting">Conectando…</string>
-    
-    <string name="you_strap_state_key_rejected">La banda rechazó la clave</string>
+    <string name="you_strap_state_connecting">Conectando</string>
+    <string name="you_strap_state_key_rejected">Clave rechazada</string>
     <string name="you_strap_state_cant_connect">No se puede conectar</string>
-    <string name="you_strap_state_not_paired">No vinculado</string>
-    
-    <string name="you_strap_state_last_seen">Última vez visto: <xliff:g id="ago" example="18 min ago">%1$s</xliff:g></string>
+    <string name="you_strap_state_cant_connect_seen">No se puede conectar, vista %1$s</string>
+    <string name="you_strap_state_not_paired">Ninguna banda vinculada</string>
+    <string name="you_strap_state_last_seen">Sin conexión, vista %1$s</string>
     <string name="you_strap_state_not_connected">No conectado</string>
-
-    
+    <string name="you_strap_state_bluetooth_off">Bluetooth desactivado</string>
     <string name="you_strap_disconnect_title">¿Desconectar la banda?</string>
     <string name="you_strap_disconnect_text">La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardiaca en tiempo real hasta que la vuelvas a conectar.</string>
-    
     <string name="you_strap_disconnect_text_syncing">La sincronización en curso se detendrá. La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardiaca en tiempo real hasta que la vuelvas a conectar.</string>
-    
     <string name="you_strap_disconnect">Desconectar</string>
-    
     <string name="you_strap_restart_title">¿Reiniciar la banda?</string>
     <string name="you_strap_restart_text">La banda se reiniciará y desconectará. unstrap se reconectará sola cuando vuelva a estar lista, lo que puede tardar un minuto.</string>
-    
     <string name="you_strap_restart_text_syncing">La sincronización en curso se detendrá. La banda se reiniciará y desconectará. unstrap se reconectará sola cuando vuelva a estar lista, lo que puede tardar un minuto.</string>
     <string name="you_strap_restart">Reiniciar</string>
-    
     <string name="you_strap_forget_title">¿Olvidar esta banda?</string>
     <string name="you_strap_forget_text">unstrap se desconectará y borrará la dirección de la banda y la clave de autenticación de este teléfono. Tus datos de salud sincronizados se mantendrán. Para volver a vincularla, necesitarás la clave de autenticación.\n\nEsto no desvincula la banda de tu cuenta de Zepp.</string>
     <string name="you_strap_forget">Olvidar</string>
-
-    
     <string name="you_strap_title">Tu banda</string>
-    
     <string name="you_strap_sync_now">Sincronizar ahora</string>
     <string name="you_strap_connect">Conectar</string>
-    
+    <string name="you_strap_turn_on_bluetooth">Activar Bluetooth</string>
     <string name="you_strap_find">Buscar banda</string>
     <string name="you_strap_find_stop">Dejar de vibrar</string>
-    
-    <string name="you_strap_reading">Leyendo…</string>
-    
-    <string name="you_strap_on_strap">En la banda</string>
-    
+    <string name="you_strap_reading">Leyendo</string>
+    <string name="you_strap_on_strap">Aún sin leer</string>
     <string name="you_strap_row_alarms">Alarmas</string>
     <string name="you_strap_row_phone_alerts">Alertas del teléfono</string>
     <string name="you_strap_row_health_alerts">Alertas de salud</string>
-    
     <string name="you_strap_row_off_body">Recordatorio de uso</string>
-    <string name="you_strap_row_auto_detect">Detección automática de entrenamientos</string>
     <string name="you_strap_row_firmware">Firmware</string>
-    
-    <string name="you_strap_check_for_updates">Buscar actualizaciones</string>
     <string name="you_strap_row_zepp">Cuenta de Zepp</string>
     <string name="you_strap_signed_in">Sesión iniciada</string>
     <string name="you_strap_not_signed_in">Sesión no iniciada</string>
     <string name="you_strap_row_restart">Reiniciar banda</string>
-    <string name="you_strap_row_forget">Olvidar esta correa</string>
-    
-    <string name="you_strap_row_background">Mantente conectado en segundo plano</string>
+    <string name="you_strap_row_forget">Olvidar esta banda</string>
+    <string name="you_strap_row_background">Conexión en segundo plano</string>
     <string name="you_strap_battery_settings_failed">No se pudo abrir la configuración de batería en este teléfono.</string>
-    
-    <string name="you_strap_battery_unit"><xliff:g id="percent_sign" example="%">%1$s</xliff:g> batería</string>
-    
-    <string name="you_strap_retrying">unstrap sigue intentándolo. Mantén la correa en su cargador cerca del teléfono y asegúrate de que la aplicación Zepp no esté abierta. La correa solo se comunica con una aplicación a la vez.</string>
-    
-    <string name="you_strap_sync_stopped">Sincronización detenida.<xliff:g id="reason" example="The strap stopped answering.">%1$s</xliff:g></string>
-    
-    <string name="you_strap_sync_retry"><xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g> unstrap lo intentará de nuevo.</string>
-
-    
+    <string name="you_strap_retrying">Sigue intentándolo sola. Conectar lo intenta de nuevo ahora.</string>
+    <string name="you_strap_sync_stopped">Sincronización detenida.%1$s</string>
+    <string name="you_strap_sync_retry">%1$s Lo vuelve a intentar sola.</string>
     <string name="you_pair_title">Vincula tu Helio Strap</string>
-    <string name="you_pair_intro">unstrap necesita la clave de autenticación de la correa, que Zepp crea cuando la vinculas. Solo tienes que hacer esto una vez.</string>
-    
-    <string name="you_pair_step_link">Vincula la correa en la aplicación Zepp</string>
+    <string name="you_pair_intro">unstrap necesita la clave de autenticación de la banda, que Zepp crea cuando la vinculas. Solo tienes que hacer esto una vez.</string>
+    <string name="you_pair_step_link">Vincula la banda en la aplicación Zepp</string>
     <string name="you_pair_step_link_text">Instala Zepp, inicia sesión y vincula tu Helio Strap.</string>
-    <string name="you_pair_step_link_note">unstrap inicia sesión solo con correo electrónico. Si te registraste con Google o Apple, añade un correo y una contraseña a tu cuenta en la configuración de cuenta de la aplicación Zepp.</string>
-    <string name="you_pair_step_ready">Prepara la correa</string>
-    <string name="you_pair_step_ready_text">Coloca la correa en su cargador, cerca de este teléfono.</string>
-    <string name="you_pair_step_ready_note">Detén Zepp a la fuerza o desinstálala para que suelte la correa. No desvincules la correa en Zepp, ya que eso borra su clave.</string>
+    <string name="you_pair_step_link_note">unstrap inicia sesión solo con correo. Si usas Google o Apple, añade un correo y una contraseña en los ajustes de cuenta de la app de Zepp.</string>
+    <string name="you_pair_step_ready">Prepara la banda</string>
+    <string name="you_pair_step_ready_text">Coloca la banda en su cargador, cerca de este teléfono.</string>
+    <string name="you_pair_step_ready_note">Cierra Zepp para que suelte la banda. Nunca desvincules la banda en Zepp, porque eso borra su clave.</string>
     <string name="you_pair_step_sign_in">Inicia sesión y vincula</string>
-    <string name="you_pair_step_sign_in_text">Inicia sesión con el mismo correo de Zepp. unstrap buscará tu correa y su clave, y luego las vinculará.</string>
-    
+    <string name="you_pair_step_sign_in_text">Inicia sesión con el mismo correo de Zepp. unstrap buscará tu banda y su clave, y luego las vinculará.</string>
     <string name="you_pair_sign_in">Iniciar sesión con Zepp</string>
-    
-    <string name="you_pair_confirm">Vincular esta correa</string>
-    
-    <string name="you_pair_have_key">¿Ya tienes la clave?</string>
+    <string name="you_pair_confirm">Vincular esta banda</string>
+    <string name="you_pair_have_key">Ya tengo la clave</string>
     <string name="you_pair_enter_key">Introdúcela tú mismo</string>
-    
     <string name="you_pair_manual_title">Introduce la clave tú mismo</string>
-    <string name="you_pair_manual_note">Escanea con la correa en su cargador y tócala para rellenar la dirección, luego pega la clave de autenticación de 32 caracteres. El número al lado de cada correa es su señal. Cuanto más cerca esté de cero, más cerca se encuentra.</string>
+    <string name="you_pair_manual_note">Escanea, toca la banda para rellenar la dirección y pega la clave de autenticación. Cuanto más cerca de cero, más cerca está.</string>
     <string name="you_pair_scan_stop">Detener escaneo</string>
-    <string name="you_pair_scan">Buscar correas</string>
-    
-    <string name="you_pair_scan_failed">Escaneo detenido: <xliff:g id="reason" example="Bluetooth is off">%1$s</xliff:g>. Comprueba que tienes el Bluetooth encendido y prueba de nuevo.</string>
-    
-    <string name="you_pair_scan_location_off">Android 11 solo encuentra correas si la ubicación está activada.</string>
+    <string name="you_pair_scan">Buscar bandas</string>
+    <string name="you_pair_scan_failed">Se detuvo el escaneo. %1$s. Inténtalo de nuevo.</string>
+    <string name="you_pair_scan_location_off">Android 11 solo encuentra bandas si la ubicación está activada.</string>
     <string name="you_pair_scan_location_on">Activar ubicación</string>
-    <string name="you_pair_scan_looking">Buscando correas cercanas. Mantén la correa en su cargador.</string>
-    
+    <string name="you_pair_scan_looking">Buscando bandas cercanas. Mantén la banda en su cargador.</string>
     <string name="you_pair_chosen">Seleccionada</string>
-    
-    <string name="you_pair_rssi"><xliff:g id="rssi" example="-62">%1$d</xliff:g> dBm</string>
-    
+    <string name="you_pair_rssi">%1$d dBm</string>
     <string name="you_pair_address">Dirección Bluetooth</string>
     <string name="you_pair_key">Clave de autenticación</string>
-    
     <string name="you_pair_pair">Vincular</string>
-    
-    <string name="you_pair_key_rejected_title">La vinculación no funcionó</string>
     <string name="you_pair_again">Volver a iniciar la vinculación</string>
-
-    
-    <string name="you_pair_key_invalid">La clave de autenticación tiene 32 caracteres, solo del 0 al 9 y de la a a la f. Introdujiste<xliff:g id="count" example="30">%1$d</xliff:g>.</string>
+    <string name="you_pair_key_invalid">La clave de autenticación tiene 32 caracteres, solo del 0 al 9 y de la a a la f. Escribiste %1$d.</string>
     <string name="you_pair_address_invalid">La dirección Bluetooth debe tener un formato como C8:0F:10:AB:CD:EF. Escanea para rellenarla.</string>
-    <string name="you_pair_no_key">Inicio de sesión de Zepp guardado, pero Zepp no envió ninguna clave de autenticación. Comprueba que la correa siga vinculada en la aplicación Zepp y vuelve a iniciar sesión.</string>
-    
+    <string name="you_pair_no_key">Zepp no envió ninguna clave de autenticación. Comprueba que la banda siga vinculada y vuelve a iniciar sesión.</string>
     <string name="you_strap_sample_loaded">Se cargó una semana de datos de muestra.</string>
-    
-    <string name="you_strap_not_linked">Conexión en segundo plano no permitida. En su lugar, puedes desactivar la optimización de batería para unstrap.</string>
-    <string name="you_strap_buzz_failed">No se pudo hacer vibrar la correa</string>
-    <string name="you_strap_stop_buzz_failed">No se pudo detener la vibración de la correa</string>
-    <string name="you_strap_restarting">Reiniciando la banda. Quítatela y vuelve a ponértela para reconectarla.</string>
-    <string name="you_strap_restart_failed">No se pudo reiniciar la banda</string>
-    
+    <string name="you_strap_not_linked">No se permite la conexión en segundo plano. En su lugar, puedes desactivar la optimización de batería para unstrap.</string>
+    <string name="you_strap_buzz_failed">No se pudo hacer vibrar la banda.</string>
+    <string name="you_strap_stop_buzz_failed">No se pudo detener la vibración de la banda.</string>
+    <string name="you_strap_restarting">Reiniciando la banda. Se reconecta cuando vuelva.</string>
+    <string name="you_strap_restart_failed">No se pudo reiniciar la banda.</string>
     <string name="you_error_no_answer">La banda no respondió. Inténtalo de nuevo.</string>
+    <string name="you_strap_row_off_body_note">Vibra cuando te la quitas</string>
 </resources>

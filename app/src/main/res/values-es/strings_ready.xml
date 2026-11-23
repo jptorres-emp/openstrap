@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ready_goal">Meta</string>
+    <string name="ready_goal_type">Tipo de meta</string>
+    <string name="ready_goal_type_change">Tipo de meta, %1$s. Cambiar</string>
+    <string name="ready_tab_open">Abierto</string>
+    <string name="ready_tab_free">Libre</string>
+    <string name="ready_tab_timed">Con tiempo</string>
+    <string name="ready_tab_periods">Periodos</string>
+    <string name="ready_hero_pace_about">Unos %1$d min a tu ritmo</string>
+    <string name="ready_hero_zone_keep">Mantén %1$d a %2$d lpm</string>
+    <string name="ready_hero_zone_keep_up">Mantén más de %1$d lpm</string>
+    <plurals name="ready_hero_heart_zones">
+        <item quantity="one">zona cardíaca</item>
+        <item quantity="many">zonas cardíacas</item>
+        <item quantity="other">zonas cardíacas</item>
+    </plurals>
+    <plurals name="ready_hero_reps_of">
+        <item quantity="one">repetición de %1$s</item>
+        <item quantity="many">repeticiones de %1$s</item>
+        <item quantity="other">repeticiones de %1$s</item>
+    </plurals>
+    <string name="ready_hero_reps_about">Unos %1$d min con descansos</string>
+    <plurals name="ready_hero_sets">
+        <item quantity="one">serie</item>
+        <item quantity="many">series</item>
+        <item quantity="other">series</item>
+    </plurals>
+    <plurals name="ready_hero_rounds">
+        <item quantity="one">ronda</item>
+        <item quantity="many">rondas</item>
+        <item quantity="other">rondas</item>
+    </plurals>
+    <plurals name="ready_hero_periods">
+        <item quantity="one">periodo</item>
+        <item quantity="many">periodos</item>
+        <item quantity="other">periodos</item>
+    </plurals>
+    <string name="ready_hero_in_all">%1$s en total</string>
+    <string name="ready_hero_every_in_all">%1$s en total, el descanso es lo que sobra</string>
+    <string name="ready_hero_periods_about">Unos %1$d min con pausas</string>
+    <string name="ready_last_no_goal">Sin meta, última sesión %1$s</string>
+    <string name="ready_last_no_plan">Sin plan, última sesión %1$s</string>
+    <string name="ready_last_time_line">La última vez %1$s</string>
+    <string name="ready_last_pace_line">%1$s a %2$s por km</string>
+    <string name="ready_last_pace_line_mi">%1$s a %2$s por milla</string>
+    <string name="ready_no_goal">Sin meta</string>
+    <string name="ready_no_plan">Sin plan</string>
+    <string name="ready_rest_between_sets">Descanso entre series</string>
+    <string name="ready_work">Trabajo</string>
+    <string name="ready_rest">Descanso</string>
+    <string name="ready_round_every">Cada ronda empieza cada</string>
+    <string name="ready_each_rep">Cada repetición</string>
+    <string name="ready_each_period">Cada periodo</string>
+    <string name="ready_break">Pausa</string>
+    <string name="ready_less">%1$s, menos</string>
+    <string name="ready_more">%1$s, más</string>
+    <string name="ready_outdoor">Al aire libre</string>
+    <string name="ready_outdoor_gps_ready">GPS para distancia y mapa, preciso a %1$d m</string>
+    <string name="ready_outdoor_gps_close">GPS para distancia y mapa, preciso a %1$d m por ahora</string>
+    <string name="ready_outdoor_gps_finding">GPS para distancia y mapa, buscándote</string>
+    <string name="ready_outdoor_off_steps">Distancia a partir de tus pasos</string>
+    <string name="ready_outdoor_off">Sin distancia en interior</string>
+    <string name="ready_location_off">La ubicación está desactivada.</string>
+    <string name="ready_location_turn_on">Actívala</string>
+    <string name="ready_your_zones">Tus zonas</string>
+    <string name="ready_save_intervals">Guardar intervalos</string>
+    <string name="ready_saved_intervals">Guardados</string>
+    <string name="ready_save_note">Encuéntralos al iniciar un entrenamiento. Se guardan hasta diez.</string>
+    <string name="ready_name_hint">Nombre, como Intervalos del martes</string>
+    <string name="ready_type_goal">Escribe la meta</string>
+</resources>

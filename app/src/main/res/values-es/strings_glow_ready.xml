@@ -1,74 +1,47 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="glow_choose_title">Iniciar un entrenamiento</string>
-    
     <string name="glow_choose_search_all">Buscar en todos los deportes</string>
-    
     <string name="glow_choose_recent">Recientes</string>
-    
     <string name="glow_choose_all_sports">Todos los deportes</string>
-    
-    <string name="glow_choose_more_sports">Más deportes</string>
-    
-    <string name="glow_choose_more_sports_detail">Tenis, pádel, baile y los demás</string>
-    
     <string name="glow_choose_your_usual">Tus habituales</string>
-    
     <string name="glow_choose_start">Iniciar</string>
-    
     <string name="glow_choose_outdoors">Al aire libre</string>
-    
+    <string name="glow_ready_hero_zone_range">%1$d a %2$d</string>
+    <string name="glow_ready_last_caption">La última vez, %1$s</string>
+    <string name="glow_ready_last_today">hoy</string>
+    <string name="glow_ready_last_time">Tiempo</string>
+    <string name="glow_ready_last_distance">Distancia</string>
+    <string name="glow_ready_last_pace">Ritmo prom.</string>
+    <string name="glow_ready_last_avg_bpm">lpm prom.</string>
+    <string name="glow_ready_last_peak_bpm">lpm máx.</string>
+    <string name="glow_ready_last_kcal">kcal activas</string>
+    <string name="glow_ready_last_load">Carga</string>
+    <string name="glow_ready_last_sets">Series</string>
+    <string name="glow_choose_change_title">Cambiar deporte</string>
+    <string name="glow_choose_now">Ahora</string>
+    <string name="glow_choose_now_note">Tu meta se mantiene si encaja</string>
     <string name="glow_choose_pick_title">Elige un deporte</string>
-    
     <string name="glow_choose_search">Buscar</string>
-    
-    <string name="glow_choose_sports">Deportes</string>
-    
-    <string name="glow_choose_no_match">Ningún deporte coincide con \"<xliff:g id="query" example="curling">%1$s</xliff:g>\".</string>
-    
+    <string name="glow_choose_group_distance">Distancia</string>
+    <string name="glow_choose_group_indoor">Cardio en interior</string>
+    <string name="glow_choose_group_strength">Fuerza e intervalos</string>
+    <string name="glow_choose_group_mind">Mente y cuerpo</string>
+    <string name="glow_choose_group_games">Juegos</string>
+    <string name="glow_choose_group_other">Otros</string>
+    <string name="glow_choose_group_distance_note">Ruta, distancia y ritmo</string>
+    <string name="glow_choose_group_indoor_note">Tiempo, frecuencia cardíaca y calorías</string>
+    <string name="glow_choose_group_strength_note">Series, rondas y descanso</string>
+    <string name="glow_choose_group_mind_note">Frecuencia cardíaca en calma y tiempo</string>
+    <string name="glow_choose_group_games_note">Tiempo, frecuencia cardíaca y esfuerzo</string>
+    <string name="glow_choose_group_other_note">Cualquier otra cosa, tiempo y frecuencia cardíaca</string>
+    <string name="glow_choose_no_match">Ningún deporte llamado %1$s</string>
     <string name="glow_choose_clear">Borrar</string>
-    
     <plurals name="glow_choose_sports_count">
-        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> sport</item>
-        <item quantity="other"><xliff:g id="count" example="12">%d</xliff:g> sports</item>
+        <item quantity="one">%d deporte</item>
+        <item quantity="many">%d deportes</item>
+        <item quantity="other">%d deportes</item>
     </plurals>
-
-    
-    <string name="glow_ready_bpm_live">lpm, ahora desde tu banda</string>
-    
-    <string name="glow_ready_plan_description"><xliff:g id="plan" example="Distance">%1$s</xliff:g>. <xliff:g id="hint" example="Tap to choose another goal">%2$s</xliff:g></string>
-    
-    <string name="glow_ready_shorter">Más corto</string>
-    
-    <string name="glow_ready_longer">Más largo</string>
-    
-    <string name="glow_ready_save_title"><xliff:g id="save" example="Save intervals">%1$s</xliff:g> <xliff:g id="intervals" example="5 × 400 m">%2$s</xliff:g></string>
-
-    
-    
-    <string name="glow_ready_with">con</string>
-    
-    <string name="glow_ready_rest_between">descanso entre</string>
-    
-    <string name="glow_ready_rest_after_set">descanso después de cada serie</string>
-    
-    <string name="glow_ready_with_a">con una</string>
-    
-    <string name="glow_ready_break">pausa</string>
-    
-    <string name="glow_ready_unit_sets">series</string>
-    
-    <string name="glow_ready_unit_rounds">rondas</string>
-    
-    <string name="glow_ready_unit_s_on">s de esfuerzo</string>
-    
-    <string name="glow_ready_unit_s_off">s de pausa</string>
-    
-    <string name="glow_ready_unit_s_a_round">s por ronda</string>
-    
-    <plurals name="glow_ready_rounds_description">
-        <item quantity="one"><xliff:g id="rounds" example="1">%1$d</xliff:g> round, <xliff:g id="work" example="20">%2$d</xliff:g> s work, <xliff:g id="rest" example="10">%3$d</xliff:g> s rest</item>
-        <item quantity="other"><xliff:g id="rounds" example="8">%1$d</xliff:g> rounds, <xliff:g id="work" example="20">%2$d</xliff:g> s work, <xliff:g id="rest" example="10">%3$d</xliff:g> s rest</item>
-    </plurals>
+    <string name="glow_ready_strap_disconnected">Banda desconectada, sin frecuencia cardíaca en vivo</string>
+    <string name="glow_ready_connect">Conectar banda</string>
 </resources>

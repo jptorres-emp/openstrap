@@ -1,30 +1,11 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="glow_celebrate_personal_best">Mejor marca personal</string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="glow_celebrate_settings">Celebraciones</string>
-    
     <string name="glow_celebrate_goal_met">Meta semanal cumplida</string>
-    
-    <string name="glow_celebrate_goal_note">Se muestra una vez a la semana cuando alcanzas tu meta.</string>
-    
     <string name="glow_celebrate_title">Celebraciones</string>
-    
-    <string name="glow_celebrate_sheet_note">Sin rachas que mantener ni recordatorios. Solo estas dos.</string>
-    
-    <string name="glow_celebrate_goal_moment">Momento de la meta semanal</string>
-    
-    <string name="glow_celebrate_goal_moment_line">Una pantalla completa una vez a la semana cuando alcanzas tu meta</string>
-    
-    <string name="glow_celebrate_recap">Resumen semanal</string>
-    
-    <string name="glow_celebrate_recap_line">Una notificación el lunes por la mañana sobre tu semana</string>
-    
+    <string name="glow_celebrate_goal_moment">Momento de la meta</string>
+    <string name="glow_celebrate_goal_moment_line">Pantalla completa al alcanzar tu meta</string>
+    <string name="glow_celebrate_recap">Tu semana</string>
+    <string name="glow_celebrate_recap_line">Una notificación el lunes por la mañana</string>
     <string name="glow_celebrate_history_title">De tus entrenamientos hasta ahora</string>
-    
-    <plurals name="glow_celebrate_history_badges">
-        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> badge already earned. New ones show on the summary after a workout.</item>
-        <item quantity="other"><xliff:g id="count" example="5">%d</xliff:g> badges already earned. New ones show on the summary after a workout.</item>
-    </plurals>
 </resources>

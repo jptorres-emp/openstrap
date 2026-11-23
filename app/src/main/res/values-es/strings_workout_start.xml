@@ -1,344 +1,101 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="workout_start_strap_ready_bpm">Banda lista, <xliff:g id="bpm" example="72">%1$d</xliff:g> lpm</string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workout_start_strap_ready_bpm">Banda lista, %1$d lpm</string>
     <string name="workout_start_strap_ready">Banda lista</string>
-    
     <string name="workout_start_strap_connecting">Conectando a la banda</string>
-    
-    <string name="workout_start_strap_not_paired">No hay ninguna banda vinculada. Puedes empezar de todos modos.</string>
-    
-    <string name="workout_start_strap_not_connected">Banda no conectada. Puedes empezar de todos modos.</string>
-
-    
+    <string name="workout_start_strap_not_paired">Sin banda vinculada, empieza igual</string>
+    <string name="workout_start_strap_not_connected">Banda no conectada, empieza igual</string>
     <string name="workout_start_just_run">Solo corre</string>
-    
     <string name="workout_start_just_walk">Solo camina</string>
-    
     <string name="workout_start_just_ride">Solo pedalea</string>
-    
+    <string name="workout_start_just_row">Solo remar</string>
     <string name="workout_start_just_go">Solo avanza</string>
-    
-    <string name="workout_start_open">Sin límite</string>
-
-    
-    <string name="workout_start_plan_title_goal">Objetivo</string>
-    
-    <string name="workout_start_plan_title_plan">Plan</string>
-    
-    <string name="workout_start_plan_title_length">Duración</string>
-    
-    <string name="workout_start_plan_title_match">Encuentro</string>
-    
-    <string name="workout_start_plan_sheet_goal">Elige un objetivo</string>
-    
-    <string name="workout_start_plan_sheet_plan">Elige un plan</string>
-    
-    <string name="workout_start_plan_sheet_length">Elige una duración</string>
-    
-    <string name="workout_start_plan_sheet_games">Juego libre o periodos</string>
-    
-    <string name="workout_start_plan_hint_goal">Cambiar el objetivo</string>
-    
-    <string name="workout_start_plan_hint_plan">Cambiar el plan</string>
-    
-    <string name="workout_start_plan_hint_length">Cambiar la duración</string>
-    
-    <string name="workout_start_plan_hint_match">Cambiar el encuentro</string>
-
-    
     <string name="workout_start_strength_plan">Plan</string>
-    
-    <string name="workout_start_strength_status">La banda vibra cuando termina el descanso, así que el teléfono puede quedarse en la banca.</string>
-    
-    <string name="workout_start_open_sets_kind_note">Tantas series como quieras, descansa después de cada una</string>
-    
-    <string name="workout_start_plan_kind_note">Un número de series con descanso entre ellas</string>
-    
-    <string name="workout_start_open_sets_note">Tantas series como quieras. La banda vibra cuando termina el descanso.</string>
-    
-    <string name="workout_start_strength_typing">Cuántas series y luego el descanso en segundos</string>
-    
+    <string name="workout_start_open_sets_note">Sin límite de series, la banda vibra al acabar el descanso</string>
     <plurals name="workout_start_sets">
-        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> set</item>
-        <item quantity="other"><xliff:g id="count" example="5">%d</xliff:g> sets</item>
+        <item quantity="one">%d serie</item>
+        <item quantity="many">%d series</item>
+        <item quantity="other">%d series</item>
     </plurals>
-    
     <string name="workout_start_end_rest_early">Terminar el descanso antes</string>
-    
-    <string name="workout_start_end_rest_note">Una vez que estés por debajo de<xliff:g id="bpm" example="110">%1$d</xliff:g> bpm</string>
-    
+    <string name="workout_start_end_rest_note">Cuando bajes de %1$d lpm</string>
     <string name="workout_start_log_sets">Registra repeticiones y peso</string>
-    
     <string name="workout_start_log_sets_note">Una tarjeta rápida después de cada serie</string>
-
-    
-    <string name="workout_start_games_status">¿El teléfono en la bolsa? No hay problema.</string>
-    
-    <string name="workout_start_games_note_half_break">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada tiempo y descanso.</string>
-    
-    <string name="workout_start_games_note_half">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada tiempo.</string>
-    
-    <string name="workout_start_games_note_quarter_break">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada cuarto y descanso.</string>
-    
-    <string name="workout_start_games_note_quarter">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada cuarto.</string>
-    
-    <string name="workout_start_games_note_period_break">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada periodo y descanso.</string>
-    
-    <string name="workout_start_games_note_period">¿El teléfono en la bolsa? No hay problema. La banda vibra al final de cada periodo.</string>
-
-    
-    <string name="workout_start_gps_finding">Buscando GPS</string>
-    
-    <string name="workout_start_gps_finding_accuracy">Buscando GPS, ±<xliff:g id="meters" example="48">%1$d</xliff:g> m</string>
-    
-    <string name="workout_start_gps_ready">GPS listo, ±<xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
-
-    
-    <string name="workout_start_seconds"><xliff:g id="seconds" example="90">%1$d</xliff:g> s</string>
-    
-    <string name="workout_start_minutes"><xliff:g id="minutes" example="2">%1$d</xliff:g> min</string>
-    
-    <string name="workout_start_minutes_seconds"><xliff:g id="minutes" example="2">%1$d</xliff:g> min <xliff:g id="seconds" example="30">%2$d</xliff:g> s</string>
-    
-    <string name="workout_start_hours"><xliff:g id="hours" example="1">%1$d</xliff:g> h</string>
-    
-    <string name="workout_start_hours_minutes"><xliff:g id="hours" example="1">%1$d</xliff:g> h <xliff:g id="minutes" example="30">%2$d</xliff:g></string>
-    
-    <string name="workout_start_km"><xliff:g id="km" example="2.4">%1$s</xliff:g> km</string>
-    
-    <string name="workout_start_meters"><xliff:g id="meters" example="400">%1$d</xliff:g> m</string>
-    
+    <string name="workout_start_games_status">El teléfono puede quedarse en tu bolsa</string>
+    <string name="workout_start_games_note_half_break">La banda vibra en cada tiempo y descanso</string>
+    <string name="workout_start_games_note_half">La banda vibra en cada tiempo</string>
+    <string name="workout_start_games_note_quarter_break">La banda vibra en cada cuarto y descanso</string>
+    <string name="workout_start_games_note_quarter">La banda vibra en cada cuarto</string>
+    <string name="workout_start_games_note_period_break">La banda vibra en cada periodo y descanso</string>
+    <string name="workout_start_games_note_period">La banda vibra en cada periodo</string>
+    <string name="workout_start_seconds">%1$d s</string>
+    <string name="workout_start_minutes">%1$d min</string>
+    <string name="workout_start_minutes_seconds">%1$d min %2$d s</string>
+    <string name="workout_start_hours">%1$d h</string>
+    <string name="workout_start_hours_minutes">%1$d h %2$d</string>
+    <string name="workout_start_km">%1$s km</string>
+    <string name="workout_start_meters">%1$d m</string>
     <string name="workout_start_unit_km">km</string>
-    
     <string name="workout_start_unit_m">m</string>
-    
     <string name="workout_start_unit_min">min</string>
-    
     <string name="workout_start_unit_s">s</string>
-    
-    <string name="workout_start_unit_h">h</string>
-
-    
     <string name="workout_start_preset_tabata">Tabata</string>
-    
-    <string name="workout_start_preset_tabata_note">20 s de trabajo, 10 de descanso, 8 rondas</string>
-    
     <string name="workout_start_preset_forty_twenty">40 / 20</string>
-    
-    <string name="workout_start_preset_forty_twenty_note">10 rondas</string>
-    
     <string name="workout_start_every_minute">Cada minuto</string>
-    
-    <string name="workout_start_preset_every_minute_note">12 rondas, el descanso es lo que queda</string>
-    
-    <string name="workout_start_preset_free">Libre</string>
-    
-    <string name="workout_start_preset_free_note">Sin temporizador, las vueltas marcan las rondas</string>
-    
-    <string name="workout_start_work_rest"><xliff:g id="work" example="30">%1$d</xliff:g> / <xliff:g id="rest" example="15">%2$d</xliff:g></string>
-    
-    <string name="workout_start_every">Cada<xliff:g id="time" example="90 s">%1$s</xliff:g></string>
-    
-    <string name="workout_start_total_line"><xliff:g id="time" example="4:00">%1$s</xliff:g> in all</string>
-    
     <plurals name="workout_start_structure_timed">
-        <item quantity="one"><xliff:g id="work" example="30">%1$d</xliff:g> / <xliff:g id="rest" example="15">%2$d</xliff:g>, <xliff:g id="rounds" example="6">%3$d</xliff:g> round</item>
-        <item quantity="other"><xliff:g id="work" example="30">%1$d</xliff:g> / <xliff:g id="rest" example="15">%2$d</xliff:g>, <xliff:g id="rounds" example="6">%3$d</xliff:g> rounds</item>
+        <item quantity="one">%1$d / %2$d, %3$d ronda</item>
+        <item quantity="many">%1$d / %2$d, %3$d rondas</item>
+        <item quantity="other">%1$d / %2$d, %3$d rondas</item>
     </plurals>
-    
     <plurals name="workout_start_structure_every">
-        <item quantity="one">Cada<xliff:g id="time" example="90 s">%1$s</xliff:g>, <xliff:g id="rounds" example="10">%2$d</xliff:g> round</item>
-        <item quantity="other">Cada<xliff:g id="time" example="90 s">%1$s</xliff:g>, <xliff:g id="rounds" example="10">%2$d</xliff:g> rounds</item>
+        <item quantity="one">Cada %1$s, %2$d ronda</item>
+        <item quantity="many">Cada %1$s, %2$d rondas</item>
+        <item quantity="other">Cada %1$s, %2$d rondas</item>
     </plurals>
-    
-    <string name="workout_start_structure_reps"><xliff:g id="reps" example="6">%1$d</xliff:g> × <xliff:g id="length" example="400 m">%2$s</xliff:g></string>
-    
-    <string name="workout_start_hiit_free_note">Sin temporizador. Las vueltas marcan las rondas.</string>
-    
-    <string name="workout_start_intervals_status">La correa vibra en cada cambio para que puedas dejar el teléfono en el suelo.</string>
-    
-    <string name="workout_start_hiit_typing">Trabajo, luego descanso y cuántas rondas</string>
-    
-    <string name="workout_start_every_typing">El tiempo de cada ronda y cuántas rondas</string>
-    
+    <string name="workout_start_structure_reps">%1$d × %2$s</string>
+    <string name="workout_start_hiit_free_note">Sin temporizador, las vueltas marcan las rondas</string>
     <string name="workout_start_warm_up">Calienta primero</string>
-    
-    <string name="workout_start_warm_up_note">Sin temporizador hasta que comiences las rondas.</string>
-
-    
+    <string name="workout_start_warm_up_note">Sin temporizador hasta que empiecen las rondas</string>
     <string name="workout_start_halves">Mitades</string>
-    
     <string name="workout_start_quarters">Cuartos</string>
-    
     <plurals name="workout_start_periods">
-        <item quantity="one"><xliff:g id="count" example="3">%1$d</xliff:g> period</item>
-        <item quantity="other"><xliff:g id="count" example="3">%1$d</xliff:g> periods</item>
+        <item quantity="one">%1$d periodo</item>
+        <item quantity="many">%1$d periodos</item>
+        <item quantity="other">%1$d periodos</item>
     </plurals>
-    
     <string name="workout_start_half_1">1.ª mitad</string>
-    
     <string name="workout_start_half_2">2.ª mitad</string>
-    
     <string name="workout_start_quarter_1">1.er cuarto</string>
-    
     <string name="workout_start_quarter_2">2.° cuarto</string>
-    
     <string name="workout_start_quarter_3">3.er cuarto</string>
-    
     <string name="workout_start_quarter_4">4.° cuarto</string>
-    
-    <string name="workout_start_period_n">Periodo<xliff:g id="number" example="2">%1$d</xliff:g></string>
-    
+    <string name="workout_start_period_n">Periodo %1$d</string>
     <string name="workout_start_half_time">Medio tiempo</string>
-    
     <string name="workout_start_break">Descanso</string>
-    
-    <string name="workout_start_free_play">Juego libre</string>
-    
-    <string name="workout_start_free_play_kind_note">Sin periodos, el reloj simplemente corre</string>
-    
-    <string name="workout_start_halves_kind_note">Dos mitades con un medio tiempo entre ellas</string>
-    
-    <string name="workout_start_quarters_kind_note">Cuatro cuartos con un descanso entre cada uno</string>
-    
-    <string name="workout_start_games_typing">Cuántos, cuánto tiempo y luego el descanso</string>
-
-    
-    <string name="workout_start_mind_status">Correa silenciosa y pantalla tenue. Una vibración suave al final.</string>
-    
-    <string name="workout_start_mind_open_note">Correa silenciosa y pantalla tenue. Finalízalo cuando estés listo.</string>
-    
-    <string name="workout_start_mind_open_kind_note">Sin duración, termínalo tú mismo</string>
-    
-    <string name="workout_start_mind_time_kind_note">Una vibración suave cuando se acabe el tiempo</string>
-
-    
-    <string name="workout_start_last_time">Última vez<xliff:g id="what" example="5.21 km">%1$s</xliff:g>, <xliff:g id="day" example="Tuesday">%2$s</xliff:g></string>
-    
-    <string name="workout_start_start_treadmill">Iniciar carrera en cinta</string>
-
-    
-    <string name="workout_start_place_outside">Exterior</string>
-    
-    <string name="workout_start_place_open_water">Aguas abiertas</string>
-    
-    <string name="workout_start_place_treadmill">En una cinta de correr</string>
-    
-    <string name="workout_start_place_pool">En una piscina</string>
-    
-    <string name="workout_start_place_indoors">Interior</string>
-    
-    <string name="workout_start_other_outside">Exterior</string>
-    
-    <string name="workout_start_other_open_water">Aguas abiertas</string>
-    
-    <string name="workout_start_other_treadmill">Cinta</string>
-    
-    <string name="workout_start_other_pool">Piscina</string>
-    
-    <string name="workout_start_other_indoors">Interior</string>
-    
-    <string name="workout_start_indoor_note_run">Ritmo calculado por tus pasos</string>
-    
-    <string name="workout_start_indoor_note_on_foot">Distancia calculada por tus pasos</string>
-    
-    <string name="workout_start_indoor_note_other">Tiempo y frecuencia cardiaca, sin distancia</string>
-
-    
+    <string name="workout_start_mind_open_note">Banda en silencio, termina cuando estés listo</string>
+    <string name="workout_start_last_time">Última vez %1$s, %2$s</string>
     <string name="workout_start_kind_distance">Distancia</string>
-    
     <string name="workout_start_kind_time">Tiempo</string>
-    
     <string name="workout_start_kind_zone">Zona</string>
-    
     <string name="workout_start_kind_intervals">Intervalos</string>
-    
-    <string name="workout_start_tap_to_type">Toca para escribir</string>
-    
-    <string name="workout_start_distance_kind_note">Una vibración a la mitad y al alcanzar la meta</string>
-    
-    <string name="workout_start_time_kind_note">Una vibración cuando se acabe el tiempo</string>
-    
-    <string name="workout_start_zone_kind_note">Una vibración cuando salgas de tu zona</string>
-    
-    <string name="workout_start_intervals_kind_note">Repeticiones con descanso entre ellas, una vibración en cada cambio</string>
-    
-    <string name="workout_start_no_goal_note_distance">Sin meta. Tiempo, distancia y frecuencia cardiaca.</string>
-    
-    <string name="workout_start_no_goal_note">Sin meta. Tiempo y frecuencia cardiaca.</string>
-    
-    <string name="workout_start_distance_note">La correa vibra a la mitad y en<xliff:g id="km" example="7.5">%1$s</xliff:g> km.</string>
-    
-    <string name="workout_start_half_marathon">Mitad</string>
-    
-    <string name="workout_start_ends_near">Termina aprox. a las<xliff:g id="time" example="19:15">%1$s</xliff:g></string>
-    
-    <string name="workout_start_time_typing_note">Escribe las horas y luego los minutos.<xliff:g id="ends_near" example="Ends near 19:15">%1$s</xliff:g></string>
-    
-    <string name="workout_start_zone_note">Toca una zona, o una segunda para definir un rango. La correa vibrará cuando salgas de ella.</string>
-    
-    <string name="workout_start_your_zones">Tus zonas</string>
-    
-    <string name="workout_start_zone_range"><xliff:g id="from" example="115">%1$d</xliff:g> to <xliff:g id="to" example="152">%2$d</xliff:g> bpm, <xliff:g id="low" example="aerobic">%3$s</xliff:g> to <xliff:g id="high" example="tempo">%4$s</xliff:g></string>
-    
-    <string name="workout_start_zone_range_one"><xliff:g id="from" example="115">%1$d</xliff:g> to <xliff:g id="to" example="133">%2$d</xliff:g> bpm, <xliff:g id="zone" example="aerobic">%3$s</xliff:g></string>
-    
-    <string name="workout_start_zone_up"><xliff:g id="from" example="153">%1$d</xliff:g> bpm and up, <xliff:g id="low" example="threshold">%2$s</xliff:g> to <xliff:g id="high" example="max">%3$s</xliff:g></string>
-    
-    <string name="workout_start_zone_up_one"><xliff:g id="from" example="173">%1$d</xliff:g> bpm and up, <xliff:g id="zone" example="max">%2$s</xliff:g></string>
-
-    
-    <string name="workout_start_intervals_note_distance">La correa vibra al final de cada<xliff:g id="rep" example="400 m">%1$s</xliff:g> rep and when rest is up. <xliff:g id="total" example="2.4 km">%2$s</xliff:g> of reps in all.</string>
-    
-    <string name="workout_start_intervals_note_time">La correa vibra al final de cada<xliff:g id="rep" example="4 min">%1$s</xliff:g> rep and when rest is up. <xliff:g id="total" example="16 min">%2$s</xliff:g> of reps in all.</string>
-    
-    <string name="workout_start_intervals_typing">Cuántas, luego cada repetición y después el descanso</string>
-    
-    <string name="workout_start_tap_a_number">Toca un número para escribirlo</string>
-    
-    <string name="workout_start_each_rep_in">Cada repetición en</string>
-    
-    <string name="workout_start_save_intervals">Guardar</string>
-    
-    <string name="workout_start_saved_intervals">Guardado</string>
-    
-    <string name="workout_start_save_note">Encuéntralos al iniciar un entrenamiento. Se guardan hasta diez.</string>
-    
-    <string name="workout_start_name_hint">Nombre, como intervalos del martes</string>
-
-    
+    <string name="workout_start_no_goal_note_distance">Registra tu tiempo, distancia y frecuencia cardíaca</string>
+    <string name="workout_start_no_goal_note">Registra tu tiempo y frecuencia cardíaca</string>
+    <string name="workout_start_distance_note">Una vibración a la mitad y a los %1$s km</string>
+    <string name="workout_start_distance_note_mi">Una vibración a la mitad y a las %1$s mi</string>
+    <string name="workout_start_ends_near">Termina hacia las %1$s</string>
+    <string name="workout_start_zone_note">Toca una zona, o dos para un rango</string>
+    <string name="workout_start_intervals_note_distance">Una vibración en cada repetición de %1$s, %2$s en total</string>
+    <string name="workout_start_intervals_note_time">Una vibración en cada repetición de %1$s, %2$s en total</string>
     <string name="workout_start_ask_to_end">Preguntar para finalizar al detener</string>
-    
-    <string name="workout_start_ask_to_end_note">La correa vibra después de 8 min sin moverse</string>
-    
-    <string name="workout_start_keep_route">Guardar un mapa de mi<xliff:g id="sport" example="run">%1$s</xliff:g></string>
-    
-    <string name="workout_start_keep_route_ride">Guardar un mapa de mi recorrido</string>
-    
-    <string name="workout_start_keep_route_ski">Guardar un mapa de mi esquí</string>
-    
-    <string name="workout_start_keep_route_ruck">Guardar un mapa de mi marcha con peso</string>
-    
+    <string name="workout_start_ask_to_end_note">Una vibración tras 8 min sin moverte</string>
     <string name="workout_start_turn_on_location">Activar la ubicación</string>
-
-    
-    <string name="workout_ready_connected">Correa conectada</string>
-    
-    <string name="workout_ready_live">En directo desde tu correa.</string>
-    
-    <string name="workout_ready_waiting">Esperando la frecuencia cardíaca.</string>
-    
-    <string name="workout_ready_live_battery">En directo desde tu correa. Batería<xliff:g id="percent" example="15">%1$d</xliff:g>%%.</string>
-    
-    <string name="workout_ready_waiting_battery">Esperando la frecuencia cardíaca. Batería<xliff:g id="percent" example="15">%1$d</xliff:g>%%.</string>
-    
-    <string name="workout_ready_connecting">Conectando a la correa</string>
-    
-    <string name="workout_ready_not_paired">Ninguna correa vinculada</string>
-    
-    <string name="workout_ready_not_connected">Correa no conectada</string>
-    
-    <string name="workout_ready_anyway">Puedes empezar de todos modos.</string>
+    <string name="workout_ready_connected">Banda conectada</string>
+    <string name="workout_ready_live">En vivo desde tu banda</string>
+    <string name="workout_ready_waiting">Esperando la frecuencia cardíaca</string>
+    <string name="workout_ready_live_battery">En vivo desde tu banda, batería %1$d%%</string>
+    <string name="workout_ready_waiting_battery">Esperando la frecuencia cardíaca, batería %1$d%%</string>
+    <string name="workout_ready_connecting">Conectando a la banda</string>
+    <string name="workout_ready_not_paired">Ninguna banda vinculada</string>
+    <string name="workout_ready_not_connected">Banda no conectada</string>
+    <string name="workout_ready_anyway">Puedes empezar igual</string>
 </resources>

@@ -1,48 +1,24 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="core_body_title">Algunas señales corporales están fuera de tu rango normal</string>
-    
     <string name="core_body_short">Algunas señales están fuera de tu rango normal</string>
-    
     <string name="core_body_causes">Esto puede suceder debido a un entrenamiento intenso, alcohol, viajes, mal sueño o cuando tu cuerpo está combatiendo algo.</string>
-    
     <string name="core_body_advice">Un día más relajado podría ayudar. Si no te sientes bien, consulta con un profesional de la salud.</string>
-    
     <string name="core_body_disclaimer">Esta es una estimación de bienestar, no una evaluación médica.</string>
-
-    
-    <string name="core_body_push_several_again">Varias de tus señales nocturnas (<xliff:g id="signals" example="resting heart rate, skin temperature">%1$s</xliff:g>) have been outside your normal range for two nights or more.</string>
-    
-    <string name="core_body_push_several_once">Varias de tus señales nocturnas (<xliff:g id="signals" example="resting heart rate, skin temperature">%1$s</xliff:g>) were outside your normal range last night.</string>
-    
-    <string name="core_body_push_one_again">Tus valores nocturnos de<xliff:g id="signal" example="skin temperature">%1$s</xliff:g> has been outside your normal range for two nights or more.</string>
-    
-    <string name="core_body_push_one_once">Tus valores nocturnos de <xliff:g id="signal" example="skin temperature">%1$s</xliff:g> was outside your normal range last night.</string>
-
-    
+    <string name="core_body_push_several_again">Varias de tus señales nocturnas (%1$s) llevan dos noches o más fuera de tu rango normal.</string>
+    <string name="core_body_push_several_once">Varias de tus señales nocturnas (%1$s) estuvieron fuera de tu rango normal anoche.</string>
+    <string name="core_body_push_one_again">Tu %1$s nocturna lleva dos noches o más fuera de tu rango normal.</string>
+    <string name="core_body_push_one_once">Tu %1$s nocturna estuvo fuera de tu rango normal anoche.</string>
     <string name="core_body_family_cardiac">frecuencia cardíaca en reposo</string>
-    
     <string name="core_body_family_thermal">temperatura de la piel</string>
-    
     <string name="core_body_family_respiratory">frecuencia respiratoria</string>
-
-    
-    <string name="core_body_signal_rhr">frecuencia cardíaca en reposo alta<xliff:g id="bpm" example="6">%1$d</xliff:g> lpm</string>
-    
+    <string name="core_body_signal_rhr">frecuencia cardíaca en reposo %1$d lpm más alta</string>
     <string name="core_body_signal_temperature">temperatura de la piel superior a tu normal</string>
-    
-    <string name="core_body_signal_breathing">frecuencia respiratoria alta<xliff:g id="breaths" example="1.4">%1$s</xliff:g>/min</string>
-    
+    <string name="core_body_signal_breathing">frecuencia respiratoria %1$s/min más alta</string>
     <string name="core_body_signal_hrv">VFC muy por debajo de tu normal</string>
-
-    
     <string name="core_checkin_poor">Deficiente</string>
-    
     <string name="core_checkin_low">Bajo</string>
-    
     <string name="core_checkin_ok">Aceptable</string>
-    
     <string name="core_checkin_good">Bueno</string>
-    
     <string name="core_checkin_great">Excelente</string>
 </resources>

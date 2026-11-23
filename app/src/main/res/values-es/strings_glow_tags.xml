@@ -1,44 +1,26 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="glow_tag_personal_best">Mejor personal</string>
-    
     <string name="glow_tag_best_month">Mejor de este mes</string>
-    
     <string name="glow_tag_double_goal">Doble objetivo</string>
-    
-    <string name="glow_tag_past_goal">+<xliff:g id="amount" example="2,140">%1$s</xliff:g> objetivo pasado</string>
-    
+    <string name="glow_tag_past_goal">+%1$s objetivo pasado</string>
     <plurals name="glow_tag_in_a_row">
-        <item quantity="one"><xliff:g id="days" example="1">%d</xliff:g> day in a row</item>
-        <item quantity="other"><xliff:g id="days" example="3">%d</xliff:g> days in a row</item>
+        <item quantity="one">%d día seguido</item>
+        <item quantity="many">%d días seguidos</item>
+        <item quantity="other">%d días seguidos</item>
     </plurals>
-    
     <string name="glow_tag_goal_met">Objetivo cumplido</string>
-    
-    <string name="glow_tag_above_normal">Por encima de lo normal</string>
-    
-    <string name="glow_tag_below_normal">Por debajo de lo normal</string>
-    
-    <string name="glow_tag_above_usual">Por encima de lo habitual</string>
-    
-    <string name="glow_tag_below_usual">Por debajo de lo habitual</string>
-    
+    <string name="glow_tag_above_normal">Por encima de tu normal</string>
+    <string name="glow_tag_below_normal">Por debajo de tu normal</string>
+    <string name="glow_tag_above_usual">Por encima de tu normal</string>
+    <string name="glow_tag_below_usual">Por debajo de tu normal</string>
     <string name="glow_tag_short">Corto</string>
-    
     <string name="glow_tag_long">Largo</string>
-    
     <string name="glow_tag_later">Más tarde</string>
-    
     <string name="glow_tag_earlier">Más temprano</string>
-    
     <string name="glow_tag_older">Más viejo</string>
-    
     <string name="glow_tag_younger">Más joven</string>
-    
     <string name="glow_tag_more_than_usual">Más de lo habitual</string>
-    
     <string name="glow_tag_up">Más</string>
-    
     <string name="glow_tag_down">Menos</string>
 </resources>

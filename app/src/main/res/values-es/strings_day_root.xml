@@ -1,44 +1,27 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="day_tab_today">Hoy</string>
     <string name="day_tab_recovery">Recupera.</string>
     <string name="day_tab_sleep">Sueño</string>
     <string name="day_tab_activity">Actividad</string>
-
-    
     <string name="day_hc_unavailable">Health Connect no está disponible en este teléfono.</string>
-    
     <string name="day_hc_install_first">Instala Health Connect primero.</string>
-    
     <string name="day_hc_not_granted">unstrap no tiene permiso para Health Connect.</string>
-
-    
     <string name="day_bluetooth_required">unstrap necesita dispositivos cercanos para conectarse a tu pulsera.</string>
-    
     <string name="day_bluetooth_required_location">unstrap necesita acceso a la ubicación para encontrar tu pulsera. Tu ubicación no será utilizada.</string>
-    
     <string name="day_location_declined">Sin la ubicación, la distancia se calculará a partir de los pasos de la pulsera.</string>
-    
     <string name="day_nearby_title">Permitir dispositivos cercanos</string>
-    
     <string name="day_nearby_text">unstrap necesita dispositivos cercanos para encontrar y conectar tu pulsera. Android no volverá a preguntar, así que actívalo en los ajustes de unstrap, en Permisos.</string>
-    
     <string name="day_nearby_title_location">Permitir ubicación</string>
     <string name="day_nearby_text_location">En Android 11, unstrap necesita acceso a la ubicación para encontrar y conectar tu pulsera. Tu ubicación no será utilizada. Android no volverá a preguntar, así que actívalo en los ajustes de unstrap, en Permisos.</string>
-    
     <string name="day_nearby_open_settings">Abrir ajustes</string>
-    
     <string name="day_nearby_not_now">Ahora no</string>
-
-    
-    <string name="day_pull_sync_failed">No se pudo sincronizar. <xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g></string>
-    
+    <string name="day_location_blocked_text">Los entrenamientos con GPS necesitan acceso a la ubicación. Android no volverá a preguntar, así que actívalo en los ajustes de unstrap, en Permisos.</string>
+    <string name="day_notifications_blocked_title">Permitir notificaciones</string>
+    <string name="day_notifications_blocked_text">unstrap muestra tu entrenamiento y el estado de la banda en una notificación. Android no volverá a preguntar, así que actívala en los ajustes de unstrap, en Notificaciones.</string>
+    <string name="day_pull_sync_failed">No se pudo sincronizar. %1$s</string>
     <string name="day_pull_not_connected">La pulsera no está conectada.</string>
-    
-    <string name="day_pull_syncing">Sincronizando pulsera…</string>
-    
+    <string name="day_pull_syncing">Sincronizando la banda</string>
     <string name="day_pull_release">Suelta para sincronizar la pulsera</string>
-    
     <string name="day_pull_pull">Desliza hacia abajo para sincronizar la pulsera</string>
 </resources>

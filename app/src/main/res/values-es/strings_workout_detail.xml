@@ -1,155 +1,83 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="workout_detail_effort_easy">Suave</string>
-    
     <string name="workout_detail_effort_steady">Constante</string>
-    
     <string name="workout_detail_effort_hard">Intenso</string>
-    
     <string name="workout_detail_effort_very_hard">Muy intenso</string>
-
-    
-    <string name="workout_detail_sentence_easy">Suave <xliff:g id="sport" example="walk">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_easy_zone">Suave <xliff:g id="sport" example="walk">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="2">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_steady">Buen entreno de <xliff:g id="sport" example="run">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_steady_zone">Buen entreno de <xliff:g id="sport" example="strength training">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="2">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_hard">Intenso <xliff:g id="sport" example="run">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_hard_zone">Intenso <xliff:g id="sport" example="run">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="4">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_very_hard">Muy intenso <xliff:g id="sport" example="HIIT">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_very_hard_zone">Muy intenso <xliff:g id="sport" example="HIIT">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="4">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_short">Corto <xliff:g id="sport" example="run">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_short_zone">Corto <xliff:g id="sport" example="walk">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="1">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_a">Un <xliff:g id="sport" example="run">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_a_zone">Un <xliff:g id="sport" example="run">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="2">%2$d</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_sport"><xliff:g id="sport" example="Strength training">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_sentence_sport_zone"><xliff:g id="sport" example="Strength training">%1$s</xliff:g>, principalmente en zona <xliff:g id="zone" example="2">%2$d</xliff:g>.</string>
-
-    
+    <string name="workout_detail_sentence_easy">Suave %1$s.</string>
+    <string name="workout_detail_sentence_easy_zone">Suave %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_steady">Buen entreno de %1$s.</string>
+    <string name="workout_detail_sentence_steady_zone">Buen entreno de %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_hard">Intenso %1$s.</string>
+    <string name="workout_detail_sentence_hard_zone">Intenso %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_very_hard">Muy intenso %1$s.</string>
+    <string name="workout_detail_sentence_very_hard_zone">Muy intenso %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_short">Corto %1$s.</string>
+    <string name="workout_detail_sentence_short_zone">Corto %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_a">Un %1$s.</string>
+    <string name="workout_detail_sentence_a_zone">Un %1$s, principalmente en zona %2$d.</string>
+    <string name="workout_detail_sentence_sport">%1$s.</string>
+    <string name="workout_detail_sentence_sport_zone">%1$s, principalmente en zona %2$d.</string>
     <string name="workout_detail_fact_distance">Distancia</string>
-    
     <string name="workout_detail_fact_km">Kilómetros</string>
-    
+    <string name="workout_detail_fact_mi">Millas</string>
     <string name="workout_detail_fact_m">Metros</string>
-    
+    <string name="workout_detail_fact_ft">Pies</string>
     <string name="workout_detail_fact_km_from_steps">Kilómetros, estimados a partir de tus pasos</string>
-    
+    <string name="workout_detail_fact_mi_from_steps">Millas, estimadas a partir de tus pasos</string>
     <string name="workout_detail_fact_m_from_steps">Metros, estimados a partir de tus pasos</string>
-    
+    <string name="workout_detail_fact_ft_from_steps">Pies, estimados a partir de tus pasos</string>
     <string name="workout_detail_fact_paused">En pausa</string>
-    
     <string name="workout_detail_fact_paused_note">No se incluye en el tiempo</string>
-    
     <string name="workout_detail_fact_steps">Pasos</string>
-    
     <string name="workout_detail_fact_calories">Calorías</string>
-    
-    <string name="workout_detail_fact_calories_total">Total <xliff:g id="kcal" example="1,612">%1$s</xliff:g></string>
-    
+    <string name="workout_detail_fact_calories_total">Total %1$s</string>
     <string name="workout_detail_fact_kcal">kcal</string>
-    
     <string name="workout_detail_fact_target">Meta</string>
-    
-    <string name="workout_detail_target_kcal"><xliff:g id="kcal" example="300">%1$s</xliff:g> kcal</string>
-    
-    <string name="workout_detail_target_reached_at">Alcanzado a las <xliff:g id="time" example="24:40">%1$s</xliff:g></string>
-    
+    <string name="workout_detail_target_kcal">%1$s kcal</string>
+    <string name="workout_detail_target_reached_at">Alcanzado a las %1$s</string>
     <string name="workout_detail_target_reached">Alcanzado</string>
-    
-    <string name="workout_detail_target_short">No alcanzado,<xliff:g id="burned" example="212">%1$s</xliff:g> de <xliff:g id="kcal" example="300">%2$s</xliff:g></string>
-    
+    <string name="workout_detail_target_short">No alcanzado,%1$s de %2$s</string>
     <string name="workout_detail_target_not_reached">No alcanzado</string>
-
-    
-    <string name="workout_detail_drop">Descenso de la frecuencia cardíaca de <xliff:g id="bpm" example="30">%1$d</xliff:g> lpm en el primer minuto.</string>
-    
-    <string name="workout_detail_drop_quick">Descenso de la frecuencia cardíaca de <xliff:g id="bpm" example="30">%1$d</xliff:g> lpm en el primero minuto, rápido para ti.</string>
-    
-    <string name="workout_detail_drop_slow">Descenso de la frecuencia cardíaca de <xliff:g id="bpm" example="20">%1$d</xliff:g> lpm en el primer minuto, lento para ti.</string>
-    
-    <string name="workout_detail_drop_usual">Descenso de la frecuencia cardíaca de <xliff:g id="bpm" example="25">%1$d</xliff:g> lpm en el primer minuto, más o menos lo habitual en ti.</string>
-
-    
+    <string name="workout_detail_drop">Descenso de la frecuencia cardíaca de %1$d lpm en el primer minuto.</string>
+    <string name="workout_detail_drop_quick">Descenso de la frecuencia cardíaca de %1$d lpm en el primero minuto, rápido para ti.</string>
+    <string name="workout_detail_drop_slow">Descenso de la frecuencia cardíaca de %1$d lpm en el primer minuto, lento para ti.</string>
+    <string name="workout_detail_drop_usual">Descenso de la frecuencia cardíaca de %1$d lpm en el primer minuto, más o menos lo habitual en ti.</string>
     <string name="workout_detail_scale_light">Ligero</string>
-    
     <string name="workout_detail_scale_keeps">Mantiene</string>
-    
     <string name="workout_detail_scale_builds">Mejora</string>
-    
     <string name="workout_detail_scale_builds_a_lot">Mejora mucho</string>
-    
     <string name="workout_detail_scale_overreach">Sobreentrenamiento</string>
-
-    
     <string name="workout_detail_info_name">Carga y efecto de entrenamiento</string>
-    
     <string name="workout_detail_info_meaning">Lo que este entrenamiento le exigió a tu cuerpo y lo que entrenó.</string>
-    
-    <string name="workout_detail_here">Estás aquí. Aeróbico <xliff:g id="effect" example="3.2">%1$s</xliff:g> en una escala de 0 a 5.</string>
-    
+    <string name="workout_detail_here">Estás aquí. Aeróbico %1$s en una escala de 0 a 5.</string>
     <string name="workout_detail_row_load">Carga</string>
-    
-    <string name="workout_detail_load_text">La carga de un entrenamiento es el EPOC: el oxígeno adicional que tu cuerpo usa después para recuperarse, en ml por kg de peso corporal. Cuanto más duro y largo sea el entrenamiento, mayor será. No es la carga del día, que cuenta cada minuto en otra escala. Este entrenamiento:<xliff:g id="load" example="85">%1$d</xliff:g>.</string>
-    
-    <string name="workout_detail_load_text_usual">La carga de un entrenamiento es el EPOC: el oxígeno adicional que tu cuerpo usa después para recuperarse, en ml por kg de peso corporal. Cuanto más duro y largo sea el entrenamiento, mayor será. No es la carga del día, que cuenta cada minuto en otra escala. Este entrenamiento:<xliff:g id="load" example="85">%1$d</xliff:g>. Tu habitual es <xliff:g id="usual" example="70">%2$d</xliff:g>.</string>
-    
+    <string name="workout_detail_load_text">La carga de un entrenamiento es el EPOC: el oxígeno adicional que tu cuerpo usa después para recuperarse, en ml por kg de peso corporal. Cuanto más duro y largo sea el entrenamiento, mayor será. No es la carga del día, que cuenta cada minuto en otra escala. Este entrenamiento:%1$d.</string>
+    <string name="workout_detail_load_text_usual">La carga de un entrenamiento es el EPOC: el oxígeno adicional que tu cuerpo usa después para recuperarse, en ml por kg de peso corporal. Cuanto más duro y largo sea el entrenamiento, mayor será. No es la carga del día, que cuenta cada minuto en otra escala. Este entrenamiento:%1$d. Tu habitual es %2$d.</string>
     <string name="workout_detail_row_effect">Efecto de entrenamiento</string>
-    
-    <string name="workout_detail_effect_text">Dos escalas de 0 a 5. El aeróbico indica lo que el entrenamiento hizo por tu resistencia; el anaeróbico, por los esfuerzos cortos e intensos. Menos de 2 entrena poco, de 2 a 3 mantiene lo que tienes, de 3 a 4 lo mejora, de 4 a 5 lo mejora mucho, y 5 es más de lo que tu cuerpo puede usar de inmediato. Este entrenamiento: <xliff:g id="figures" example="aerobic 3.2, anaerobic 1.1">%1$s</xliff:g>.</string>
-    
-    <string name="workout_detail_figure_aerobic">aeróbico <xliff:g id="effect" example="3.2">%1$s</xliff:g></string>
-    
-    <string name="workout_detail_figure_anaerobic">anaeróbico <xliff:g id="effect" example="1.1">%1$s</xliff:g></string>
-    
-    <string name="workout_detail_figure_load">Carga <xliff:g id="load" example="80">%1$d</xliff:g></string>
-    
-    <string name="workout_detail_figure_recover">tiempo para recuperar <xliff:g id="time" example="12 h">%1$s</xliff:g></string>
-    
+    <string name="workout_detail_effect_text">Dos escalas de 0 a 5. La aeróbica indica lo que el entrenamiento hizo por tu resistencia, y la anaeróbica, por los esfuerzos cortos e intensos. Menos de 2 entrena poco, de 2 a 3 mantiene lo que tienes, de 3 a 4 lo mejora, de 4 a 5 lo mejora mucho, y 5 es más de lo que tu cuerpo puede aprovechar de inmediato. Este entrenamiento: %1$s.</string>
+    <string name="workout_detail_figure_aerobic">aeróbico %1$s</string>
+    <string name="workout_detail_figure_anaerobic">anaeróbico %1$s</string>
+    <string name="workout_detail_figure_load">Carga %1$d</string>
+    <string name="workout_detail_figure_recover">tiempo para recuperar %1$s</string>
     <string name="workout_detail_row_recover">Tiempo para recuperar</string>
-    
-    <string name="workout_detail_recover_text">El tiempo que falta para que tu cuerpo esté listo para otro entrenamiento duro, según el efecto del entrenamiento y lo cansado que hayas estado últimamente. Nunca baja de lo que dejaron los entrenamientos anteriores. Este entrenamiento:<xliff:g id="time" example="14 h">%1$s</xliff:g>.</string>
-    
+    <string name="workout_detail_recover_text">El tiempo que falta para que tu cuerpo esté listo para otro entrenamiento duro, según el efecto del entrenamiento y lo cansado que hayas estado últimamente. Nunca baja de lo que dejaron los entrenamientos anteriores. Este entrenamiento:%1$s.</string>
     <string name="workout_detail_row_drop">Descenso de la frecuencia cardíaca</string>
-    
-    <string name="workout_detail_drop_value">Este entrenamiento: bajó <xliff:g id="bpm" example="30">%1$d</xliff:g> en el primer minuto.</string>
-    
-    <string name="workout_detail_drop_value_two">Este entrenamiento: bajó <xliff:g id="bpm" example="30">%1$d</xliff:g> en el primer minuto, <xliff:g id="bpm_two" example="48">%2$d</xliff:g> en el segundo.</string>
-    
-    <string name="workout_detail_drop_not_rated">Terminaste con <xliff:g id="bpm" example="110">%1$d</xliff:g> lpm, estaba casi en reposo, así que no había mucho de lo que recuperarse.</string>
-    
+    <string name="workout_detail_drop_value">Este entrenamiento: bajó %1$d en el primer minuto.</string>
+    <string name="workout_detail_drop_value_two">Este entrenamiento: bajó %1$d en el primer minuto, %2$d en el segundo.</string>
+    <string name="workout_detail_drop_not_rated">Terminaste con %1$d lpm, estaba casi en reposo, así que no había mucho de lo que recuperarse.</string>
     <string name="workout_detail_row_vo2max">VO2 máx.</string>
-    
-    <string name="workout_detail_vo2max_text">La mayor cantidad de oxígeno que tu cuerpo puede usar, en ml por kg por minuto, estimada a partir de este entrenamiento:<xliff:g id="vo2max" example="48">%1$d</xliff:g>.</string>
-    
+    <string name="workout_detail_vo2max_text">La mayor cantidad de oxígeno que tu cuerpo puede usar, en ml por kg por minuto, estimada a partir de este entrenamiento:%1$d.</string>
     <string name="workout_detail_row_where">De dónde provienen</string>
-    
     <string name="workout_detail_where_strap_too">De la banda, que registró este entrenamiento junto con el teléfono y calculó esto por sí misma.</string>
-    
     <string name="workout_detail_where_phone">Calculado por unstrap a partir de tu frecuencia cardíaca, en las propias escalas de la banda.</string>
-    
     <string name="workout_detail_where_strap">De la banda, calculado durante el entrenamiento.</string>
-    
-    <string name="workout_detail_strap_one">La banda también registró este entrenamiento. Sus propias cifras:<xliff:g id="figures" example="aerobic 3.0, Load 80">%1$s</xliff:g>.</string>
-    
+    <string name="workout_detail_strap_one">La banda también registró este entrenamiento. Sus propias cifras:%1$s.</string>
     <plurals name="workout_detail_strap_many">
-        <item quantity="one">La banda lo registró como<xliff:g id="count" example="1">%d</xliff:g> workout of its own.</item>
-        <item quantity="other">La banda lo registró como<xliff:g id="count" example="2">%d</xliff:g> workouts of its own.</item>
+        <item quantity="one">La banda lo registró como %d entrenamiento propio.</item>
+        <item quantity="many">La banda lo registró como %d entrenamientos propios.</item>
+        <item quantity="other">La banda lo registró como %d entrenamientos propios.</item>
     </plurals>
-    
-    <string name="workout_detail_strap_from">De <xliff:g id="time" example="18:05">%1$s</xliff:g>: <xliff:g id="figures" example="aerobic 2.1, Load 20">%2$s</xliff:g>.</string>
-    
-    <string name="workout_detail_strap_from_start">Desde su inicio: <xliff:g id="figures" example="aerobic 2.1, Load 20">%1$s</xliff:g>.</string>
+    <string name="workout_detail_strap_from">De %1$s: %2$s.</string>
+    <string name="workout_detail_strap_from_start">Desde su inicio: %1$s.</string>
 </resources>

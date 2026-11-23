@@ -1,24 +1,17 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="you_firmware_title">Firmware</string>
-    
     <string name="you_firmware_this_strap">Esta pulsera</string>
     <string name="you_firmware_unknown">Desconocido</string>
     <string name="you_firmware_hardware">Hardware</string>
     <string name="you_firmware_battery">Batería</string>
-    
-    <string name="you_firmware_percent"><xliff:g id="percent" example="86">%1$d</xliff:g>%%</string>
+    <string name="you_firmware_percent">%1$d%%</string>
     <string name="you_firmware_not_connected">No conectado</string>
-    
     <string name="you_firmware_service">Servicio de actualización</string>
     <string name="you_firmware_service_available">Disponible</string>
     <string name="you_firmware_service_not_found">No encontrado</string>
-    <string name="you_firmware_service_unknown">Conéctate para comprobar</string>
-    
+    <string name="you_firmware_service_unknown">Desconocido</string>
     <string name="you_firmware_from_file">Instalar desde un archivo</string>
-    <string name="you_firmware_from_file_note">Para una imagen que tienes</string>
-    
     <string name="you_firmware_privacy">Privacidad y seguridad</string>
     <string name="you_firmware_privacy_sign_in">Iniciar sesión</string>
     <string name="you_firmware_privacy_sign_in_text">Ocurre en la propia página de Zepp. unstrap solo conserva el token de la aplicación y el ID de usuario, y obtiene tu lista de dispositivos una vez.</string>
@@ -26,122 +19,94 @@
     <string name="you_firmware_privacy_check_text">Envía al servidor de actualización tu token, ID de usuario y el firmware, hardware y número de serie de la pulsera. Nada más.</string>
     <string name="you_firmware_privacy_install">Instalación segura</string>
     <string name="you_firmware_privacy_install_text">Las descargas se verifican con la suma de comprobación del servidor y la pulsera verifica la firma antes de instalar.</string>
-
-    
-    <string name="you_firmware_updates">Actualizaciones</string>
     <string name="you_firmware_updates_text">Pregunta al servidor de actualización de Zepp si hay un firmware más nuevo para esta pulsera.</string>
     <string name="you_firmware_check">Buscar actualizaciones</string>
-    <string name="you_firmware_checking">Buscando actualizaciones…</string>
-    
-    <string name="you_firmware_downloading">Descargando<xliff:g id="part" example="Firmware">%1$s</xliff:g> <xliff:g id="version" example="3.25.1">%2$s</xliff:g>…</string>
-    
-    <string name="you_firmware_part_title"><xliff:g id="part" example="Firmware">%1$s</xliff:g> <xliff:g id="version" example="3.25.1">%2$s</xliff:g></string>
+    <string name="you_firmware_checking">Buscando actualizaciones</string>
+    <string name="you_firmware_downloading">Descargando %1$s %2$s</string>
+    <string name="you_firmware_part_title">%1$s %2$s</string>
     <string name="you_firmware_ready">Listo para instalar</string>
-    
     <string name="you_firmware_image">Imagen</string>
     <string name="you_firmware_size">Tamaño</string>
-    
-    <string name="you_firmware_megabytes"><xliff:g id="megabytes" example="1.2">%1$.1f</xliff:g> MB</string>
+    <string name="you_firmware_megabytes">%1$.1f MB</string>
     <string name="you_firmware_signed_for">Firmado para</string>
-    
-    <string name="you_firmware_signed_for_value">producto <xliff:g id="product" example="157">%1$d</xliff:g> v<xliff:g id="version" example="1">%2$d</xliff:g></string>
+    <string name="you_firmware_signed_for_value">producto %1$d v%2$d</string>
     <string name="you_firmware_install">Instalar</string>
     <string name="you_firmware_installing_note">Mantén la pulsera cerca y esta pantalla abierta. Esto puede tardar varios minutos.</string>
     <string name="you_firmware_installed">Instalado</string>
     <string name="you_firmware_installed_text">La pulsera se está reiniciando. unstrap se reconectará automáticamente. Comprueba de nuevo más tarde por si hay más partes que instalar.</string>
     <string name="you_firmware_done">Listo</string>
     <string name="you_firmware_failed">Algo salió mal</string>
-    <string name="you_firmware_ok">Aceptar</string>
     <string name="you_firmware_up_to_date">Actualizado</string>
     <string name="you_firmware_up_to_date_text">El servidor de actualización no tiene nada más nuevo para esta pulsera.</string>
     <string name="you_firmware_required">Actualización necesaria</string>
     <string name="you_firmware_available">Actualización disponible</string>
-    
-    <string name="you_firmware_part_size"><xliff:g id="version" example="3.25.1">%1$s</xliff:g>, <xliff:g id="size" example="1,204">%2$s</xliff:g> KB</string>
-    <string name="you_firmware_parts_note">Las piezas se instalan de una en una. Después de que la correa se reinicie, vuelve a comprobar para instalar la siguiente.</string>
+    <string name="you_firmware_part_size">%1$s, %2$s KB</string>
+    <string name="you_firmware_parts_note">Las piezas se instalan de una en una. Después de que la banda se reinicie, vuelve a comprobar para instalar la siguiente.</string>
     <string name="you_firmware_not_now">Ahora no</string>
-    
     <string name="you_firmware_unsupported">No se puede instalar</string>
     <string name="you_firmware_download">Descargar</string>
-    
-    <string name="you_firmware_confirm_title">Instalar <xliff:g id="title" example="Firmware 3.25.1">%1$s</xliff:g>?</string>
-    <string name="you_firmware_confirm_text">La correa recibirá la imagen, la comprobará, la instalará y se reiniciará. Mantenla cerca del teléfono y no cierres unstrap hasta que termine.</string>
-    
+    <string name="you_firmware_confirm_title">¿Instalar actualización?</string>
+    <string name="you_firmware_confirm_text">Instalando %1$s. La banda lo comprobará, lo instalará y se reiniciará. Mantenla cerca del teléfono y no cierres unstrap hasta que termine.</string>
     <string name="you_firmware_confirm_anyway">Entiendo y quiero instalarlo de todos modos</string>
-
-    
     <string name="you_firmware_no_account">Inicia sesión en Zepp primero.</string>
-    <string name="you_firmware_no_version">Conecta la correa primero para conocer su versión de firmware.</string>
+    <string name="you_firmware_no_version">Conecta la banda primero para conocer su versión de firmware.</string>
     <string name="you_firmware_check_failed">Error al comprobar la actualización</string>
-    
-    <string name="you_firmware_unknown_part">unstrap no puede instalar este tipo de pieza (<xliff:g id="code" example="xyz">%1$s</xliff:g>)</string>
+    <string name="you_firmware_unknown_part">unstrap no puede instalar este tipo de pieza (%1$s)</string>
     <string name="you_firmware_download_failed">Error al descargar</string>
     <string name="you_firmware_install_failed">Error al instalar</string>
     <plurals name="you_firmware_file_size">
-        <item quantity="one">Ese archivo es<xliff:g id="bytes" example="512">%1$d</xliff:g> byte, which isn\'t a plausible firmware image.</item>
-        <item quantity="other">Ese archivo es<xliff:g id="bytes" example="512">%1$d</xliff:g> bytes, which isn\'t a plausible firmware image.</item>
+        <item quantity="one">Ese archivo pesa %1$,d byte, lo que no es una imagen de firmware plausible.</item>
+        <item quantity="many">Ese archivo pesa %1$,d bytes, lo que no es una imagen de firmware plausible.</item>
+        <item quantity="other">Ese archivo pesa %1$,d bytes, lo que no es una imagen de firmware plausible.</item>
     </plurals>
-    
-    <string name="you_firmware_file_untrusted">Este archivo no proviene del servidor de actualizaciones de Zepp para esta correa. Instala únicamente archivos en los que confíes.</string>
-    <string name="you_firmware_file_unsigned">Este archivo no tiene firma de firmware. Probablemente no sea un firmware para esta correa.</string>
-    
+    <string name="you_firmware_file_untrusted">Este archivo no proviene del servidor de actualizaciones de Zepp para esta banda. Instala únicamente archivos en los que confíes.</string>
+    <string name="you_firmware_file_unsigned">Este archivo no tiene firma de firmware. Probablemente no sea un firmware para esta banda.</string>
     <string name="you_firmware_file_title">Firmware desde archivo</string>
     <string name="you_firmware_file_unread">No se pudo leer el archivo. Selecciónalo de nuevo.</string>
-    <string name="you_firmware_wrong_product">La imagen indica que es para el producto <xliff:g id="image" example="158">%1$d</xliff:g>, pero esta pulsera es <xliff:g id="strap" example="157">%2$d</xliff:g>.</string>
+    <string name="you_firmware_wrong_product">La imagen indica que es para el producto %1$d, pero esta pulsera es %2$d.</string>
     <plurals name="you_firmware_wrong_size">
-        <item quantity="one">El archivo es más corto de lo que indica la imagen (<xliff:g id="size" example="1234567">%1$d</xliff:g> byte). It may be incomplete.</item>
-        <item quantity="other">El archivo es más corto de lo que indica la imagen (<xliff:g id="size" example="1234567">%1$d</xliff:g> bytes). It may be incomplete.</item>
+        <item quantity="one">El archivo es más corto de lo que indica la imagen, %1$,d byte. Puede estar incompleto.</item>
+        <item quantity="many">El archivo es más corto de lo que indica la imagen, %1$,d bytes. Puede estar incompleto.</item>
+        <item quantity="other">El archivo es más corto de lo que indica la imagen, %1$,d bytes. Puede estar incompleto.</item>
     </plurals>
-    
-    <string name="you_firmware_block_connect">Conecta la correa.</string>
-    <string name="you_firmware_block_battery_unknown">Nivel de batería desconocido. Vuelve a conectar la correa.</string>
-    <string name="you_firmware_block_battery">Carga la correa por encima de <xliff:g id="min" example="30">%1$d</xliff:g>%% (now <xliff:g id="battery" example="20">%2$d</xliff:g>%%).</string>
-    
-    <string name="you_firmware_step_starting">Iniciando…</string>
-    <string name="you_firmware_step_sending">Enviando a la correa…</string>
-    <string name="you_firmware_step_validating">La correa está comprobando la imagen…</string>
-    <string name="you_firmware_step_applying">La correa se está instalando…</string>
-    <string name="you_firmware_step_restarting">Reiniciando…</string>
-
-    
-    <string name="you_error_firmware_rejected">El servidor de actualizaciones de Zepp no aceptó el inicio de sesión. Es posible que haya expirado. Inicia sesión de nuevo.</string>
-    <string name="you_error_firmware_server">El servidor de actualizaciones de Zepp no respondió como se esperaba. Inténtalo de nuevo en unos minutos.</string>
-    <string name="you_error_firmware_download">La descarga del firmware falló. Inténtalo de nuevo en unos minutos.</string>
-    <string name="you_error_firmware_damaged">La descarga del firmware estaba dañada. Inténtalo de nuevo.</string>
-    <string name="you_error_firmware_network">No se pudo conectar con el servidor de actualizaciones. Comprueba tu conexión a internet e inténtalo de nuevo.</string>
-    <string name="you_error_zepp_rejected">Zepp no aceptó el inicio de sesión. Es posible que haya expirado o que la cuenta sea de otra región. Inicia sesión de nuevo.</string>
-    <string name="you_error_zepp_server">Zepp no respondió como se esperaba. Es posible que tenga problemas. Inténtalo de nuevo en unos minutos.</string>
-    <string name="you_error_zepp_network">No se pudo conectar con los servidores de Zepp. Comprueba tu conexión a internet e inténtalo de nuevo.</string>
-
-    
+    <string name="you_firmware_block_connect">Conecta la banda.</string>
+    <string name="you_firmware_block_battery_unknown">Nivel de batería desconocido. Vuelve a conectar la banda.</string>
+    <string name="you_firmware_block_battery">Carga primero la banda por encima del %1$d%%, está al %2$d%%.</string>
+    <string name="you_firmware_step_starting">Iniciando</string>
+    <string name="you_firmware_step_sending">Enviando a la banda</string>
+    <string name="you_firmware_step_validating">La banda está comprobando la imagen</string>
+    <string name="you_firmware_step_applying">La banda se está instalando</string>
+    <string name="you_firmware_step_restarting">Reiniciando</string>
+    <string name="you_error_firmware_rejected">El servidor de actualizaciones de Zepp no aceptó el inicio de sesión. Inicia sesión de nuevo.</string>
+    <string name="you_error_firmware_server">El servidor de actualizaciones de Zepp no respondió como se esperaba. Inténtalo de nuevo más tarde.</string>
+    <string name="you_error_firmware_download">La descarga del firmware falló. Inténtalo de nuevo más tarde.</string>
+    <string name="you_error_firmware_damaged">La descarga del firmware estaba dañada. Inténtalo de nuevo más tarde.</string>
+    <string name="you_error_firmware_network">No se pudo conectar con el servidor de actualizaciones. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="you_error_zepp_rejected">Zepp no aceptó el inicio de sesión. Inicia sesión de nuevo.</string>
+    <string name="you_error_zepp_server">Zepp no respondió como se esperaba. Inténtalo de nuevo más tarde.</string>
+    <string name="you_error_zepp_network">No se pudo conectar con Zepp. Comprueba tu conexión e inténtalo de nuevo.</string>
     <string name="you_zepp_title">Cuenta de Zepp</string>
-    
     <string name="you_zepp_save_sign_in">Guardar inicio de sesión</string>
-    <string name="you_zepp_account_none">Zepp solo responde a las comprobaciones de actualización para usuarios que han iniciado sesión. Inicia sesión o pega tu propio token de aplicación y ID de usuario. Solo se almacenan en este teléfono.</string>
-    
-    <string name="you_zepp_account_user">Las comprobaciones de actualización usan tu token guardado para el usuario<xliff:g id="user" example="1234567890">%1$s</xliff:g> on <xliff:g id="server" example="https://api-mifit-us2.zepp.com">%2$s</xliff:g>.</string>
-    <string name="you_zepp_account">Las comprobaciones de actualización usan tu token guardado en<xliff:g id="server" example="https://api-mifit-us2.zepp.com">%1$s</xliff:g>.</string>
+    <string name="you_zepp_account_none">Inicia sesión para buscar actualizaciones de firmware, o pega tu propio token de aplicación e ID de usuario.</string>
     <string name="you_zepp_sign_in_again">Volver a iniciar sesión</string>
     <string name="you_zepp_paste_token">Pegar token</string>
     <string name="you_zepp_edit">Editar</string>
     <string name="you_zepp_remove">Eliminar</string>
-    
     <string name="you_zepp_app_token">Token de aplicación</string>
     <string name="you_zepp_keep_token">Déjalo vacío para conservar el token guardado</string>
     <string name="you_zepp_user_id">ID de usuario</string>
     <string name="you_zepp_server">Servidor</string>
     <string name="you_zepp_china">Pulsera del mercado chino</string>
     <string name="you_zepp_china_note">Solo si la pulsera se compró en China continental</string>
-
-    
     <string name="you_zepp_close">Cerrar</string>
     <string name="you_zepp_sign_in_title">Iniciar sesión con Zepp</string>
     <string name="you_zepp_reset">Restablecer</string>
     <string name="you_zepp_sign_in_text">Usa el correo electrónico y la contraseña de la cuenta de Zepp a la que está vinculada tu pulsera. Los inicios de sesión de Google, Apple, Facebook y Xiaomi no funcionen aquí.</string>
-    <string name="you_zepp_sign_in_note">Esta es la propia página de Zepp, por lo que unstrap nunca ve tu contraseña. Solo lee el token de aplicación y el ID de usuario, y luego le pide a Zepp tus dispositivos una vez.</string>
+    <string name="you_zepp_sign_in_note">Esta es la propia página de Zepp, así que unstrap nunca ve tu contraseña. Solo lee el token de aplicación y el ID de usuario.</string>
+    <string name="you_zepp_third_party" tools:ignore="Typos">El inicio de sesión con %1$s no funciona aquí, porque %1$s bloquea el inicio de sesión en páginas incrustadas.
     
-    <string name="you_zepp_third_party" tools:ignore="Typos"><xliff:g id="provider" example="Google">%1$s</xliff:g> sign-in doesn\'t work inside unstrap, because <xliff:g id="provider" example="Google">%1$s</xliff:g> blocks sign-in in embedded pages.  Open the Zepp app and add an email and password to your account in its account settings. Then sign in here with that email. Or get the auth key on a computer.</string>
-    <string name="you_zepp_fetching">Sesión iniciada. Buscando tus dispositivos…</string>
+    Añade un correo y una contraseña a tu cuenta en la app de Zepp y luego inicia sesión aquí con ese correo. O consigue la clave de autenticación en un ordenador.</string>
+    <string name="you_zepp_fetching">Sesión iniciada, buscando tus dispositivos</string>
     <string name="you_zepp_use_email">Usar inicio de sesión por correo</string>
     <string name="you_zepp_no_devices">No se pudieron obtener tus dispositivos</string>
     <string name="you_zepp_sign_in_email">Iniciar sesión con correo electrónico</string>
@@ -149,22 +114,27 @@
     <string name="you_zepp_not_found">No hay ningún Helio Strap en esta cuenta</string>
     <string name="you_zepp_account_empty">Esta cuenta no tiene dispositivos. Vincula la pulsera en la app de Zepp primero. Si ya está vinculada, inicia sesión con el correo de la cuenta que usa la app de Zepp.</string>
     <plurals name="you_zepp_account_other_devices">
-        <item quantity="one">Esta cuenta tiene<xliff:g id="count" example="2">%1$d</xliff:g> device, but it isn\'t an Amazfit Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
-        <item quantity="other">Esta cuenta tiene<xliff:g id="count" example="2">%1$d</xliff:g> devices, but none is an Amazfit Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
+        <item quantity="one">Esta cuenta tiene %1$d dispositivo, pero no es una Helio Strap. Vincula la banda en la app de Zepp y vuelve a iniciar sesión.</item>
+        <item quantity="many">Esta cuenta tiene %1$d dispositivos, pero ninguno es una Helio Strap. Vincula la banda en la app de Zepp y vuelve a iniciar sesión.</item>
+        <item quantity="other">Esta cuenta tiene %1$d dispositivos, pero ninguno es una Helio Strap. Vincula la banda en la app de Zepp y vuelve a iniciar sesión.</item>
     </plurals>
     <string name="you_zepp_key_missing">No está en la cuenta</string>
-    
     <string name="you_zepp_serial">Número de serie</string>
     <string name="you_zepp_region">Región</string>
     <string name="you_zepp_region_china">China</string>
     <string name="you_zepp_region_global">Global</string>
-    <string name="you_zepp_no_key">Zepp no devolvió una clave de autenticación para esta pulsera. Comprueba en la app de Zepp que la pulsera siga vinculada y luego vuelve a iniciar sesión aquí.</string>
-    <string name="you_zepp_user">Usuario de Zepp</string>
-    <string name="you_zepp_keep_on_charger">Mantén la pulsera en su cargador cerca del teléfono. No la desvincules en la app de Zepp: eso borra esta clave de la pulsera.</string>
+    <string name="you_zepp_no_key">Zepp no envió ninguna clave de autenticación para esta banda. Comprueba que la banda siga vinculada en la app de Zepp y vuelve a iniciar sesión.</string>
+    <string name="you_zepp_user">ID de usuario</string>
+    <string name="you_zepp_keep_on_charger">Mantén la banda en su cargador cerca del teléfono. No la desvincules nunca en la app de Zepp, porque eso borra esta clave de la banda.</string>
     <string name="you_zepp_token_stays">El token de aplicación y el ID de usuario se quedan solo en este teléfono para las comprobaciones de firmware.</string>
     <string name="you_zepp_keep_sign_in">Guardar inicio de sesión únicamente</string>
     <string name="you_zepp_other_account">Usar otra cuenta</string>
-    
     <string name="you_zepp_guide">¿No puedes iniciar sesión con correo?</string>
     <string name="you_zepp_guide_note">Obtener la clave en una computadora</string>
+    <string name="you_firmware_group_new">Firmware nuevo</string>
+    <string name="you_firmware_account_signed_in">Sesión iniciada</string>
+    <string name="you_zepp_saved">Inicio de sesión guardado</string>
+    <string name="you_zepp_edit_note">Token de aplicación, ID de usuario y servidor</string>
+    <string name="you_zepp_remove_note">Las comprobaciones de firmware se detienen hasta que vuelvas a iniciar sesión. Tu banda sigue vinculada.</string>
+    <string name="you_firmware_group_updates">Comprobación de actualizaciones</string>
 </resources>

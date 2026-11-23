@@ -1,24 +1,17 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">    
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="glow_metrics_all_metrics">Todas las métricas</string>
-    
+    <string name="glow_metrics_search">Buscar métricas</string>
+    <string name="glow_metrics_no_match">Ninguna métrica llamada %1$s</string>
     <string name="glow_metrics_recovery">Recuperación</string>
-    
     <string name="glow_metrics_sleep">Sueño</string>
-    
     <string name="glow_metrics_group_heart">Corazón</string>
-    
     <string name="glow_metrics_group_body">Señales corporales</string>
-    
     <string name="glow_metrics_group_activity">Actividad</string>
-    
     <string name="glow_metrics_energy">Energía</string>
-    
     <string name="glow_metrics_habit_age">Edad del hábito</string>
-    
     <string name="glow_metrics_heart_rate">Frecuencia cardíaca</string>
     <string name="glow_metrics_resting_heart_rate">Frecuencia cardíaca en reposo</string>
-    
     <string name="glow_metrics_hrv">VFC</string>
     <string name="glow_metrics_blood_oxygen">Oxígeno en sangre</string>
     <string name="glow_metrics_skin_temperature">Temperatura corporal</string>
@@ -26,84 +19,85 @@
     <string name="glow_metrics_stress">Estrés</string>
     <string name="glow_metrics_steps">Pasos</string>
     <string name="glow_metrics_workouts">Entrenamientos</string>
-    
+    <string name="glow_metrics_active_kcal">kcal activas</string>
     <plurals name="glow_metrics_learning_nights">
-        <item quantity="one">Aprendizaje,<xliff:g id="nights" example="2">%1$d</xliff:g> of <xliff:g id="needed" example="4">%2$d</xliff:g> night</item>
-        <item quantity="other">Aprendizaje,<xliff:g id="nights" example="2">%1$d</xliff:g> of <xliff:g id="needed" example="4">%2$d</xliff:g> nights</item>
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
     </plurals>
-    
     <string name="glow_metrics_score_for_day">Puntuación del día</string>
-    
     <string name="glow_metrics_score_for_night">Puntuación de la noche</string>
-    
     <string name="glow_metrics_latest">Último</string>
-    
     <string name="glow_metrics_end_of_day">Fin del día</string>
-    
     <string name="glow_metrics_latest_reading">Última lectura</string>
-    
     <string name="glow_metrics_for_the_day">Para el día</string>
-    
+    <string name="glow_metrics_for_the_day_estimated">Del día, estimado</string>
     <string name="glow_metrics_day_average">Promedio diario</string>
     <string name="glow_metrics_night_average">Promedio dormido</string>
-    
     <string name="glow_metrics_last_7_days">Últimos 7 días</string>
-    
     <string name="glow_metrics_updated_weekly">Actualizado semanalmente</string>
-    
     <string name="glow_metrics_starting_point">Punto de partida</string>
-    
     <string name="glow_metrics_needs_profile">Necesita año de nacimiento y sexo</string>
-    
     <string name="glow_metrics_not_worked_out">Sin estimación aún</string>
-
-    
-
-    
-    <string name="glow_metrics_about">Acerca de<xliff:g id="title" example="Heart rate">%1$s</xliff:g></string>
-    
-    <string name="glow_metrics_show_day">Mostrar<xliff:g id="day" example="Wed">%1$s</xliff:g></string>
-    
+    <string name="glow_metrics_about">Acerca de %1$s</string>
+    <string name="glow_metrics_show_day">Mostrar %1$s</string>
     <string name="glow_metrics_showing">Mostrando</string>
-    
-    
     <string name="glow_metrics_last_7_nights">En las últimas 7 noches</string>
-    
-    <string name="glow_metrics_none_last_7_nights">Aún no hay datos de las últimas 7 noches.</string>
-    
-    <string name="glow_metrics_none_in_range">Aún no hay datos en este rango.</string>
-    
+    <string name="glow_metrics_none_last_7_nights">Aún no hay lecturas en las últimas 7 noches.</string>
+    <string name="glow_metrics_none_in_range">Aún no hay lecturas en este rango.</string>
     <string name="glow_metrics_none_asleep">No hay lecturas mientras duermes.</string>
-    
-    <string name="glow_metrics_none_this_day">Aún no hay datos para este día.</string>
-    
+    <string name="glow_metrics_first_reading">Primera lectura a las %1$s, cuando ya llevabas un rato dormido.</string>
+    <string name="glow_metrics_spo2_mostly_asleep">Sobre todo durante el sueño, la última a las %1$s</string>
+    <string name="glow_metrics_none_this_day">No hay lecturas de este día.</string>
     <string name="glow_metrics_breathing_in_sleep">La frecuencia respiratoria se mide durante el sueño.</string>
-    
-    <string name="glow_metrics_unit_day"><xliff:g id="unit" example="bpm">%1$s</xliff:g>, <xliff:g id="day" example="Wed 21">%2$s</xliff:g></string>
-    
-    <string name="glow_metrics_unit_at_time"><xliff:g id="unit" example="bpm">%1$s</xliff:g> a las <xliff:g id="time" example="22:30">%2$s</xliff:g></string>
-    
-    <string name="glow_metrics_at_time">a las<xliff:g id="time" example="22:30">%1$s</xliff:g></string>
-    
-    <string name="glow_metrics_steps_hours">pasos,<xliff:g id="hours" example="09:00 to 10:00">%1$s</xliff:g></string>
-    
-    <string name="glow_metrics_week_of">semana del<xliff:g id="date" example="21 Oct">%1$s</xliff:g></string>
-    
+    <string name="glow_metrics_unit_day">%1$s, %2$s</string>
+    <string name="glow_metrics_unit_average_from_time">%1$s, promedio de %2$d min desde las %3$s</string>
+    <string name="glow_metrics_average_from_time">Promedio de %1$d min desde las %2$s</string>
+    <string name="glow_metrics_steps_hours">pasos,%1$s</string>
+    <string name="glow_metrics_week_of">semana del %1$s</string>
     <string name="glow_metrics_related">Relacionados</string>
-
-    
-
-    
-    <string name="glow_metrics_chart_average">prom.<xliff:g id="value" example="62">%1$s</xliff:g></string>
-
-    
-
-    
-    <string name="glow_metrics_zone_title"><xliff:g id="zone" example="Zone 2">%1$s</xliff:g>, <xliff:g id="name" example="Aerobic">%2$s</xliff:g></string>
-    
-    <string name="glow_metrics_zone_lower"><xliff:g id="label" example="Starts at">%1$s</xliff:g> lower</string>
-    
-    <string name="glow_metrics_zone_higher"><xliff:g id="label" example="Starts at">%1$s</xliff:g> higher</string>
-    
-    <string name="glow_metrics_zone_bpm"><xliff:g id="bpm" example="132">%1$d</xliff:g> lpm</string>
+    <string name="glow_detail_band_note">La franja es tu normal</string>
+    <string name="glow_detail_your_normal">Tu normal</string>
+    <string name="glow_detail_low">Mínimo</string>
+    <string name="glow_detail_high">Máximo</string>
+    <string name="glow_detail_average">Promedio</string>
+    <string name="glow_detail_seven_night_average">Promedio de 7 noches</string>
+    <string name="glow_detail_vs_normal">vs. tu normal</string>
+    <string name="glow_detail_of_goal">de %1$s</string>
+    <string name="glow_zones_bpm_value">%1$d lpm</string>
+    <string name="glow_zones_worked_out_from">Calculado a partir de</string>
+    <string name="glow_zones_heading">Zonas</string>
+    <string name="glow_detail_worse">Peor</string>
+    <string name="glow_detail_against_normal">Frente a tu normal</string>
+    <string name="glow_detail_since_woke">Desde que despertaste</string>
+    <string name="glow_detail_through_day">A lo largo del día</string>
+    <string name="glow_detail_at_waking_note">%1$d al despertar</string>
+    <string name="glow_detail_seven_day_average">Promedio de 7 días</string>
+    <string name="glow_detail_vs_yesterday">vs. ayer</string>
+    <string name="glow_detail_better">Mejor</string>
+    <string name="glow_metrics_chart_average">prom.%1$s</string>
+    <string name="glow_metrics_zone_title">%1$s, %2$s</string>
+    <string name="glow_metrics_zone_lower">%1$s, menos</string>
+    <string name="glow_metrics_zone_higher">%1$s, más</string>
+    <string name="glow_detail_goal">Meta</string>
+    <string name="glow_detail_best_day">Mejor día</string>
+    <string name="glow_detail_daily_average">Promedio diario</string>
+    <string name="glow_detail_hr_calm">Tranquila</string>
+    <string name="glow_detail_hr_raised">Elevada</string>
+    <string name="glow_detail_spo2_normal">Normal</string>
+    <string name="glow_detail_spo2_slightly_low">Algo baja</string>
+    <string name="glow_detail_spo2_low">Baja</string>
+    <string name="glow_detail_steps_below_goal">Por debajo de tu meta</string>
+    <string name="glow_detail_steps_goal_reached">Meta cumplida</string>
+    <string name="glow_detail_steps_to_go">%1$s pasos más para tu meta.</string>
+    <string name="glow_detail_steps_done">Alcanzaste tu meta.</string>
+    <string name="glow_detail_steps_so_far_to">Hasta ahora hoy, hasta las %1$s</string>
+    <string name="glow_detail_live">En vivo</string>
+    <string name="glow_detail_asleep_note">Dormido</string>
+    <string name="glow_detail_spo2_day_today" tools:ignore="PluralsCandidate">Entre %1$d%% y %2$d%% hasta ahora hoy.</string>
+    <string name="glow_detail_spo2_day_past" tools:ignore="PluralsCandidate">Entre %1$d%% y %2$d%% ese día.</string>
+    <string name="glow_detail_stress_calm">Calma</string>
+    <string name="glow_detail_stress_high">Alto</string>
+    <string name="glow_detail_last_night_estimated">Anoche, estimado</string>
+    <string name="glow_detail_that_night_estimated">Esa noche, estimado</string>
 </resources>

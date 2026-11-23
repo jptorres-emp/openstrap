@@ -1,63 +1,32 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
-    <string name="update_summary_ready">unstrap<xliff:g id="version" example="2.2.0">%1$s</xliff:g> is ready to install</string>
-    
-    <string name="update_summary_checking">Comprobando…</string>
-    
-    <string name="update_summary_version">Versión<xliff:g id="version" example="2.1.0">%1$s</xliff:g></string>
-    
-    <string name="update_summary_up_to_date">Al día. Comprobado<xliff:g id="when" example="today at 19:00">%1$s</xliff:g></string>
-
-    
-    <string name="update_check_checking">Comprobando GitHub…</string>
-    
-    <string name="update_check_failed_last">No se pudo conectar a GitHub. Última comprobación<xliff:g id="when" example="today at 19:00">%1$s</xliff:g></string>
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_summary_ready">unstrap %1$s está listo para instalar</string>
+    <string name="update_summary_checking">Comprobando</string>
+    <string name="update_summary_version">Versión %1$s</string>
+    <string name="update_summary_up_to_date">Al día, comprobado %1$s</string>
+    <string name="update_check_checking">Comprobando GitHub</string>
+    <string name="update_check_failed_last">No se pudo conectar con GitHub, última comprobación %1$s</string>
     <string name="update_check_failed">No se pudo conectar a GitHub</string>
-    
-    <string name="update_check_last">Última comprobación<xliff:g id="when" example="today at 19:00">%1$s</xliff:g></string>
-    
+    <string name="update_check_last">Última comprobación %1$s</string>
     <string name="update_check_never">Nunca comprobado</string>
-
-    
-    <string name="update_install_downloading_percent">Descargando,<xliff:g id="percent" example="45">%1$d</xliff:g>%%</string>
-    
-    <string name="update_install_downloading_size">Descargando,<xliff:g id="size" example="19.3 MB">%1$s</xliff:g></string>
-    
-    <string name="update_install_installing">Instalando. unstrap se cerrará al terminar</string>
-    
-    <string name="update_install_no_apk">No hay archivo de app en esta versión. Ábrela en GitHub</string>
-    
-    <string name="update_install_after_workout">Después de tu entrenamiento. La instalación cerrará la app</string>
-    
-    <string name="update_install_download">Descargar e instalar,<xliff:g id="size" example="19.3 MB">%1$s</xliff:g></string>
-    
-    <string name="update_megabytes"><xliff:g id="megabytes" example="19.3">%1$.1f</xliff:g> MB</string>
-
-    
-    <string name="update_failure_network">La descarga se detuvo. Toca para intentar de nuevo</string>
-    
-    <string name="update_failure_checksum">La descarga no coincide con el archivo en GitHub. Toca para intentar de nuevo</string>
-    
-    <string name="update_failure_no_checksum">GitHub no pudo verificar la descarga, por lo que no se instaló</string>
-    
-    <string name="update_failure_not_openstrap">La descarga no es unstrap, por lo que no se instaló</string>
-    
-    <string name="update_failure_signature">Esta copia de unstrap está firmada con otra clave. Instálala desde GitHub en su lugar</string>
-    
-    <string name="update_failure_storage">No hay suficiente espacio para instalarla</string>
-    
-    <string name="update_failure_android">Android no pudo instalarla. Toca para intentar de nuevo</string>
-
-    
-    <string name="update_available_title">unstrap<xliff:g id="version" example="2.2.0">%1$s</xliff:g> is out</string>
-    
-    <string name="update_available_text">Mira las novedades e instálalas desde la página de actualizaciones.</string>
-    
-    <string name="update_installed_title">Actualizado a unstrap<xliff:g id="version" example="2.2.0">%1$s</xliff:g></string>
-    
-    <string name="update_installed_text">Toca para ver las novedades.</string>
-    
+    <string name="update_install_downloading_percent">Descargando,%1$d%%</string>
+    <string name="update_install_downloading_size">Descargando,%1$s</string>
+    <string name="update_install_installing">Instalando, se cierra al terminar</string>
+    <string name="update_install_not_allowed">unstrap no tiene permiso para instalar apps, así que no se actualizó.</string>
+    <string name="update_install_no_apk">Esta versión no incluye archivo de app</string>
+    <string name="update_install_after_workout">Espera a que termine tu entrenamiento</string>
+    <string name="update_install_download">Descargar e instalar,%1$s</string>
+    <string name="update_megabytes">%1$.1f MB</string>
+    <string name="update_failure_network">La descarga se detuvo</string>
+    <string name="update_failure_checksum">La descarga no coincidía con el archivo de GitHub</string>
+    <string name="update_failure_no_checksum">No se pudo verificar la descarga</string>
+    <string name="update_failure_not_openstrap">La descarga no es esta app</string>
+    <string name="update_failure_signature">Firmada con otra clave, usa GitHub</string>
+    <string name="update_failure_storage">No hay espacio suficiente para instalar</string>
+    <string name="update_failure_android">Android no pudo instalarla</string>
+    <string name="update_available_title">unstrap %1$s ya está disponible</string>
+    <string name="update_available_text">Abre Actualizaciones para ver las novedades</string>
+    <string name="update_installed_title">Actualizado a unstrap %1$s</string>
+    <string name="update_installed_text">Ver las novedades</string>
     <string name="update_channel_name">Actualizaciones de la app</string>
 </resources>

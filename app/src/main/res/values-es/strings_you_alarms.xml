@@ -1,12 +1,10 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="you_alarms_days_once">Una vez</string>
     <string name="you_alarms_days_every_day">Todos los días</string>
     <string name="you_alarms_days_weekdays">Días de semana</string>
     <string name="you_alarms_days_weekends">Fines de semana</string>
     <string name="you_alarms_days_workdays">Días laborables</string>
-    
     <string name="you_alarms_day_mon">Lun</string>
     <string name="you_alarms_day_tue">Mar</string>
     <string name="you_alarms_day_wed">Mié</string>
@@ -14,7 +12,6 @@
     <string name="you_alarms_day_fri">Vie</string>
     <string name="you_alarms_day_sat">Sáb</string>
     <string name="you_alarms_day_sun">Dom</string>
-    
     <string name="you_alarms_letter_mon">L</string>
     <string name="you_alarms_letter_tue">M</string>
     <string name="you_alarms_letter_wed">M</string>
@@ -22,107 +19,84 @@
     <string name="you_alarms_letter_fri">V</string>
     <string name="you_alarms_letter_sat">S</string>
     <string name="you_alarms_letter_sun">D</string>
-
-    
     <string name="you_alarms_interval_continuous">Continuo</string>
-    <string name="you_alarms_interval_every">Cada<xliff:g id="minutes" example="10">%1$d</xliff:g> min</string>
-
-    
+    <string name="you_alarms_interval_every">Cada %1$d min</string>
     <string name="you_alarms_summary_none">Ninguno</string>
-    
     <string name="you_alarms_summary_all_off">Desactivar todo</string>
-    
-    <string name="you_alarms_summary_first"><xliff:g id="time" example="06:40">%1$s</xliff:g> <xliff:g id="days" example="weekdays">%2$s</xliff:g></string>
-    
+    <string name="you_alarms_summary_first">%1$s, %2$s</string>
     <plurals name="you_alarms_summary_more">
-        <item quantity="one"><xliff:g id="first" example="06:40 weekdays">%2$s</xliff:g> and <xliff:g id="count" example="1">%1$d</xliff:g> more</item>
-        <item quantity="other"><xliff:g id="first" example="06:40 weekdays">%2$s</xliff:g> and <xliff:g id="count" example="2">%1$d</xliff:g> more</item>
+        <item quantity="one">%2$s y %1$d más</item>
+        <item quantity="many">%2$s y %1$d más</item>
+        <item quantity="other">%2$s y %1$d más</item>
     </plurals>
-
-    
     <string name="you_health_summary_both">Frecuencia cardíaca y oxígeno</string>
-    
-    <string name="you_health_summary_over_under">Por encima<xliff:g id="high" example="150">%1$d</xliff:g>, below <xliff:g id="low" example="40">%2$d</xliff:g></string>
-    <string name="you_health_summary_over">Por encima<xliff:g id="high" example="150">%1$d</xliff:g> bpm</string>
-    <string name="you_health_summary_under">Por debajo<xliff:g id="low" example="40">%1$d</xliff:g> bpm</string>
-    
-    <string name="you_health_summary_oxygen">Oxígeno por debajo<xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
-
-    
+    <string name="you_health_summary_over_under">Más de %1$d, menos de %2$d lpm</string>
+    <string name="you_health_summary_over">Más de %1$d lpm</string>
+    <string name="you_health_summary_under">Menos de %1$d lpm</string>
+    <string name="you_health_summary_oxygen">Oxígeno por debajo de %1$d%%</string>
     <string name="you_alarms_delete_all_title">¿Eliminar todas las alarmas?</string>
     <string name="you_alarms_delete_all_text">Esto elimina todas las alarmas de la pulsera.</string>
-    
     <string name="you_alarms_delete_all">Eliminar todo</string>
-    
     <string name="you_alarms_title">Alarmas</string>
-    <string name="you_alarms_reading">Leyendo de la pulsera…</string>
+    <string name="you_alarms_reading">Leyendo</string>
     <string name="you_alarms_try_again">Intentar de nuevo</string>
-    
     <string name="you_alarms_on_strap">En la pulsera</string>
-    
-    <string name="you_alarms_count"><xliff:g id="count" example="3">%1$d</xliff:g> of <xliff:g id="max" example="10">%2$d</xliff:g></string>
     <string name="you_alarms_none">No hay alarmas en la pulsera.</string>
     <string name="you_alarms_add">Agregar alarma</string>
     <string name="you_alarms_tip">La pulsera vibra a la hora de la alarma. Para detenerla, toca la parte delantera de la pulsera varias veces.</string>
-    
     <string name="you_alarms_new">Nueva alarma</string>
     <string name="you_alarms_edit">Editar alarma</string>
     <string name="you_alarms_delete">Eliminar alarma</string>
-    
-    <string name="you_alarms_not_loaded">La configuración aún no se ha cargado</string>
-    <string name="you_alarms_read_failed">No se pudo leer de la correa</string>
-
-    
+    <string name="you_alarms_not_loaded">Los ajustes aún no se han cargado.</string>
+    <string name="you_alarms_read_failed">No se pudo leer de la banda.</string>
     <string name="you_health_title">Alertas de salud</string>
-    <string name="you_health_panel">Frecuencia cardíaca y oxígeno en sangre</string>
-    
     <string name="you_health_measuring">Midiendo frecuencia cardíaca</string>
-    
-    <string name="you_health_measuring_note">Las alertas de frecuencia cardíaca necesitan estar en modo continuo o cada minuto.</string>
+    <string name="you_health_measuring_note">Las alertas de frecuencia cardíaca necesitan Continua o Cada 1 min.</string>
     <string name="you_health_high">Alerta de frecuencia cardíaca alta</string>
-    
-    <string name="you_health_above">Por encima de<xliff:g id="bpm" example="150">%1$d</xliff:g></string>
     <string name="you_health_low">Alerta de frecuencia cardíaca baja</string>
-    <string name="you_health_below">Por debajo de<xliff:g id="bpm" example="40">%1$d</xliff:g></string>
+    <string name="you_health_auto_oxygen">Oxígeno en sangre automático</string>
+    <string name="you_health_auto_oxygen_note">Mide mientras descansas</string>
     <string name="you_health_oxygen">Alerta de oxígeno en sangre bajo</string>
-    
-    <string name="you_health_below_percent">Por debajo de<xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
-    <string name="you_health_note">La correa vibra cuando se activa una alerta. unstrap no es un dispositivo médico.</string>
-
-    
+    <string name="you_health_oxygen_note">Necesita el oxígeno en sangre automático activado.</string>
+    <string name="you_health_note">La banda vibra cuando se activa una alerta. unstrap no es un dispositivo médico.</string>
     <string name="you_phone_summary_both">Llamadas y notificaciones</string>
     <string name="you_phone_summary_calls">Llamadas</string>
     <string name="you_phone_summary_notifications">Notificaciones</string>
-    
     <string name="you_phone_quiet_off">Pausa la vibración por la noche o durante las horas establecidas.</string>
     <string name="you_phone_quiet_same">Elige diferentes horas de inicio y fin.</string>
-    
-    <string name="you_phone_quiet_with_calls">Sin vibración de<xliff:g id="hours" example="22:00 to 07:00">%1$s</xliff:g>, calls included.</string>
-    <string name="you_phone_quiet_notifications">Sin vibración de notificaciones de<xliff:g id="hours" example="22:00 to 07:00">%1$s</xliff:g>.</string>
-
-    
+    <string name="you_phone_quiet_with_calls">Sin vibración de %1$s, llamadas incluidas.</string>
+    <string name="you_phone_quiet_notifications">Sin vibración de notificaciones de %1$s.</string>
     <string name="you_phone_title">Alertas del teléfono</string>
     <string name="you_phone_calls">Llamadas entrantes</string>
-    <string name="you_phone_calls_note">Vibra mientras suena tu teléfono. Las llamadas de aplicaciones como WhatsApp necesitan acceso a las notificaciones.</string>
+    <string name="you_phone_calls_note">Vibra mientras suena tu teléfono. Las llamadas de aplicaciones necesitan acceso a las notificaciones.</string>
     <string name="you_phone_calls_blocked">Necesita acceso al teléfono. Android no volverá a preguntar, así que actívalo en Permisos.</string>
-    
     <string name="you_phone_open_settings">Abrir configuración</string>
     <string name="you_phone_call_buzz">Vibración de llamada</string>
-    
-    <string name="you_phone_call_length">Vibrar durante</string>
-    
+    <string name="you_phone_call_length">Duración de la vibración</string>
     <string name="you_phone_notifications">Notificaciones</string>
     <string name="you_phone_notifications_note">Vibra para las notificaciones que emiten un sonido.</string>
     <string name="you_phone_notifications_access">Necesita acceso a las notificaciones.</string>
     <string name="you_phone_pattern">Patrón de vibración</string>
     <string name="you_phone_quiet">Horas de silencio</string>
-    
     <string name="you_phone_quiet_from">Desde</string>
     <string name="you_phone_quiet_to">Hasta</string>
     <string name="you_phone_quiet_calls">Llamadas también</string>
-    <string name="you_phone_quiet_calls_note">Cuando está desactivado, la correa sigue vibrando para las llamadas.</string>
-    <string name="you_phone_note">Sigue el modo No molestar y las aplicaciones silenciadas. Nunca lee el contenido de las notificaciones.</string>
-    
+    <string name="you_phone_quiet_calls_note">Cuando está desactivado, la banda sigue vibrando para las llamadas.</string>
+    <string name="you_phone_note">unstrap sigue el modo No molestar y las aplicaciones silenciadas. Nunca lee lo que dice una notificación.</string>
     <string name="you_phone_quiet_from_title">Silencio desde</string>
     <string name="you_phone_quiet_until_title">Silencio hasta</string>
+    <string name="you_health_bpm_value">%1$d lpm</string>
+    <string name="you_health_percent_value">%1$d%%</string>
+    <string name="you_health_row_above">Por encima</string>
+    <string name="you_health_row_below">Por debajo</string>
+    <string name="you_health_group_heart">Frecuencia cardíaca</string>
+    <string name="you_health_group_oxygen">Oxígeno en sangre</string>
+    <string name="you_alarms_repeat">Repetir, %1$s</string>
+    <string name="you_phone_group_calls">Llamadas</string>
+    <string name="you_phone_group_notifications">Notificaciones</string>
+    <plurals name="you_alarms_panel_count">
+        <item quantity="one">%1$d de %2$d alarma</item>
+        <item quantity="many">%1$d de %2$d alarmas</item>
+        <item quantity="other">%1$d de %2$d alarmas</item>
+    </plurals>
 </resources>

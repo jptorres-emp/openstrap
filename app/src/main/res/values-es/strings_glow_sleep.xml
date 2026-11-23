@@ -1,74 +1,38 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <string name="glow_sleep_breathing_title">Alteraciones respiratorias</string>
-    
     <string name="glow_sleep_last_night">Anoche</string>
-    
+    <string name="glow_sleep_score_adjusted">%1$s, ajustada</string>
     <string name="glow_sleep_restore">Restaurar</string>
-    
-    <string name="glow_sleep_from_minutes">Tu banda no registró esta noche, por lo que la app la reconstruyó a partir de lo que la banda registró cada minuto. Obtienes horarios y despertares, pero no fases.</string>
-    
-    <string name="glow_sleep_stage_span"><xliff:g id="stage" example="Deep">%1$s</xliff:g>, <xliff:g id="times" example="01:10 to 01:55">%2$s</xliff:g>, <xliff:g id="minutes" example="45">%3$d</xliff:g> min</string>
-    
+    <string name="glow_sleep_stage_span">%1$s, %2$s, %3$d min</string>
     <string name="glow_sleep_vitals_title">Signos vitales nocturnos</string>
-    
-    <string name="glow_sleep_vitals_note">En comparación con tu valor normal</string>
-    
     <string name="glow_sleep_regularity_title">Regularidad del sueño</string>
-    
     <string name="glow_sleep_last_7_nights">Últimas 7 noches</string>
-    
-    <string name="glow_sleep_regularity_none">No hay sueño registrado en las últimas 7 noches</string>
-    
+    <string name="glow_sleep_regularity_none">Sin sueño registrado</string>
     <string name="glow_sleep_an_hour">una hora</string>
-
-    
-    <string name="glow_sleep_scrubbed"><xliff:g id="value" example="62">%1$s</xliff:g> <xliff:g id="label" example="bpm at 03:10">%2$s</xliff:g></string>
-    
+    <string name="glow_sleep_scrubbed">%1$s %2$s</string>
     <string name="glow_sleep_week_average">Promedio de los últimos 7 días</string>
-    
     <string name="glow_sleep_no_scores">Sin puntuaciones</string>
-    
     <string name="glow_sleep_in_last_7_nights">En las últimas 7 noches</string>
-    
     <string name="glow_sleep_no_score">Sin puntuación</string>
-    
     <string name="glow_sleep_what_shaped">Qué influyó en la puntuación</string>
-    
     <string name="glow_sleep_no_scores_week">Aún no hay puntuaciones de sueño en las últimas 7 noches.</string>
-    
     <string name="glow_sleep_adjust_times">Ajustar horarios</string>
-    
-    <string name="glow_sleep_delete_text"><xliff:g id="times" example="23:10 to 07:05">%1$s</xliff:g>. <xliff:g id="what" example="Its scores and stages go from every page.">%2$s</xliff:g></string>
-    
+    <string name="glow_sleep_delete_text">%1$s. %2$s</string>
     <string name="glow_sleep_undo">Deshacer</string>
-    
     <string name="glow_sleep_heart_rate">Frecuencia cardíaca</string>
-    
-    <string name="glow_sleep_heart_note">Más baja <xliff:g id="lowest" example="48">%1$d</xliff:g>, de media <xliff:g id="average" example="55">%2$d</xliff:g> lpm</string>
-    
-    <string name="glow_sleep_breathing_note">Promedio <xliff:g id="rate" example="14.2">%1$s</xliff:g> res/min</string>
-    
+    <string name="glow_sleep_heart_note">Mínima %1$d, promedio %2$d lpm</string>
+    <string name="glow_sleep_breathing_note">Promedio %1$s res/min</string>
     <string name="glow_sleep_breathing_rate">Frecuencia respiratoria</string>
-    
     <string name="glow_sleep_unit_breaths">respr/min</string>
-    
-    <string name="glow_sleep_scrub_at"><xliff:g id="unit" example="bpm">%1$s</xliff:g> a las<xliff:g id="time" example="03:10">%2$s</xliff:g></string>
-    
+    <string name="glow_sleep_scrub_at">%1$s a las %2$s</string>
     <string name="glow_sleep_no_sleep">Sin sueño</string>
-    
     <string name="glow_sleep_none_week">No hay sueño registrado en las últimas 7 noches.</string>
-    
     <string name="glow_sleep_usually_asleep">Sueles dormirte a las</string>
-    
     <string name="glow_sleep_usually_up">Sueles despertarte a las</string>
-    
     <string name="glow_sleep_no_naps_today">No hay siestas registradas hoy.</string>
-    
     <string name="glow_sleep_no_naps_that_day">No hay siestas registradas ese día.</string>
-    
     <string name="glow_sleep_use_strap_times">Usar los horarios de la banda</string>
-    
     <string name="glow_sleep_naps_none">Ninguno este día</string>
+    <string name="glow_sleep_after_a_night">Tras una noche</string>
 </resources>

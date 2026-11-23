@@ -40,7 +40,8 @@ today()   { for m in Waking Midday WorkoutWindow After Evening Night; do open --
 # Edit Today is the button at the foot of Today, so scroll until it shows.
 edit()    { open; for k in 1 2 3 4 5 6; do tapText "Edit Today" >/dev/null && { shots edit-today 2; return; }
               front; adb shell input swipe 540 1900 540 500 300; sleep 1; done; echo "no Edit Today"; }
-details() { for m in HeartRate RestingHr Hrv Spo2 Stress SkinTemperature Breathing Steps SleepScore Recovery Sleep Energy Load; do
+METRICS=${METRICS:-"HeartRate RestingHr Hrv Spo2 Stress SkinTemperature Breathing Steps SleepScore Recovery Sleep Energy Load"}
+details() { for m in $METRICS; do
               open --es open_metric $m; shots detail-$m-day 3
               # Score pages (Sleep score, Recovery, Sleep, Energy, Load) offer fewer ranges; a missing one is skipped.
               for r in Week Month Year; do top; tapText $r >/dev/null && shots detail-$m-$r 1; done; done; true; }

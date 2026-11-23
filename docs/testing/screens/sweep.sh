@@ -57,7 +57,7 @@ sheets()  { open; tap 540 240; shots sheet-calendar 1
             open --es open_metric HeartRate; tap 445 218; shots sheet-switcher 2
             open --es open_metric HeartRate; tap 686 218; shots sheet-info 2; }
 you()     { open; tap 100 222; shots you-page 4
-            for r in "Profile" "Goals and bests" "Sleep goal" "Heart rate zones" "Workout settings" "Health Connect" "Backup" "Diagnostics" "Updates"; do
+            for r in "Profile" "Goals and bests" "Sleep goal" "Heart rate zones" "Workouts" "Health Connect" "Backup" "Diagnostics" "Updates"; do
               open; tap 100 222; for k in 1 2 3; do tapText "$r" && break; front; adb shell input swipe 540 1900 540 900 300; sleep 1; done
               shots "you-$(echo $r | tr 'A-Z ' 'a-z-')" 3; done
             open --ez open_recap true; shots weekly-recap 2; open --ez open_updates true; shots updates 2; }
@@ -68,7 +68,7 @@ live()    { for id in $SPORTS; do
               adb shell input swipe 900 1200 200 1200 300; sleep 2; shots live-$id-view2 1; adb shell input swipe 200 1200 900 1200 300
               sleep 60; warm --es workout pause; shots live-$id-paused 1
               [ $id = 52 ] && { warm --es workout resume; tap 540 1835; sleep 4; shots live-52-set 1; tap 540 1835; sleep 4; shots live-52-log 1
-                                tapText "Exercise" && shots live-52-exercise 1 && back; }
+                                tapText "Name it" && shots live-52-exercise 1 && back; }
               T=10 warm --es workout end; shots summary-$id 4; done; }
 summary() { open --ez show_summary true; shots summary-latest 4; }
 widgets() { adb shell appwidget grantbind --package $P --user 0
@@ -79,7 +79,7 @@ widgets() { adb shell appwidget grantbind --package $P --user 0
 # tab, a swipe back a day, scroll to the run, then its map and the second split.
 route()   { open; tap 884 2215; front && adb shell input swipe 300 240 900 240 300; sleep 3
             for k in 1 2 3 4 5 6 7 8; do tapHas "km, 07:00" && break; front; adb shell input swipe 540 1700 540 1000 300; sleep 1.5; done
-            shots route-workout 3; top; T=6 tap 540 1100; shots route-map 1; T=4 tapText "Km 2"; shots route-split 1; }
+            shots route-workout 3; top; T=6 tap 540 1100; shots route-map 1; T=4 tapText "Km 2" >/dev/null || T=4 tapText "Mile 2"; shots route-split 1; }
 
 adb root >/dev/null 2>&1; sleep 2
 # Animations off: a screen is still as soon as it is drawn, so every wait ends sooner. Put back however the run ends.

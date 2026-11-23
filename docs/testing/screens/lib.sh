@@ -35,7 +35,16 @@ front() {
 }
 
 # open [am extras...]: a cold start with the extras, so no scroll or page is left from the last screen.
-open() { adb shell am start -S -n $ACT "$@" >/dev/null 2>&1; sleep 1; settle; front; }
+# splashGone [max]: waits until the system's splash window has left. It stays still for about 3 s, longer than
+# STILL, so settle alone could take it for the screen.
+splashGone() {
+  local t0; t0=$(now)
+  while adb shell dumpsys window windows 2>/dev/null | grep -q "Splash Screen $P}"; do
+    awk "BEGIN{exit !($(now)-$t0 >= ${1:-$WAIT})}" && return 1; sleep 0.3
+  done
+}
+
+open() { adb shell am start -S -n $ACT "$@" >/dev/null 2>&1; sleep 1; splashGone; settle; front; }
 
 # warm [am extras...]: the extras to the running app (workout commands).
 warm() { adb shell am start -n $ACT "$@" >/dev/null 2>&1; settle ${T:-6} 1.5; front; }

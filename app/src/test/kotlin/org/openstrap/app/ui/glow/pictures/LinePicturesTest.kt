@@ -70,6 +70,17 @@ class LinePicturesTest {
         assertEquals(45f, dialAngle(0.75f), eps)
     }
 
+    @Test fun dialWidensForAWideNormalOrAFarNight() {
+        // A usual normal and night keep the 1.5 °C dial.
+        assertEquals(DIAL_RANGE, dialRange(0.4f, -0.3f..0.3f), eps)
+        // A normal 1.2 °C either way: its edges sit 60% of the way out, leaving each end room for its zone.
+        assertEquals(2f, dialRange(0.5f, -1.2f..1.2f), eps)
+        assertEquals(36f, dialAngle(1.2f, dialRange(0.5f, -1.2f..1.2f)), eps)
+        // A night 2.7 °C off stays on the arc, 90% of the way out.
+        assertEquals(3f, dialRange(2.7f, -0.3f..0.3f), eps)
+        assertEquals(DIAL_RANGE, dialRange(null, null), eps)
+    }
+
     @Test fun dialFitsItsBoxAndPointsAlongTheArc() {
         val fit = dialFit(200f, 60f, 5f)
         assertEquals(50f, fit.radius, eps)

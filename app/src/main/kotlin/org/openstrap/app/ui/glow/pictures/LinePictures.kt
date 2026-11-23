@@ -201,8 +201,25 @@ fun dayStripRim(levels: List<Float?>, size: PictureSize, slots: Int = levels.siz
 /* Skin temperature: a half dial centred on your normal                                               */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** How far either way the dial reaches, in °C. */
+/** How far either way the dial reaches at least, in °C. */
 const val DIAL_RANGE = 1.5f
+
+/** Your normal's edge sits at most this share of the way to the dial's end, leaving the end for its zone. */
+private const val DIAL_EDGE_SHARE = 0.6f
+
+/** Tonight's marker sits at most this share of the way to the dial's end, so it never hides in the end's cap. */
+private const val DIAL_MARKER_SHARE = 0.9f
+
+/**
+ * How far either way the dial reaches: [DIAL_RANGE], or wider when your [normal] (a deviation range in °C) is so wide
+ * that its edges would leave no room for their zones, or tonight's [deviation] would be past the end. A wide normal
+ * comes from nights that vary a lot, and the dial still reads as "inside your normal or past it".
+ */
+internal fun dialRange(deviation: Float?, normal: ClosedFloatingPointRange<Float>?): Float {
+    val edge = normal?.let { kotlin.math.max(-it.start, it.endInclusive) } ?: 0f
+    val tonight = deviation?.let { abs(it) } ?: 0f
+    return maxOf(DIAL_RANGE, edge / DIAL_EDGE_SHARE, tonight / DIAL_MARKER_SHARE)
+}
 
 /**
  * The angle of [deviation] on the dial in degrees, maths style: 180 at the left end, 90 at the top for your normal, 0 at
@@ -227,7 +244,7 @@ internal fun dialPoint(fit: DialFit, angle: Float, inset: Float = 0f): Offset {
 }
 
 /**
- * Skin temperature's picture (board HaloRecovery): a half dial reaching [DIAL_RANGE] either side of your normal, a 6 dp
+ * Skin temperature's picture (board HaloRecovery): a half dial reaching [dialRange] either side of your normal, a 6 dp
  * track of white at 10%, a short tick at the top for your normal, a cool zone just past the low edge of your [normal]
  * (a deviation range in °C, like -0.3..0.3) and a warm zone just past its high edge, and a light marker with a dark
  * ring at tonight's [deviation]. Centred in its modifier: on a Wide the card puts the number left and gives the dial a
@@ -253,12 +270,15 @@ fun TempDial(
         val corner = Offset(fit.center.x - fit.radius, fit.center.y - fit.radius)
         val round = Stroke(track, cap = StrokeCap.Round)
         drawArc(DialTrack, 180f, 180f, false, corner, box, style = round)
+        val range = dialRange(deviation, normal)
         if (normal != null) {
-            // Compose sweeps clockwise from 3 o'clock with y down, so a maths angle a is at -a.
-            val warmFrom = dialAngle(normal.endInclusive)
-            val coolFrom = dialAngle(normal.start)
-            drawArc(DialWarm, -warmFrom, DIAL_ZONE_SWEEP, false, corner, box, style = round)
-            drawArc(DialCool, -coolFrom - DIAL_ZONE_SWEEP, DIAL_ZONE_SWEEP, false, corner, box, style = round)
+            // Compose sweeps clockwise from 3 o'clock with y down, so a maths angle a is at -a. Each zone stops at its
+            // end of the dial, never running on under it.
+            val warmFrom = dialAngle(normal.endInclusive, range)
+            val coolFrom = dialAngle(normal.start, range)
+            drawArc(DialWarm, -warmFrom, min(DIAL_ZONE_SWEEP, warmFrom), false, corner, box, style = round)
+            val coolSweep = min(DIAL_ZONE_SWEEP, HALF_TURN - coolFrom)
+            drawArc(DialCool, -coolFrom - coolSweep, coolSweep, false, corner, box, style = round)
         }
         // Your normal, a short tick across the top of the arc.
         drawLine(
@@ -266,7 +286,7 @@ fun TempDial(
             1.5.dp.toPx(),
         )
         if (deviation != null) {
-            val at = dialPoint(fit, dialAngle(deviation))
+            val at = dialPoint(fit, dialAngle(deviation, range))
             drawCircle(Greys.Card, marker + ring / 2, at)
             drawCircle(DialMarker, marker - ring / 2, at)
         }
@@ -275,6 +295,7 @@ fun TempDial(
 
 /** How far each of the cool and warm zones runs past your normal, in degrees. */
 private const val DIAL_ZONE_SWEEP = 34f
+private const val HALF_TURN = 180f
 private val DialTrack = Ink.Edge
 private val DialCool = org.openstrap.app.ui.theme.MetricColors.temperatureCool.copy(alpha = 0.55f)
 private val DialWarm = org.openstrap.app.ui.theme.MetricColors.temperatureWarm.copy(alpha = 0.55f)

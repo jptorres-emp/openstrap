@@ -109,7 +109,8 @@ fun GlowSleepScreen(
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }, LocalGlowMood provides GlowMood.Night) {
         GlowScreenList(contentPadding, list) {
             full { header() }
-            // With naps and a breathing summary the two are a Small pair; alone, either is a Wide.
+            // With naps and a breathing summary the two are a Small pair; alone, either is a Wide, which grows past its
+            // height when a tag and a large font need more room, as every grid card does.
             val pair = (breathing != null || firstNights) && state.naps.isNotEmpty()
             tabCards(slots) { card, m ->
                 when (card) {
@@ -117,11 +118,11 @@ fun GlowSleepScreen(
                     SleepCard.Vitals -> VitalsList(state, firstNights) { onOpen(Detail.OfMetric(it, night = true)) }
                     SleepCard.Regularity -> RegularityCard(state, rec?.regularity, firstNights) { onOpen(Detail.OfScore(Score.Regularity)) }
                     SleepCard.Breathing -> BreathingCard(
-                        rec, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+                        rec, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().gridSize(CardSize.Wide),
                         onInfo = if (breathing != null) ({ breathingInfo = true }) else null,
                     )
                     SleepCard.Naps -> NapsCard(
-                        state, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight),
+                        state, if (pair) PictureSize.Small else PictureSize.Wide, if (pair) m else Modifier.fillMaxWidth().gridSize(CardSize.Wide),
                     ) { onOpen(Detail.OfScore(Score.Naps)) }
                 }
             }
@@ -369,7 +370,7 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
 // The ink and the rim stay so the screens placing it compile: a Halo card has no coloured rim (Halo System board).
 @Suppress("UnusedParameter")
 @Composable
-private fun SleepPictureCard(
+internal fun SleepPictureCard(
     ink: Color, title: String, rim: Rim?, onClick: (() -> Unit)?,
     value: String?, unit: String?, tag: NewsTag?, status: String?,
     picture: (@Composable (Modifier) -> Unit)?,
@@ -381,6 +382,8 @@ private fun SleepPictureCard(
         HaloTitle(title)
         if (picture != null && pictureHeight != null) {
             // A Wide has no height to spare under its title, so the picture sits beside the number, as on Energy's Wide.
+            // The title keeps its gap when a tag and a large font grow the card.
+            Spacer(Modifier.height(Space.S12))
             Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
                 Column(Modifier.weight(1f)) {

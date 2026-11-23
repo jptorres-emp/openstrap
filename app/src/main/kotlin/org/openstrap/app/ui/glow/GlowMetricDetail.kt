@@ -999,6 +999,7 @@ private const val MINUTES_PER_HOUR = 60
  * would say the opposite ([LatestReading.spo2Line] says it by the one reading).
  */
 @Composable
+@ReadOnlyComposable
 private fun spo2Context(state: DayUiState, at: Long): String {
     val window = LatestReading.sleepWindow(state)
     val asleep = state.spo2.count { LatestReading.isAsleep(it.x, window) }

@@ -119,6 +119,9 @@ class WidgetShots {
             }
         }
 
+        // Lint sees only currentComposer here, but the reflected Content draws the whole widget, so this composable
+        // emits and must not be @ReadOnlyComposable.
+        @Suppress("ComposeReadOnlyComposable")
         @Composable
         private fun Reflected(content: java.lang.reflect.Method, sample: Any?) {
             content.invoke(inner, sample, currentComposer, 0)

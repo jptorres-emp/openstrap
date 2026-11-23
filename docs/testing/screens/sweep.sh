@@ -76,9 +76,9 @@ widgets() { adb shell appwidget grantbind --package $P --user 0
               adb shell am start -f 0x00020000 -n $P/org.openstrap.app.widget.debug.WidgetGalleryActivity --es widget $w --es data $d >/dev/null
               settle 35 3; cap "$OUT/$(scale)/widget-$w-$d.png"; echo "ok widget-$w-$d"; done; done; back; }
 # The route map needs a phone workout with a GPS track. Demo data has one, a run at 07:00 the day before: the Activity
-# tab, a swipe back a day, scroll to the run, then its map and the second split.
+# tab, a swipe back a day, scroll to the run (its row ends ", 07:00" in km or miles), then its map and the second split.
 route()   { open; tap 884 2215; front && adb shell input swipe 300 240 900 240 300; sleep 3
-            for k in 1 2 3 4 5 6 7 8; do tapHas "km, 07:00" && break; front; adb shell input swipe 540 1700 540 1000 300; sleep 1.5; done
+            for k in 1 2 3 4 5 6 7 8; do tapHas ", 07:00" && break; front; adb shell input swipe 540 1700 540 1000 300; sleep 1.5; done
             shots route-workout 3; top; T=6 tap 540 1100; shots route-map 1; T=4 tapText "Km 2" >/dev/null || T=4 tapText "Mile 2"; shots route-split 1; }
 
 adb root >/dev/null 2>&1; sleep 2

@@ -379,9 +379,21 @@ private fun SleepPictureCard(
 ) {
     HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
         HaloTitle(title)
+        if (picture != null && pictureHeight != null) {
+            // A Wide has no height to spare under its title, so the picture sits beside the number, as on Energy's Wide.
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
+                Column(Modifier.weight(1f)) {
+                    SleepNumber(value, unit, tag)
+                    status?.let { SleepStatus(it, Modifier.padding(top = Space.S4)) }
+                }
+                picture(Modifier.weight(1f).height(pictureHeight))
+            }
+            return@HaloCard
+        }
         if (picture != null) {
             Spacer(Modifier.height(Space.S12))
-            picture(Modifier.fillMaxWidth().let { if (pictureHeight != null) it.height(pictureHeight) else it.weight(1f) })
+            picture(Modifier.fillMaxWidth().weight(1f))
             Spacer(Modifier.height(Space.S8))
         } else Spacer(Modifier.weight(1f))
         SleepNumber(value, unit, tag)

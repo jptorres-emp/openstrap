@@ -921,17 +921,13 @@ internal fun ChargeWideCard(
     } else if (small) HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
         // Energy as a Small (board HaloTodayNight): the figure, what happens to it, the ruler at the foot.
         HaloTitle(stringResource(R.string.glow_today_energy_title), marker = upTo, tag = tag)
-        // The ruler is the picture in the middle and the number sits at the foot, where every Small's number does.
-        if (now != null) {
-            Spacer(Modifier.height(Space.S12))
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                EnergyRuler(
-                    now.toFloat(), MetricColors.charge, Modifier.fillMaxWidth().height(16.dp),
-                    dots = 16, track = Ink.Edge,
-                )
-            }
-            Spacer(Modifier.height(Space.S12))
-        } else Spacer(Modifier.weight(1f))
+        // The ruler under the title and the number at the foot, where every Small's number sits. The card is as tall as
+        // its neighbour, so the one flexible space between them takes what's left and nothing is pushed out of it.
+        if (now != null) EnergyRuler(
+            now.toFloat(), MetricColors.charge, Modifier.fillMaxWidth().height(16.dp),
+            dots = 16, track = Ink.Edge,
+        )
+        Spacer(Modifier.weight(1f))
         if (now == null && word != null) FigureWord(word) else EdgeValue(now?.toString(), null, status)
     } else HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
         // Energy as a plain Wide (boards HaloTodayEvening, HaloTodayAfter): the figure and its line, the ruler beside.

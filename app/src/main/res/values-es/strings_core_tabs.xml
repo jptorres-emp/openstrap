@@ -132,14 +132,14 @@
     <string name="core_tab_age_for_now_waiting">%1$s</string>
     <string name="core_tab_habit_age_likely">Probablemente de %1$d a %2$d</string>
     <plurals name="core_tab_habit_age_younger">
-        <item quantity="one">%d año mas joven que la última semana</item>
-        <item quantity="many">%d años mas joven que la última semana</item>
-        <item quantity="other">%d años mas joven que la última semana</item>
+        <item quantity="one">%d año más joven que la última semana</item>
+        <item quantity="many">%d años más joven que la última semana</item>
+        <item quantity="other">%d años más joven que la última semana</item>
     </plurals>
     <plurals name="core_tab_habit_age_older">
-        <item quantity="one">%d año mas viejo que la última semana</item>
-        <item quantity="many">%d años mas viejo que la última semana</item>
-        <item quantity="other">%d años mas viejo que la última semana</item>
+        <item quantity="one">%d año más viejo que la última semana</item>
+        <item quantity="many">%d años más viejo que la última semana</item>
+        <item quantity="other">%d años más viejo que la última semana</item>
     </plurals>
     <string name="core_tab_habit_age_same">Igual que la semana pasada</string>
     <string name="core_tab_age_range">%1$d a %2$d</string>

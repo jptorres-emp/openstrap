@@ -11,7 +11,7 @@
     <string name="core_activity_line_more_now">%1$s, por delante de tu habitual</string>
     <string name="core_activity_line_about_now">%1$s, cerca de tu habitual</string>
     <string name="core_activity_line_fewer_now">%1$s, por detrás de tu habitual</string>
-    <string name="core_activity_line_more_day">%1$s, mas que un día normal</string>
+    <string name="core_activity_line_more_day">%1$s, más que un día normal</string>
     <string name="core_activity_line_about_day">%1$s, como un día normal</string>
     <string name="core_activity_line_fewer_day">%1$s, menos que un día normal</string>
     <string name="core_activity_hour_label">pasos, %1$s a %2$s</string>
@@ -73,7 +73,7 @@
         <item quantity="many">%1$d días por encima de tu habitual en los últimos 30 días.</item>
         <item quantity="other">%1$d días por encima de tu habitual en los últimos 30 días.</item>
     </plurals>
-    <string name="core_activity_strap_range">Rango productivo del sensor, %1$d to %2$d</string>
+    <string name="core_activity_strap_range">Rango productivo de la banda, %1$d a %2$d</string>
     <string name="core_activity_vo2_workout">De tu entrenamiento más reciente con una lectura válida.</string>
     <string name="core_activity_vo2_profile">Estimado a partir de tu perfil y frecuencia cardíaca en reposo, actualizado semanalmente.</string>
     <string name="core_activity_ended">%1$s a las %2$s</string>
@@ -81,7 +81,7 @@
     <string name="core_activity_calories_at_rest">Tu cuerpo usa unas %1$s kcal al día en reposo, antes de cualquier movimiento.</string>
     <string name="core_activity_distance_from_steps">km, de tus pasos</string>
     <string name="core_activity_distance_from_steps_mi">mi, de tus pasos</string>
-    <string name="core_activity_distance_from_strap">km, del sensor</string>
+    <string name="core_activity_distance_from_strap">km, de la banda</string>
     <string name="core_activity_distance_from_strap_mi">mi, de la banda</string>
     <string name="core_activity_distance_steps_today">Más de %1$s pasos hasta ahora hoy.</string>
     <string name="core_activity_distance_steps_day">Más de %1$s pasos ese día.</string>

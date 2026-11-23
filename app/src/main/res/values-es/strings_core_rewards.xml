@@ -16,11 +16,11 @@
     <string name="core_rewards_km">%1$d km</string>
     <string name="core_rewards_kg">%1$s kg</string>
     <string name="core_rewards_meters">%1$s m</string>
-    <string name="core_rewards_beat_faster">%1$s mas rápido</string>
-    <string name="core_rewards_beat_kg_more">%1$s mas kg</string>
+    <string name="core_rewards_beat_faster">%1$s más rápido</string>
+    <string name="core_rewards_beat_kg_more">%1$s kg más</string>
     <string name="core_rewards_beat_farther">%1$s más lejos</string>
-    <string name="core_rewards_beat_longer">%1$d mas minutos</string>
-    <string name="core_rewards_beat_more">%1$s mas pasos</string>
+    <string name="core_rewards_beat_longer">%1$d min más</string>
+    <string name="core_rewards_beat_more">%1$s pasos más</string>
     <string name="core_rewards_beat_rounds">%1$s más</string>
     <string name="core_rewards_beat_line_faster">%1$s más rápido que tu mejor marca de %2$s.</string>
     <string name="core_rewards_beat_line_kg_more">%1$s kg más que tu mejor marca de %2$s.</string>

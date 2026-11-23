@@ -96,7 +96,7 @@
     <string name="you_goals_calories_raise">Subir la meta de calorías</string>
     <string name="you_goals_calories_type">Escribe la meta de calorías</string>
     <string name="you_goals_suggested">Sugerido %1$s, de tus últimas 4 semanas.</string>
-    <string name="you_goals_suggested_matched">Sugerido %1$s, de tus últimas 4 semanas. El objetivo de tu pulsera se ha ajustado en consecuencia.</string>
+    <string name="you_goals_suggested_matched">Sugerido %1$s, de tus últimas 4 semanas. El objetivo de tu banda se ha ajustado en consecuencia.</string>
     <string name="you_goals_use">Usar</string>
     <string name="you_updates_title">Actualizaciones</string>
     <string name="you_updates_check_now">Comprobar ahora</string>

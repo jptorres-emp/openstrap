@@ -51,10 +51,10 @@
         <item quantity="other">%1$d repeticiones</item>
     </plurals>
     <string name="workout_summary_rest">Tu frecuencia cardíaca bajó de %1$d en %2$s de media.</string>
-    <string name="workout_summary_rest_faster">Tu frecuencia cardíaca bajó de %1$d en %2$s de media., %3$s mas rápìdo que la última vez.</string>
+    <string name="workout_summary_rest_faster">Tu frecuencia cardíaca bajó de %1$d en %2$s de media, %3$s más rápido que la última vez.</string>
     <string name="workout_summary_rest_slower">Tu frecuencia cardíaca bajó de %1$d en %2$s de media, %3$s más lento que la última vez.</string>
     <string name="workout_summary_rest_same">Tu frecuencia cardíaca bajó de %1$d en %2$s de media, casi igual que la última vez.</string>
-    <string name="workout_summary_rounds_recovered">La frecuencia cardíaca bajó %1$d lpm  de media por cada %2$s descanso.</string>
+    <string name="workout_summary_rounds_recovered">La frecuencia cardíaca bajó %1$d lpm de media por cada %2$s descanso.</string>
     <string name="workout_summary_rounds_recovered_each">La frecuencia cardíaca bajó %1$d lpm en cada descanso, de media.</string>
     <string name="workout_summary_rounds_hardest" tools:ignore="PluralsCandidate">La ronda %1$d fue la más dura.</string>
     <string name="workout_summary_settled">Tu corazón se calmó de %1$d a %2$d.</string>

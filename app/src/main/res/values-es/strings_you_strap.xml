@@ -14,8 +14,8 @@
     <string name="you_strap_state_not_connected">No conectado</string>
     <string name="you_strap_state_bluetooth_off">Bluetooth desactivado</string>
     <string name="you_strap_disconnect_title">¿Desconectar la banda?</string>
-    <string name="you_strap_disconnect_text">La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardiaca en tiempo real hasta que la vuelvas a conectar.</string>
-    <string name="you_strap_disconnect_text_syncing">La sincronización en curso se detendrá. La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardiaca en tiempo real hasta que la vuelvas a conectar.</string>
+    <string name="you_strap_disconnect_text">La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardíaca en tiempo real hasta que la vuelvas a conectar.</string>
+    <string name="you_strap_disconnect_text_syncing">La sincronización en curso se detendrá. La banda seguirá grabando por su cuenta, pero unstrap no se sincronizará ni mostrará la frecuencia cardíaca en tiempo real hasta que la vuelvas a conectar.</string>
     <string name="you_strap_disconnect">Desconectar</string>
     <string name="you_strap_restart_title">¿Reiniciar la banda?</string>
     <string name="you_strap_restart_text">La banda se reiniciará y desconectará. unstrap se reconectará sola cuando vuelva a estar lista, lo que puede tardar un minuto.</string>

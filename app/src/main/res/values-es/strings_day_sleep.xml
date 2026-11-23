@@ -69,7 +69,7 @@
     <string name="day_sleep_times_hint">Tu frecuencia cardíaca baja al dormir y sube al despertar.</string>
     <string name="day_sleep_trim_line_night">%1$s, %2$s en la cama</string>
     <string name="day_sleep_trim_line_nap">%1$s, %2$s</string>
-    <string name="day_sleep_stages_cover">Las fases cubren %1$s que la pulsera detecta.</string>
+    <string name="day_sleep_stages_cover">Las fases cubren %1$s que la banda detecta.</string>
     <string name="day_sleep_your_times">Tus horarios. %1$s</string>
     <string name="day_sleep_score_from_your_times">La puntuación de la banda, ajustada según tus horarios.</string>
     <string name="day_sleep_delete_title_nap">¿Eliminar esta siesta?</string>

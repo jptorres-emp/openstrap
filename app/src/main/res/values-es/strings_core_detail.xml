@@ -98,7 +98,7 @@
     <string name="core_detail_none_month">En los últimos 30 días</string>
     <string name="core_detail_none_year">En los últimos 12 meses</string>
     <string name="core_detail_heart_day_today" tools:ignore="PluralsCandidate">Entre %1$d y %2$d lpm hasta ahora hoy.</string>
-    <string name="core_detail_heart_day_past" tools:ignore="PluralsCandidate">Entre %1$d y %2$d lpm ese día..</string>
+    <string name="core_detail_heart_day_past" tools:ignore="PluralsCandidate">Entre %1$d y %2$d lpm ese día.</string>
     <string name="core_detail_run_above">Por encima de tu normal durante %1$s.</string>
     <string name="core_detail_run_below">Por debajo de tu normal durante %1$s.</string>
     <string name="core_detail_every_night">Dentro de tu rango normal todas las noches.</string>

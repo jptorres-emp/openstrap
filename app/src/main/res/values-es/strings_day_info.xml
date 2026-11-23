@@ -173,7 +173,7 @@
     <string name="day_info_recovery_note_strap">La puntuación propia de la banda hoy es %1$d. No cuenta la duración del sueño, así que tras una noche corta sale más alta que la de unstrap. Se guarda para comparar y nunca entra en la puntuación de unstrap.</string>
     <string name="day_info_recovery_note_capped">Hoy una señal corporal está muy alejada de tu normalidad, por lo que la puntuación está limitada.</string>
     <string name="day_info_recovery_note_hrv">La VFC propia de anoche no fue lo bastante limpia, así que entran en su lugar los %1$d ms de la banda.</string>
-    <string name="day_info_recovery_note_resting_hr">La frecuencia cardíaca en reposo de anoche no era lo suficientemente precisa, así que se ha utilizado el valor de %1$d lpm que indica la pulsera.</string>
+    <string name="day_info_recovery_note_resting_hr">La frecuencia cardíaca en reposo de anoche no era lo suficientemente precisa, así que se ha utilizado el valor de %1$d lpm que indica la banda.</string>
     <string name="day_info_recovery_note_week_thin">La VFC de la semana se apoya en %1$d de 7 noches, así que es menos fiable que de costumbre.</string>
     <string name="day_info_charge_note_estimated">La banda estuvo quitada durante la noche, por lo que el día de hoy comenzó a partir de una estimación.</string>
 </resources>

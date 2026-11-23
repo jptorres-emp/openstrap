@@ -60,7 +60,7 @@
     <string name="workout_glance_break_left">%1$s, quedan %2$s</string>
     <string name="workout_glance_start_period">Iniciar %1$s</string>
     <string name="workout_glance_start">Empezar</string>
-    <string name="workout_glance_full_time">Tiempo cumplido,%1$s</string>
+    <string name="workout_glance_full_time">Tiempo cumplido, %1$s</string>
     <string name="workout_glance_work_rep">Trabajo, repetición %1$d de %2$d</string>
     <string name="workout_glance_work_round">Trabajo, ronda %1$d de %2$d</string>
     <string name="workout_glance_then_rest">Luego %1$s de descanso</string>
@@ -90,7 +90,7 @@
     <string name="workout_glance_target">Objetivo %1$s</string>
     <string name="workout_glance_goal">Meta %1$s</string>
     <string name="workout_glance_reached">Alcanzado</string>
-    <string name="workout_glance_about_minutes_to_go">Aprox.%1$d min para llegar</string>
+    <string name="workout_glance_about_minutes_to_go">Aprox. %1$d min para llegar</string>
     <string name="workout_glance_about_under_a_minute">Menos de un minuto restante</string>
     <string name="workout_glance_minutes_to_go">Faltan %1$d min</string>
     <string name="workout_glance_under_a_minute">Menos de un minuto restante</string>

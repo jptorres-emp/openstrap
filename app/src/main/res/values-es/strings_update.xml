@@ -9,13 +9,13 @@
     <string name="update_check_failed">No se pudo conectar a GitHub</string>
     <string name="update_check_last">Última comprobación %1$s</string>
     <string name="update_check_never">Nunca comprobado</string>
-    <string name="update_install_downloading_percent">Descargando,%1$d%%</string>
-    <string name="update_install_downloading_size">Descargando,%1$s</string>
+    <string name="update_install_downloading_percent">Descargando, %1$d%%</string>
+    <string name="update_install_downloading_size">Descargando, %1$s</string>
     <string name="update_install_installing">Instalando, se cierra al terminar</string>
     <string name="update_install_not_allowed">unstrap no tiene permiso para instalar apps, así que no se actualizó.</string>
     <string name="update_install_no_apk">Esta versión no incluye archivo de app</string>
     <string name="update_install_after_workout">Espera a que termine tu entrenamiento</string>
-    <string name="update_install_download">Descargar e instalar,%1$s</string>
+    <string name="update_install_download">Descargar e instalar, %1$s</string>
     <string name="update_megabytes">%1$.1f MB</string>
     <string name="update_failure_network">La descarga se detuvo</string>
     <string name="update_failure_checksum">La descarga no coincidía con el archivo de GitHub</string>

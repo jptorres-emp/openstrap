@@ -7,7 +7,7 @@
     <string name="day_calories_to_goal">%1$s para tu meta de %2$s</string>
     <string name="day_calories_to_goal_met">Meta de %1$s cumplida</string>
     <string name="day_calories_peak">Pico a las %1$s, %2$s kcal</string>
-    <string name="day_calories_hour_label">kcal activas,%1$s</string>
+    <string name="day_calories_hour_label">kcal activas, %1$s</string>
     <string name="day_calories_source_workout_line">%1$s, %2$s</string>
     <string name="day_calories_source_walking">Caminata</string>
     <string name="day_calories_source_everyday">Movimiento diario</string>

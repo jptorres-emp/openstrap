@@ -26,8 +26,8 @@
     <string name="core_today_normal_below">Por debajo de lo normal</string>
     <string name="core_today_normal_usual">Tu normal</string>
     <string name="core_today_meaning_alert">Algunas señales nocturnas están fuera de lo normal. Un día suave puede ayudar.</string>
-    <string name="core_today_meaning_ready_for_more">Bien recuperado/a. Un buen día para una sesión intensa.</string>
-    <string name="core_today_meaning_ready">Suficientemente recuperado/a para tu entrenamiento habitual.</string>
+    <string name="core_today_meaning_ready_for_more">Buena recuperación. Un buen día para una sesión intensa.</string>
+    <string name="core_today_meaning_ready">Recuperación suficiente para tu entrenamiento habitual.</string>
     <string name="core_today_meaning_moderate">No te has recuperado del todo. Mantén un esfuerzo moderado.</string>
     <string name="core_today_meaning_low">En recuperación. Un día suave ayuda.</string>
     <string name="core_today_meaning_alert_phrase">Señales fuera de tu normal, ve suave</string>
@@ -92,9 +92,9 @@
     <string name="core_today_after_now" tools:ignore="PluralsCandidate">Frecuencia cardíaca %1$d.</string>
     <string name="core_today_after_settled">Frecuencia cardíaca de nuevo cerca del reposo.</string>
     <string name="core_today_after_settling">Frecuencia cardíaca estabilizándose.</string>
-    <string name="core_today_evening_full">Un día completo.%1$s.</string>
-    <string name="core_today_evening_quiet">Un día tranquilo.%1$s.</string>
-    <string name="core_today_evening_steady">Un día constante.%1$s.</string>
+    <string name="core_today_evening_full">Un día completo. %1$s.</string>
+    <string name="core_today_evening_quiet">Un día tranquilo. %1$s.</string>
+    <string name="core_today_evening_steady">Un día constante. %1$s.</string>
     <string name="core_today_evening_one_run">una carrera</string>
     <string name="core_today_evening_one_walk">una caminata</string>
     <string name="core_today_evening_one_ride">un recorrido en bici</string>

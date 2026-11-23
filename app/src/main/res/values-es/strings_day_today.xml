@@ -76,9 +76,9 @@
     <string name="day_chip_connected_description">Banda conectada</string>
     <string name="day_chip_battery">%1$d%%</string>
     <plurals name="day_chip_battery_low_description">
-        <item quantity="one">Banda conectada, batería baja,%1$d percent</item>
-        <item quantity="many">Banda conectada, batería baja,%1$d percent</item>
-        <item quantity="other">Banda conectada, batería baja,%1$d percent</item>
+        <item quantity="one">Banda conectada, batería baja, %1$d percent</item>
+        <item quantity="many">Banda conectada, batería baja, %1$d percent</item>
+        <item quantity="other">Banda conectada, batería baja, %1$d percent</item>
     </plurals>
     <plurals name="day_chip_battery_description">
         <item quantity="one">Banda conectada, batería al %1$d por ciento</item>

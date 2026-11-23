@@ -44,10 +44,10 @@
     <string name="core_activity_active_none_day">Ningún minuto activo ese día.</string>
     <string name="core_activity_active_brisk_today">En lo que va de día, %1$s de movimientos enérgicos.</string>
     <string name="core_activity_active_brisk_day">Ese día, %1$s de movimiento enérgico.</string>
-    <string name="core_activity_active_hard_today">En lo que va de día,%1$s de esfuerzo duro.</string>
+    <string name="core_activity_active_hard_today">En lo que va de día, %1$s de esfuerzo duro.</string>
     <string name="core_activity_active_hard_day">Ese día, %1$s de esfuerzo duro.</string>
-    <string name="core_activity_active_both_today">En lo que va de día, %1$s brisk and %2$s duro.</string>
-    <string name="core_activity_active_both_day">Ese día, %1$s brisk and %2$s duro.</string>
+    <string name="core_activity_active_both_today">En lo que va de día, %1$s a paso ligero y %2$s intensos.</string>
+    <string name="core_activity_active_both_day">Ese día, %1$s a paso ligero y %2$s intensos.</string>
     <string name="core_activity_usual_band">Tu promedio, %1$d a %2$d</string>
     <string name="core_activity_load_long_run_today">Tu carrera de hoy fue un %1$d%% más larga que tu más larga del mes anterior. Los corredores que alargan una carrera más de un 10%% de una vez tienen más probabilidad de lesionarse, así que aumenta poco a poco.</string>
     <string name="core_activity_load_long_run_day">Tu carrera de ese día fue un %1$d%% más larga que tu más larga del mes anterior. Los corredores que alargan una carrera más de un 10%% de una vez tienen más probabilidad de lesionarse, así que aumenta poco a poco.</string>
@@ -73,7 +73,7 @@
         <item quantity="many">%1$d días por encima de tu habitual en los últimos 30 días.</item>
         <item quantity="other">%1$d días por encima de tu habitual en los últimos 30 días.</item>
     </plurals>
-    <string name="core_activity_strap_range">Rango productivo del sensor,%1$d to %2$d</string>
+    <string name="core_activity_strap_range">Rango productivo del sensor, %1$d to %2$d</string>
     <string name="core_activity_vo2_workout">De tu entrenamiento más reciente con una lectura válida.</string>
     <string name="core_activity_vo2_profile">Estimado a partir de tu perfil y frecuencia cardíaca en reposo, actualizado semanalmente.</string>
     <string name="core_activity_ended">%1$s a las %2$s</string>

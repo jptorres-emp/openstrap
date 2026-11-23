@@ -47,10 +47,10 @@
     <string name="glow_today_check_in_title">¿Cómo te sientes?</string>
     <string name="glow_today_start_title">Iniciar un entrenamiento</string>
     <string name="glow_today_start_usual">Tu habitual, %1$s</string>
-    <string name="glow_today_alert_high_hr">Frecuencia cardíaca alta,%1$d lpm</string>
-    <string name="glow_today_alert_low_hr">Frecuencia cardíaca baja,%1$d lpm</string>
-    <string name="glow_today_alert_high_stress">Estrés alto,%1$d</string>
-    <string name="glow_today_alert_low_spo2">Oxígeno en sangre bajo,%1$d%%</string>
+    <string name="glow_today_alert_high_hr">Frecuencia cardíaca alta, %1$d lpm</string>
+    <string name="glow_today_alert_low_hr">Frecuencia cardíaca baja, %1$d lpm</string>
+    <string name="glow_today_alert_high_stress">Estrés alto, %1$d</string>
+    <string name="glow_today_alert_low_spo2">Oxígeno en sangre bajo, %1$d%%</string>
     <string name="glow_today_alert_irregular">Ritmo cardíaco irregular</string>
     <string name="glow_today_alert_other">Una lectura marcada por la banda</string>
     <string name="glow_today_alerts_title">De tu banda</string>

@@ -6,7 +6,7 @@
     <string name="glow_activity_all_sports">Todos los deportes</string>
     <string name="glow_activity_steps">Pasos</string>
     <string name="glow_activity_goal">Meta %1$s</string>
-    <string name="glow_activity_load">Cargar</string>
+    <string name="glow_activity_load">Carga</string>
     <string name="glow_activity_load_today">hoy</string>
     <string name="glow_activity_load_that_day">ese día</string>
     <string name="glow_activity_today">Hoy</string>
@@ -41,11 +41,11 @@
     <string name="glow_activity_no_points_yet">Aún no hay puntos</string>
     <string name="glow_activity_no_heart_points_week">Aún no hay puntos cardio en los últimos 7 días.</string>
     <string name="glow_activity_no_heart_points_month">Aún no hay puntos cardio en los últimos 30 días.</string>
-    <string name="glow_activity_week_total_on">Total de 7 días,%1$s</string>
+    <string name="glow_activity_week_total_on">Total de 7 días, %1$s</string>
     <string name="glow_activity_needs_steps_heart">Necesita los pasos y la frecuencia cardíaca de la banda</string>
     <string name="glow_activity_minutes_last_7_days">minutos, últimos 7 días</string>
     <string name="glow_activity_minutes">minutos</string>
-    <string name="glow_activity_minutes_on">minutos,%1$s</string>
+    <string name="glow_activity_minutes_on">minutos, %1$s</string>
     <string name="glow_activity_needs_heart_day">Necesita un día de frecuencia cardíaca</string>
     <plurals name="glow_activity_load_average">
         <item quantity="one">al día en promedio, último %d día</item>
@@ -91,7 +91,7 @@
     </plurals>
     <string name="glow_activity_recent_workouts">Entrenamientos recientes</string>
     <string name="glow_activity_none">Ninguno</string>
-    <string name="glow_activity_on_its_own">Por sí sola,%1$s, %2$s</string>
+    <string name="glow_activity_on_its_own">Por sí sola, %1$s, %2$s</string>
     <string name="glow_activity_needs_profile">Necesita tu edad, peso y estatura</string>
     <string name="glow_activity_goal_met">Meta cumplida</string>
     <string name="glow_activity_no_full_days">Aún no hay días completos</string>
@@ -108,10 +108,10 @@
     <string name="glow_activity_legend_everyday">Diario</string>
     <string name="glow_activity_legend_rest">El resto</string>
     <string name="glow_activity_kcal_week_of">kcal activas al día, semana del %1$s</string>
-    <string name="glow_activity_kcal_on">kcal activas,%1$s</string>
+    <string name="glow_activity_kcal_on">kcal activas, %1$s</string>
     <string name="glow_activity_your_week">Tu semana</string>
     <string name="glow_activity_no_steps">Sin pasos</string>
-    <string name="glow_activity_steps_on">pasos,%1$s</string>
+    <string name="glow_activity_steps_on">pasos, %1$s</string>
     <string name="glow_activity_asleep_a_night">Dormido prom.</string>
     <string name="glow_activity_day_by_day">Día a día</string>
     <string name="glow_activity_active_min_short">Min activos</string>

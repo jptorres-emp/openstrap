@@ -40,7 +40,7 @@
     <string name="system_strap_charging_battery">Banda cargando, batería %1$d%%</string>
     <string name="system_strap_synced">Sincronizado</string>
     <string name="system_strap_header_battery">Banda %1$d%%</string>
-    <string name="system_strap_header_charging">Banda cargando,%1$d%%</string>
+    <string name="system_strap_header_charging">Banda cargando, %1$d%%</string>
     <string name="system_strap_header_synced">%1$s, sincronizada</string>
     <string name="system_strap_action_retry">Reintentar</string>
     <string name="system_strap_action_turn_on">Activar</string>
@@ -82,7 +82,7 @@
     <string name="system_stopped_action_keep">Continuar</string>
     <string name="system_wear_title">La banda está quitada</string>
     <string name="system_wear_text">El seguimiento de la frecuencia cardíaca y el sueño está pausado hasta que te la vuelvas a poner.</string>
-    <string name="system_recap_title">Tu semana,%1$s</string>
+    <string name="system_recap_title">Tu semana, %1$s</string>
     <string name="system_tile_recording">Grabando</string>
     <string name="system_tile_paused">En pausa</string>
     <string name="system_workout_too_short">Menos de un minuto, por lo que no se guardó</string>

@@ -42,7 +42,7 @@
     <string name="core_rewards_goal_met">Meta semanal cumplida</string>
     <string name="core_rewards_goal">Meta semanal</string>
     <string name="core_rewards_goal_count">%1$d de %2$d</string>
-    <string name="core_rewards_new_best">Nuevo récord,%1$s</string>
+    <string name="core_rewards_new_best">Nuevo récord, %1$s</string>
     <string name="core_rewards_new_badge">Nueva insignia</string>
     <plurals name="core_rewards_moment_weeks">
         <item quantity="one">%1$d semana seguida. Los días de descanso nunca cuentan en tu contra.</item>

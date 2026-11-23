@@ -37,7 +37,7 @@
     <string name="workout_detail_target_kcal">%1$s kcal</string>
     <string name="workout_detail_target_reached_at">Alcanzado a las %1$s</string>
     <string name="workout_detail_target_reached">Alcanzado</string>
-    <string name="workout_detail_target_short">No alcanzado,%1$s de %2$s</string>
+    <string name="workout_detail_target_short">No alcanzado, %1$s de %2$s</string>
     <string name="workout_detail_target_not_reached">No alcanzado</string>
     <string name="workout_detail_drop">Descenso de la frecuencia cardíaca de %1$d lpm en el primer minuto.</string>
     <string name="workout_detail_drop_quick">Descenso de la frecuencia cardíaca de %1$d lpm en el primero minuto, rápido para ti.</string>

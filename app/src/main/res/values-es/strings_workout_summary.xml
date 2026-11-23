@@ -29,7 +29,7 @@
     <string name="workout_summary_line_paused">Pausa de %1$d min.</string>
     <string name="workout_summary_target_reached_at">Objetivo %1$s kcal, alcanzado a los %2$s</string>
     <string name="workout_summary_target_reached">Objetivo %1$s kcal, alcanzado</string>
-    <string name="workout_summary_target_short">Objetivo no alcanzado,%1$s of %2$s kcal</string>
+    <string name="workout_summary_target_short">Objetivo no alcanzado, %1$s de %2$s kcal</string>
     <string name="workout_summary_target_not_reached">Objetivo %1$s kcal, no alcanzado</string>
     <string name="workout_summary_lap_distance_average">%1$s, a una media de %2$d lpm</string>
     <string name="workout_summary_lap_average">Promedio %1$d lpm</string>
@@ -38,9 +38,9 @@
     <string name="workout_summary_split_km">km %1$d</string>
     <string name="workout_summary_split_mile">Milla %1$d</string>
     <string name="workout_summary_split_last">Último %1$s</string>
-    <string name="workout_summary_when_morning">Esta mañana,%1$s</string>
-    <string name="workout_summary_when_evening">Esta tarde,%1$s</string>
-    <string name="workout_summary_when_today">Hoy,%1$s</string>
+    <string name="workout_summary_when_morning">Esta mañana, %1$s</string>
+    <string name="workout_summary_when_evening">Esta tarde, %1$s</string>
+    <string name="workout_summary_when_today">Hoy, %1$s</string>
     <string name="workout_summary_when_yesterday">Ayer, %1$s</string>
     <string name="workout_summary_when_day">%1$s, %2$s</string>
     <string name="workout_summary_set_skipped">Omitida</string>

@@ -30,6 +30,6 @@
     <string name="day_week_steps_up">Pasos un %1$d%% por encima de la semana anterior.</string>
     <string name="day_week_steps_down">Pasos un %1$d%% por debajo de la semana anterior.</string>
     <string name="day_week_steps_steady">Los pasos se mantuvieron estables respecto a la semana anterior.</string>
-    <string name="day_week_label">pasos al día,%1$s</string>
+    <string name="day_week_label">pasos al día, %1$s</string>
     <string name="day_week_nothing">Sin registros</string>
 </resources>

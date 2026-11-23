@@ -8,9 +8,9 @@
     <string name="core_tab_vs_yesterday_down">−%1$d vs ayer</string>
     <string name="core_tab_same_as_yesterday">Igual que ayer</string>
     <plurals name="core_tab_learning_nights">
-        <item quantity="one">Aprendiendo,%1$d de %2$d noche</item>
-        <item quantity="many">Aprendiendo,%1$d de %2$d noches</item>
-        <item quantity="other">Aprendiendo,%1$d de %2$d noches</item>
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
     </plurals>
     <string name="core_tab_factor_hrv">VFC</string>
     <string name="core_tab_factor_resting_hr">Frecuencia cardíaca en reposo</string>
@@ -143,5 +143,5 @@
     </plurals>
     <string name="core_tab_habit_age_same">Igual que la semana pasada</string>
     <string name="core_tab_age_range">%1$d a %2$d</string>
-    <string name="core_tab_your_age">Tú,%1$d</string>
+    <string name="core_tab_your_age">Tú, %1$d</string>
 </resources>

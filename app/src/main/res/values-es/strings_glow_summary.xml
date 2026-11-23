@@ -36,7 +36,7 @@
     <string name="glow_summary_peak_heart_rate">lpm máx.</string>
     <string name="glow_summary_time_in_zones">Tiempo en zonas</string>
     <string name="glow_summary_zone">Zona %1$d</string>
-    <string name="glow_summary_zones_max">Máx.%1$d lpm</string>
+    <string name="glow_summary_zones_max">Máx. %1$d lpm</string>
     <string name="glow_summary_heart_rate">Frecuencia cardíaca</string>
     <string name="glow_summary_heart_down">baja %1$d</string>
     <string name="glow_summary_vs_last">vs. la última vez, %1$s</string>

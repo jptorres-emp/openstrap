@@ -28,7 +28,7 @@
         <item quantity="many">%1$s pasos hoy, %2$s</item>
         <item quantity="other">%1$s pasos hoy, %2$s</item>
     </plurals>
-    <string name="system_widget_steps_line_description">Pasos hasta ahora hoy,%1$s</string>
+    <string name="system_widget_steps_line_description">Pasos hasta ahora hoy, %1$s</string>
     <string name="system_widget_steps_week_description">Pasos cada día de esta semana</string>
     <string name="system_widget_recovery_this_morning">Esta mañana</string>
     <string name="system_widget_recovery_yesterday">Ayer</string>
@@ -101,7 +101,7 @@
         <item quantity="other">%1$d minutos para acostarte</item>
     </plurals>
     <string name="system_widget_moment_bedtime">Hora de dormir %1$s</string>
-    <string name="system_widget_moment_stages_description">Fases de anoche,%1$s</string>
+    <string name="system_widget_moment_stages_description">Fases de anoche, %1$s</string>
     <string name="system_widget_moment_energy_since">Energía desde las %1$s</string>
     <string name="system_widget_moment_energy_since_now" tools:ignore="PluralsCandidate">Energía desde las %1$s, %2$d ahora</string>
     <string name="system_widget_moment_heart_today">Tu frecuencia cardíaca hoy</string>

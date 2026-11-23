@@ -45,7 +45,7 @@
     <string name="day_info_hrv_meaning">Variabilidad de la frecuencia cardíaca, los pequeños cambios de tiempo entre latidos. Un valor superior a tu normalidad suele indicar que tu cuerpo está bien recuperado.</string>
     <string name="day_info_hrv_how">La banda mide el tiempo entre latidos, en milisegundos (ms), mientras estás en reposo, sobre todo durante el sueño. La cifra es el promedio de sus lecturas durante tu sueño, al ms más cercano. Se lee frente a tu propio normal: el valor medio de tus últimos 30 días, con el margen habitual.</string>
     <string name="day_info_hrv_moves">Un buen sueño y el descanso la aumentan. El estrés, el entrenamiento intenso y el alcohol la reducen. Compárala con tu propia normalidad, no con la de otras personas.</string>
-    <string name="day_info_hrv_off">Moverse durante una lectura, una banda floja or una noche corta dejan menos lecturas limpias. La VFC oscila mucho de un día para otro, por lo que unos cuantos días seguidos dicen más que uno solo.</string>
+    <string name="day_info_hrv_off">Moverse durante una lectura, una banda floja o una noche corta dejan menos lecturas limpias. La VFC oscila mucho de un día para otro, por lo que unos cuantos días seguidos dicen más que uno solo.</string>
     <string name="day_info_spo2_name">Oxígeno en sangre</string>
     <string name="day_info_spo2_meaning">Qué porcentaje de la capacidad de tu sangre transporta oxígeno. La mayoría de las personas se sitúa entre el 95 y el 100%%.</string>
     <string name="day_info_spo2_how">La banda emite luz roja e infrarroja a través de la piel y compara cuánta de cada una vuelve. Lee durante el día y la noche, y el número es la última lectura. Las pestañas Sueño y Recuperación muestran el promedio mientras dormías.</string>
@@ -75,9 +75,9 @@
     <string name="day_info_recovery_how">Cada mañana, unstrap compara tu noche con lo que es normal para ti, no con otras personas: la VFC (variabilidad de la frecuencia cardíaca), la frecuencia cardíaca en reposo, la temperatura de la piel, la frecuencia respiratoria y el oxígeno en sangre, el sueño de la anoche anterior y de las noches pasadas, y qué tan intenso fue el día de ayer. Alrededor de la mitad de la puntuación proviene de la VFC y la frecuencia cardíaca en reposo, y aproximadamente una cuarta parte del sueño. Una sola señal que se aleje mucho de tu normalidad limita el resultado, por lo que un buen sueño no puede compensarlo por completo. Todo se calcula en este teléfono a partir de los datos de tu banda.</string>
     <string name="day_info_recovery_moves">Un buen sueño, los días tranquilos y las noches sin alcohol lo elevan. El entrenamiento intenso, las noches cortas, las cenas tardías, el estrés y la enfermedad lo reducen.</string>
     <plurals name="day_info_recovery_off">
-        <item quantity="one">Necesita %1$d buena noche para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de HRV, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
-        <item quantity="many">Necesita %1$d buenas noches para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de HRV, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
-        <item quantity="other">Necesita %1$d buenas noches para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de HRV, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
+        <item quantity="one">Necesita %1$d buena noche para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de VFC, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
+        <item quantity="many">Necesita %1$d buenas noches para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de VFC, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
+        <item quantity="other">Necesita %1$d buenas noches para empezar y se estabiliza en %2$d. Una noche con la banda floja o quitada, o con muy pocas lecturas limpias de VFC, le da menos con lo que trabajar, y pueden entrar en su lugar las lecturas propias de la banda.</item>
     </plurals>
     <string name="day_info_energy_meaning">Tu energía en este momento, de 0 a 100. El sueño la recarga y el día la consume.</string>
     <string name="day_info_energy_how">Piénsalo como una batería que dura todo el día. El sueño la recarga, sobre todo el sueño profundo, y una noche tranquila y constante la recarga más rápido. Estar despierto consume un poco cada hora. El ejercicio y el estrés la consumen más rápido, mientras que los momentos tranquilos y relajados ralentizan el consumo. Se calcula en este teléfono a partir de tu frecuencia cardíaca, minuto a minuto, como una guía para planificar tu día, no como un consejo médico.</string>
@@ -131,7 +131,7 @@
     <string name="day_info_vo2_note_resting">La estimación de esta semana usa una frecuencia cardíaca en reposo de %1$d lpm, mientras dormías.</string>
     <string name="day_info_vo2_note_age_man">Eso es típico de un hombre de unos %1$d a %2$d.</string>
     <string name="day_info_vo2_note_age_woman">Eso es típico de una mujer de unos %1$d a %2$d.</string>
-    <string name="day_info_vo2_note_withheld">Aún no hay una estimación de tu perfil.%1$s</string>
+    <string name="day_info_vo2_note_withheld">Aún no hay una estimación de tu perfil. %1$s</string>
     <string name="day_info_calories_note_partial">Abarca %1$s de uso, así que es parte del día.</string>
     <string name="day_info_calories_note_unusual">Ese es un total inusual para un día completo. Verifica tu perfil y cómo se usó el brazalete.</string>
     <plurals name="day_info_calories_note_heart_rate">
@@ -172,8 +172,8 @@
     <string name="day_info_sleep_note_need">Tu necesidad de sueño aquí es %1$s, en función de tu edad o ajustes.</string>
     <string name="day_info_recovery_note_strap">La puntuación propia de la banda hoy es %1$d. No cuenta la duración del sueño, así que tras una noche corta sale más alta que la de unstrap. Se guarda para comparar y nunca entra en la puntuación de unstrap.</string>
     <string name="day_info_recovery_note_capped">Hoy una señal corporal está muy alejada de tu normalidad, por lo que la puntuación está limitada.</string>
-    <string name="day_info_recovery_note_hrv">El HRV propio de anoche no fue lo bastante limpio, así que entran en su lugar los %1$d ms de la banda.</string>
+    <string name="day_info_recovery_note_hrv">La VFC propia de anoche no fue lo bastante limpia, así que entran en su lugar los %1$d ms de la banda.</string>
     <string name="day_info_recovery_note_resting_hr">La frecuencia cardíaca en reposo de anoche no era lo suficientemente precisa, así que se ha utilizado el valor de %1$d lpm que indica la pulsera.</string>
-    <string name="day_info_recovery_note_week_thin">El HRV de la semana se apoya en %1$d de 7 noches, así que es menos fiable que de costumbre.</string>
+    <string name="day_info_recovery_note_week_thin">La VFC de la semana se apoya en %1$d de 7 noches, así que es menos fiable que de costumbre.</string>
     <string name="day_info_charge_note_estimated">La banda estuvo quitada durante la noche, por lo que el día de hoy comenzó a partir de una estimación.</string>
 </resources>

@@ -45,7 +45,7 @@
     <string name="you_strap_row_background">Conexión en segundo plano</string>
     <string name="you_strap_battery_settings_failed">No se pudo abrir la configuración de batería en este teléfono.</string>
     <string name="you_strap_retrying">Sigue intentándolo sola. Conectar lo intenta de nuevo ahora.</string>
-    <string name="you_strap_sync_stopped">Sincronización detenida.%1$s</string>
+    <string name="you_strap_sync_stopped">Sincronización detenida. %1$s</string>
     <string name="you_strap_sync_retry">%1$s Lo vuelve a intentar sola.</string>
     <string name="you_pair_title">Vincula tu Helio Strap</string>
     <string name="you_pair_intro">unstrap necesita la clave de autenticación de la banda, que Zepp crea cuando la vinculas. Solo tienes que hacer esto una vez.</string>

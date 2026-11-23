@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="day_tab_today">Hoy</string>
-    <string name="day_tab_recovery">Recupera.</string>
+    <string name="day_tab_recovery">Recuperación</string>
     <string name="day_tab_sleep">Sueño</string>
     <string name="day_tab_activity">Actividad</string>
     <string name="day_hc_unavailable">Health Connect no está disponible en este teléfono.</string>

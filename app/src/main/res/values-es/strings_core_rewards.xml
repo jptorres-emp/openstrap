@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_rewards_best_fastest">%1$s más rápido</string>
+    <string name="core_rewards_best_heaviest">Peso máximo en %1$s</string>
+    <string name="core_rewards_best_longest_run">Carrera más larga</string>
+    <string name="core_rewards_best_longest_workout">Entrenamiento más largo</string>
+    <string name="core_rewards_best_most_steps">Más pasos en un día</string>
+    <string name="core_rewards_best_most_rounds">Más rondas</string>
+    <plurals name="core_rewards_rounds">
+        <item quantity="one">%1$s ronda</item>
+        <item quantity="many">%1$s rondas</item>
+        <item quantity="other">%1$s rondas</item>
+    </plurals>
+    <string name="core_rewards_best_personal">Mejor marca personal</string>
+    <string name="core_rewards_half_marathon">medio maratón</string>
+    <string name="core_rewards_km">%1$d km</string>
+    <string name="core_rewards_kg">%1$s kg</string>
+    <string name="core_rewards_meters">%1$s m</string>
+    <string name="core_rewards_beat_faster">%1$s más rápido</string>
+    <string name="core_rewards_beat_kg_more">%1$s kg más</string>
+    <string name="core_rewards_beat_farther">%1$s más lejos</string>
+    <string name="core_rewards_beat_longer">%1$d min más</string>
+    <string name="core_rewards_beat_more">%1$s pasos más</string>
+    <string name="core_rewards_beat_rounds">%1$s más</string>
+    <string name="core_rewards_beat_line_faster">%1$s más rápido que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_kg_more">%1$s kg más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_farther">%1$s más lejos que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_longer">%1$d min más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_more">%1$s pasos más que tu mejor marca de %2$s.</string>
+    <string name="core_rewards_beat_line_rounds">%1$s más que tu mejor marca de %2$s.</string>
+    <plurals name="core_rewards_goal_weeks_in_a_row">
+        <item quantity="one">%1$d semana seguida</item>
+        <item quantity="many">%1$d semanas seguidas</item>
+        <item quantity="other">%1$d semanas seguidas</item>
+    </plurals>
+    <string name="core_rewards_goal_met_this_week">Meta cumplida esta semana</string>
+    <plurals name="core_rewards_goal_to_go">
+        <item quantity="one">Falta %1$d más esta semana</item>
+        <item quantity="many">Faltan %1$d más esta semana</item>
+        <item quantity="other">Faltan %1$d más esta semana</item>
+    </plurals>
+    <string name="core_rewards_goal_met">Meta semanal cumplida</string>
+    <string name="core_rewards_goal">Meta semanal</string>
+    <string name="core_rewards_goal_count">%1$d de %2$d</string>
+    <string name="core_rewards_new_best">Nuevo récord, %1$s</string>
+    <string name="core_rewards_new_badge">Nueva insignia</string>
+    <plurals name="core_rewards_moment_weeks">
+        <item quantity="one">%1$d semana seguida. Los días de descanso nunca cuentan en tu contra.</item>
+        <item quantity="many">%1$d semanas seguidas. Los días de descanso nunca cuentan en tu contra.</item>
+        <item quantity="other">%1$d semanas seguidas. Los días de descanso nunca cuentan en tu contra.</item>
+    </plurals>
+    <string name="core_rewards_moment_first">Tu primera semana con la meta cumplida. Los días de descanso nunca te penalizan.</string>
+    <string name="core_rewards_when_morning">%1$s, %2$s de la mañana</string>
+    <string name="core_rewards_when_afternoon">%1$s, %2$s de la tarde</string>
+    <string name="core_rewards_when_evening">%1$s, %2$s al anochecer</string>
+    <string name="core_rewards_when_night">%1$s, %2$s de noche</string>
+    <plurals name="core_rewards_run_best_is">
+        <item quantity="one">Meta cumplida %1$d semana seguida, la mejor es %2$d</item>
+        <item quantity="many">Meta cumplida %1$d semanas seguidas, la mejor es %2$d</item>
+        <item quantity="other">Meta cumplida %1$d semanas seguidas, la mejor es %2$d</item>
+    </plurals>
+    <plurals name="core_rewards_run_best_yet">
+        <item quantity="one">Meta cumplida %1$d semana seguida, la mejor hasta ahora</item>
+        <item quantity="many">Meta cumplida %1$d semanas seguidas, la mejor hasta ahora</item>
+        <item quantity="other">Meta cumplida %1$d semanas seguidas, la mejor hasta ahora</item>
+    </plurals>
+    <plurals name="core_rewards_run_best_was">
+        <item quantity="one">La mejor racha es de %1$d semana seguida</item>
+        <item quantity="many">La mejor racha es de %1$d semanas seguidas</item>
+        <item quantity="other">La mejor racha es de %1$d semanas seguidas</item>
+    </plurals>
+    <string name="core_rewards_run_none">Aún sin semanas seguidas</string>
+    <string name="core_rewards_progress_km">%1$s de %2$s km</string>
+    <string name="core_rewards_progress_steps">%1$s de %2$s pasos</string>
+    <string name="core_rewards_progress_workouts">%1$s de %2$s entrenamientos</string>
+    <string name="core_rewards_progress_weeks">%1$s de %2$s semanas</string>
+    <plurals name="core_rewards_recap">
+        <item quantity="one">%2$d de %1$d entrenamiento</item>
+        <item quantity="many">%2$d de %1$d entrenamientos</item>
+        <item quantity="other">%2$d de %1$d entrenamientos</item>
+    </plurals>
+    <plurals name="core_rewards_recap_met">
+        <item quantity="one">%1$d de %2$d entrenamiento, meta cumplida</item>
+        <item quantity="many">%1$d de %2$d entrenamientos, meta cumplida</item>
+        <item quantity="other">%1$d de %2$d entrenamientos, meta cumplida</item>
+    </plurals>
+    <plurals name="core_rewards_recap_met_in_a_row">
+        <item quantity="one">%2$d de %3$d entrenamientos, %1$d semana seguida</item>
+        <item quantity="many">%2$d de %3$d entrenamientos, %1$d semanas seguidas</item>
+        <item quantity="other">%2$d de %3$d entrenamientos, %1$d semanas seguidas</item>
+    </plurals>
+</resources>

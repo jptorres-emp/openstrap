@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_healthspan_pace_learning">Aprendiendo</string>
+    <string name="glow_healthspan_pace_slower">Más lento</string>
+    <string name="glow_healthspan_pace_faster">Más rápido</string>
+    <string name="glow_healthspan_pace_steady">Constante</string>
+    <string name="glow_healthspan_pace_times">%1$sx</string>
+    <string name="glow_healthspan_effect_none">sin cambios</string>
+    <string name="glow_healthspan_effect_off_months">quita unos meses</string>
+    <string name="glow_healthspan_effect_adds_months">añade unos meses</string>
+    <string name="glow_healthspan_effect_off_half">quita aproximadamente ½ año</string>
+    <string name="glow_healthspan_effect_adds_half">añade aproximadamente medio año</string>
+    <plurals name="glow_healthspan_effect_off_years">
+        <item quantity="one">quita unos %d año</item>
+        <item quantity="many">quita unos %d años</item>
+        <item quantity="other">quita unos %d años</item>
+    </plurals>
+    <plurals name="glow_healthspan_effect_adds_years">
+        <item quantity="one">añade unos %d año</item>
+        <item quantity="many">añade unos %d años</item>
+        <item quantity="other">añade unos %d años</item>
+    </plurals>
+    <string name="glow_healthspan_no_vo2max">Aún no hay VO2 máx. en los entrenamientos, se cuenta como típico</string>
+    <string name="glow_healthspan_no_data">Aún no hay suficientes datos, se cuenta como típico</string>
+    <string name="glow_healthspan_strength_none_aim">Ninguno registrado, típico: ninguno, meta de %1$d min por semana</string>
+    <string name="glow_healthspan_strength_none">Ninguno registrado, típico: ninguno</string>
+    <string name="glow_healthspan_strength_minutes_aim">%1$d min por semana, típico: ninguno, meta de %2$d min</string>
+    <string name="glow_healthspan_strength_minutes">%1$d min por semana, típico: ninguno</string>
+    <string name="glow_healthspan_vo2max">%1$d ml/kg/min, típico a los %2$d: %3$s</string>
+    <string name="glow_healthspan_steps_aim">%1$s al día, típico: %2$s, meta de %3$s</string>
+    <string name="glow_healthspan_steps">%1$s al día, típico: %2$s</string>
+    <string name="glow_healthspan_regularity">%1$d, típico: %2$s</string>
+    <string name="glow_healthspan_resting_hr">%1$d lpm dormido, normalmente: sobre %2$s</string>
+    <string name="glow_healthspan_time_asleep">%1$s por noche, solo se cuenta a partir de aquí abajo %2$s</string>
+    <string name="glow_healthspan_profile_birth_year">Necesita tu año de nacimiento</string>
+    <string name="glow_healthspan_profile_sex">Necesita tu sexo</string>
+    <string name="glow_healthspan_profile_both">Necesita año de nacimiento y sexo</string>
+    <string name="glow_healthspan_title">Edad de hábitos</string>
+    <string name="glow_healthspan_about">Acerca de la Edad de hábitos</string>
+    <string name="glow_healthspan_years">años</string>
+    <string name="glow_healthspan_updated_today">Actualizado hoy, próximo el domingo</string>
+    <string name="glow_healthspan_updated_tomorrow">Actualizado el domingo, próximo mañana</string>
+    <plurals name="glow_healthspan_updated_next">
+        <item quantity="one">Actualizado el domingo, próximo en %d día</item>
+        <item quantity="many">Actualizado el domingo, próximo en %d días</item>
+        <item quantity="other">Actualizado el domingo, próximo en %d días</item>
+    </plurals>
+    <string name="glow_healthspan_updated_weekly">Actualizado semanalmente, el domingo</string>
+    <string name="glow_healthspan_pace_title">Ritmo de envejecimiento</string>
+    <string name="glow_healthspan_pace_note">%1$s, %2$s</string>
+    <string name="glow_healthspan_pace_needs">Se necesitan 30 días con suficientes datos y 3 meses previos para distinguir un cambio real de la variación diaria.</string>
+    <string name="glow_healthspan_pace_beat">Tus últimos 30 días superan tus hábitos de 6 meses. Si lo mantienes, la estimación bajará.</string>
+    <string name="glow_healthspan_pace_behind">Tus últimos 30 días quedan por detrás de tus hábitos de 6 meses. Si continúa, la estimación subirá.</string>
+    <string name="glow_healthspan_pace_match">Tus últimos 30 días coinciden con tus hábitos de 6 meses, por lo que la estimación avanza al mismo ritmo que el calendario.</string>
+    <string name="glow_healthspan_scale_slower">−1x más lento</string>
+    <string name="glow_healthspan_scale_steady">1x</string>
+    <string name="glow_healthspan_scale_faster">3x más rápido</string>
+    <string name="glow_healthspan_terms_title">Qué lo afecta</string>
+    <string name="glow_healthspan_terms_note">Más de 6 meses</string>
+    <string name="glow_healthspan_scale_younger">−1½ a. más joven</string>
+    <string name="glow_healthspan_scale_older">más de 1½ años</string>
+    <string name="glow_healthspan_fitness_capped">Hábitos de condición física limitados: la frecuencia cardíaca en reposo, los pasos y el VO2 máximo combinados cuentan como máximo 3 años en total.</string>
+    <string name="glow_healthspan_years_line">%1$s, %2$s</string>
+</resources>

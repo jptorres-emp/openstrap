@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_day_today">Hoy</string>
+    <string name="core_day_yesterday">Ayer</string>
+    <string name="core_day_today_in_sentence">hoy</string>
+    <string name="core_day_yesterday_in_sentence">ayer</string>
+    <string name="core_day_at">%1$s a las %2$s</string>
+    <string name="core_day_done_today">hoy a las %1$s</string>
+    <string name="core_day_done_yesterday">ayer a las %1$s</string>
+    <string name="core_day_done_on">el %1$s</string>
+</resources>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="system_widget_status_not_paired">Vincula tu banda</string>
+    <string name="system_widget_status_not_paired_short">Vincular banda</string>
+    <string name="system_widget_status_not_paired_shortest">Vincular</string>
+    <string name="system_widget_status_low_battery">Banda en %1$d%%</string>
+    <string name="system_widget_status_percent">%1$d%%</string>
+    <string name="system_widget_status_syncing">Sincronizando</string>
+    <string name="system_widget_status_not_synced">Sin sincronizar</string>
+    <string name="system_widget_status_bluetooth_off">Bluetooth desactivado</string>
+    <string name="system_widget_status_bluetooth_off_short">Sin Bluetooth</string>
+    <string name="system_widget_status_synced">Sincronizado %1$s</string>
+    <string name="system_widget_open">Abrir</string>
+    <string name="system_widget_this_week">Esta semana</string>
+    <string name="system_widget_since">Desde las %1$s</string>
+    <string name="system_widget_steps_today">hoy</string>
+    <string name="system_widget_steps_goal">Meta %1$s</string>
+    <string name="system_widget_steps_to_go">%1$s para llegar</string>
+    <string name="system_widget_steps_goal_met">Meta cumplida</string>
+    <string name="system_widget_steps_week">Meta cumplida %1$d de %2$s</string>
+    <plurals name="system_widget_steps_days">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <plurals name="system_widget_steps_description">
+        <item quantity="one">%1$s paso hoy, %2$s</item>
+        <item quantity="many">%1$s pasos hoy, %2$s</item>
+        <item quantity="other">%1$s pasos hoy, %2$s</item>
+    </plurals>
+    <string name="system_widget_steps_line_description">Pasos hasta ahora hoy, %1$s</string>
+    <string name="system_widget_steps_week_description">Pasos cada día de esta semana</string>
+    <string name="system_widget_recovery_this_morning">Esta mañana</string>
+    <string name="system_widget_recovery_yesterday">Ayer</string>
+    <string name="system_widget_recovery_no_reading">Sin lectura</string>
+    <string name="system_widget_recovery_resting_hr">Frecuencia cardíaca en reposo</string>
+    <string name="system_widget_recovery_resting_hr_short">FC en reposo</string>
+    <string name="system_widget_recovery_hrv">VFC</string>
+    <string name="system_widget_recovery_sleep">Puntuación de sueño</string>
+    <string name="system_widget_recovery_figure">%1$s %2$s</string>
+    <string name="system_widget_score_word">%1$s, %2$s</string>
+    <string name="system_widget_recovery_week_description">Recuperación de cada día de los últimos siete días</string>
+    <string name="system_widget_sleep_title">Anoche</string>
+    <string name="system_widget_sleep_last_synced">Noche anterior</string>
+    <string name="system_widget_sleep_score_word">Puntuación de sueño %1$s, %2$s</string>
+    <string name="system_widget_sleep_score">Puntuación de sueño %1$s</string>
+    <string name="system_widget_sleep_stage_description">%1$s %2$s</string>
+    <string name="system_widget_start_usual">Tu promedio</string>
+    <string name="system_widget_start_usual_gps_on">Tu promedio, GPS activado</string>
+    <string name="system_widget_start_usual_gps_off">Tu promedio, GPS desactivado</string>
+    <string name="system_widget_start_all_sports">Todos los deportes</string>
+    <string name="system_widget_start_all_sports_action">Elige un deporte</string>
+    <string name="system_widget_start_short_title">Iniciar</string>
+    <plurals name="system_widget_start_week">
+        <item quantity="one">%1$d entrenamiento, %2$s</item>
+        <item quantity="many">%1$d entrenamientos, %2$s</item>
+        <item quantity="other">%1$d entrenamientos, %2$s</item>
+    </plurals>
+    <string name="system_widget_start_no_workouts">Aún no hay entrenamientos</string>
+    <string name="system_widget_start_last">Último: %1$s</string>
+    <string name="system_widget_start_last_workout">Último entrenamiento</string>
+    <string name="system_widget_start_last_line">%1$s, %2$s</string>
+    <string name="system_widget_start_none_yet">Ninguno aún</string>
+    <plurals name="system_widget_start_sets">
+        <item quantity="one">%1$d serie</item>
+        <item quantity="many">%1$d series</item>
+        <item quantity="other">%1$d series</item>
+    </plurals>
+    <string name="system_widget_recording">Grabando</string>
+    <string name="system_widget_paused">En pausa</string>
+    <string name="system_widget_rest">Descanso</string>
+    <string name="system_widget_still_going">¿Sigues entrenando?</string>
+    <string name="system_widget_moment_energy_left">Energía restante</string>
+    <string name="system_widget_moment_left">restante</string>
+    <string name="system_widget_moment_energy_at_waking">Energía al despertar %1$d</string>
+    <string name="system_widget_moment_drained">Agotada %1$s, recargada %2$d</string>
+    <string name="system_widget_moment_drained_short">Agotada %1$s</string>
+    <string name="system_widget_moment_recovery_word">Recuperación %1$d, %2$s</string>
+    <string name="system_widget_moment_recovery">Recuperación %1$d</string>
+    <string name="system_widget_moment_energy" tools:ignore="PluralsCandidate">Energía %1$d restante</string>
+    <string name="system_widget_moment_two_sentences">%1$s. %2$s</string>
+    <string name="system_widget_moment_sentence">%1$s.</string>
+    <string name="system_widget_moment_start">Iniciar %1$s</string>
+    <string name="system_widget_moment_recording_since">Grabando desde las %1$s</string>
+    <string name="system_widget_moment_workout">entrenamiento</string>
+    <string name="system_widget_moment_min_since_your">min desde tu %1$s</string>
+    <string name="system_widget_moment_min_since">min desde</string>
+    <string name="system_widget_moment_min">min</string>
+    <plurals name="system_widget_moment_minutes_since">
+        <item quantity="one">%1$d minuto desde tu %2$s</item>
+        <item quantity="many">%1$d minutos desde tu %2$s</item>
+        <item quantity="other">%1$d minutos desde tu %2$s</item>
+    </plurals>
+    <string name="system_widget_moment_load_today">Carga de hoy %1$d</string>
+    <string name="system_widget_moment_load">Carga %1$d</string>
+    <string name="system_widget_moment_heart_since">Frecuencia cardíaca desde tu %1$s</string>
+    <string name="system_widget_moment_min_to_bedtime">min para ir a dormir</string>
+    <plurals name="system_widget_moment_minutes_to_bedtime">
+        <item quantity="one">%1$d minuto para acostarte</item>
+        <item quantity="many">%1$d minutos para acostarte</item>
+        <item quantity="other">%1$d minutos para acostarte</item>
+    </plurals>
+    <string name="system_widget_moment_bedtime">Hora de dormir %1$s</string>
+    <string name="system_widget_moment_stages_description">Fases de anoche, %1$s</string>
+    <string name="system_widget_moment_energy_since">Energía desde las %1$s</string>
+    <string name="system_widget_moment_energy_since_now" tools:ignore="PluralsCandidate">Energía desde las %1$s, %2$d ahora</string>
+    <string name="system_widget_moment_heart_today">Tu frecuencia cardíaca hoy</string>
+</resources>

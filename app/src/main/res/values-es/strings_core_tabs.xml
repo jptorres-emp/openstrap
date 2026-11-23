@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="core_tab_stage_awake">Despierto</string>
+    <string name="core_tab_stage_rem">REM</string>
+    <string name="core_tab_stage_light">Ligero</string>
+    <string name="core_tab_stage_deep">Profundo</string>
+    <string name="core_tab_vs_yesterday_up">+%1$d vs ayer</string>
+    <string name="core_tab_vs_yesterday_down">−%1$d vs ayer</string>
+    <string name="core_tab_same_as_yesterday">Igual que ayer</string>
+    <plurals name="core_tab_learning_nights">
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
+    </plurals>
+    <string name="core_tab_factor_hrv">VFC</string>
+    <string name="core_tab_factor_resting_hr">Frecuencia cardíaca en reposo</string>
+    <string name="core_tab_factor_sleep">Sueño de anoche</string>
+    <string name="core_tab_factor_sleep_balance">Sueño de las últimas noches</string>
+    <string name="core_tab_factor_temperature">Temperatura en la piel</string>
+    <string name="core_tab_factor_breathing">Frecuencia respiratoria</string>
+    <string name="core_tab_factor_previous_load">Carga de ayer</string>
+    <string name="core_tab_factor_blood_oxygen">Oxígeno en sangre</string>
+    <string name="core_tab_factor_recovery_index">Cuándo se estabilizó tu corazón</string>
+    <string name="core_tab_phrase_hrv">VFC</string>
+    <string name="core_tab_phrase_resting_hr">frecuencia cardíaca en reposo</string>
+    <string name="core_tab_phrase_sleep">sueño de anoche</string>
+    <string name="core_tab_phrase_sleep_balance">sueño de las últimas noches</string>
+    <string name="core_tab_phrase_temperature">temperatura en la piel</string>
+    <string name="core_tab_phrase_breathing">frecuencia respiratoria</string>
+    <string name="core_tab_phrase_previous_load">carga de ayer</string>
+    <string name="core_tab_phrase_blood_oxygen">oxígeno en sangre</string>
+    <string name="core_tab_phrase_recovery_index">cuándo se estabilizó tarde tu corazón</string>
+    <string name="core_tab_held_back_by">Principalmente limitado por %1$s fuera de rango.</string>
+    <string name="core_tab_recovery_waiting">La recuperación se mostrará cuando se sincronice el sueño de anoche.</string>
+    <string name="core_tab_no_sleep_score">No se registró sueño anoche, así que hoy no hay puntuación.</string>
+    <string name="core_tab_deleted_sleep_score">Eliminaste el sueño de anoche, así que hoy no hay puntuación.</string>
+    <string name="core_tab_contributor_helping">Ayuda</string>
+    <string name="core_tab_contributor_usual">Tu normal</string>
+    <string name="core_tab_contributor_little">Conteniendose un poco</string>
+    <string name="core_tab_contributor_holding">Conteniendose</string>
+    <string name="core_tab_charge_sleep_rest">Sueño y descanso tranquilo</string>
+    <string name="core_tab_charge_movement">Movimiento</string>
+    <string name="core_tab_charge_stress">Estrés</string>
+    <string name="core_tab_charge_awake">Estar despierto</string>
+    <string name="core_tab_charge_recharged">Recargada</string>
+    <string name="core_tab_charge_drained">Agotado</string>
+    <string name="core_tab_charge_first_night">La energía comienza después de tu primera noche. El sueño es lo que la recarga.</string>
+    <string name="core_tab_charge_waiting">La energía aparece una vez que la banda registra unas horas de frecuencia cardíaca.</string>
+    <string name="core_tab_charge_now">Ahora</string>
+    <string name="core_tab_charge_used" tools:ignore="PluralsCandidate">Gastaste %1$d desde que despertaste</string>
+    <string name="core_tab_charge_up" tools:ignore="PluralsCandidate">Subió %1$d desde que despertaste</string>
+    <string name="core_tab_charge_level">Igual que al despertar</string>
+    <string name="core_tab_night_asleep">%1$s dormido.</string>
+    <string name="core_tab_night_longest">%1$s, lo máximo esta semana.</string>
+    <string name="core_tab_night_shortest">%1$s, lo mínimo esta semana.</string>
+    <string name="core_tab_first_night_sleep">Tu primera noche con la banda aparecerá aquí por la mañana.</string>
+    <string name="core_tab_only_naps">No se registró ninguna noche de sueño, solo siestas.</string>
+    <string name="core_tab_no_sleep_that_night">No se registró sueño esa noche.</string>
+    <string name="core_tab_sleep_score_poor">Calidad de sueño, baja</string>
+    <string name="core_tab_sleep_score_fair">Calidad de sueño, normal</string>
+    <string name="core_tab_sleep_score_good">Calidad de sueño, buena</string>
+    <string name="core_tab_sleep_score_great">Calidad de sueño, excelente</string>
+    <string name="core_tab_no_strap_score">Sin puntuación de la banda</string>
+    <string name="core_tab_stage_total">%1$s %2$s</string>
+    <string name="core_tab_asleep">%1$s dormido</string>
+    <string name="core_tab_slept_through">Dormiste del tiron</string>
+    <plurals name="core_tab_woke">
+        <item quantity="one">Despertaste una vez</item>
+        <item quantity="many">Despertaste %d veces</item>
+        <item quantity="other">Despertaste %d veces</item>
+    </plurals>
+    <string name="core_tab_regularity_needs">Necesita unos 5 días de uso</string>
+    <string name="core_tab_regularity_steady">Horarios de sueño estables esta semana</string>
+    <string name="core_tab_regularity_moved">Los horarios de sueño cambiaron esta semana</string>
+    <string name="core_tab_usual_times">Duermes %1$s, despiertas %2$s</string>
+    <plurals name="core_tab_breathing_learning">
+        <item quantity="one">Aprendiendo, %1$d de %2$d noche</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d noches</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d noches</item>
+    </plurals>
+    <string name="core_tab_breathing_usual">Tu habitual, %1$s por hora</string>
+    <plurals name="core_tab_breathing_short_learning">
+        <item quantity="one">Aprendiendo, %1$d de %2$d</item>
+        <item quantity="many">Aprendiendo, %1$d de %2$d</item>
+        <item quantity="other">Aprendiendo, %1$d de %2$d</item>
+    </plurals>
+    <string name="core_tab_breathing_short_usual">Tu normal %1$s</string>
+    <string name="core_tab_load_usual">Tu habitual, %1$d al día</string>
+    <string name="core_tab_load_learning">Aprendiendo tu horario habitual</string>
+    <string name="core_tab_balance_building">Construyendo</string>
+    <string name="core_tab_balance_easing">Disminuyendo</string>
+    <string name="core_tab_balance_steady">Estable</string>
+    <string name="core_tab_active_reached">Meta cumplida esta semana</string>
+    <string name="core_tab_active_goal">Objetivo %1$d por semana</string>
+    <plurals name="core_tab_points_reached">
+        <item quantity="one">Meta cumplida esta semana</item>
+        <item quantity="many">Meta cumplida esta semana</item>
+        <item quantity="other">Meta cumplida esta semana</item>
+    </plurals>
+    <string name="core_tab_points_aim">Objetivo %1$d por semana</string>
+    <string name="core_tab_calories_today">Kcal estimadas hasta ahora hoy</string>
+    <string name="core_tab_calories_partial">Kcal estimadas, parte del día con uso</string>
+    <string name="core_tab_calories">Kcal estimadas</string>
+    <string name="core_tab_mostly_movement">Mayormente movimiento</string>
+    <string name="core_tab_mostly_stress">Mayormente estrés</string>
+    <string name="core_tab_mostly_awake">Mayormente despierto</string>
+    <string name="core_tab_nothing_yet">Aún nada</string>
+    <plurals name="core_tab_naps_title">
+        <item quantity="one">Siesta</item>
+        <item quantity="many">Siestas</item>
+        <item quantity="other">Siestas</item>
+    </plurals>
+    <string name="core_tab_nap_at">A las %1$s</string>
+    <plurals name="core_tab_naps_first_at">
+        <item quantity="one">%1$d siesta, %2$s</item>
+        <item quantity="many">%1$d siestas, %2$s</item>
+        <item quantity="other">%1$d siestas, %2$s</item>
+    </plurals>
+    <string name="core_tab_last_7_days">Últimos 7 días</string>
+    <string name="core_tab_auto_detected">Detectado automáticamente</string>
+    <string name="core_tab_fact_average_bpm">Promedio %1$d lpm</string>
+    <plurals name="core_tab_fact_sets">
+        <item quantity="one">%d serie</item>
+        <item quantity="many">%d series</item>
+        <item quantity="other">%d series</item>
+    </plurals>
+    <string name="core_tab_fact_distance_pace">%1$s, %2$s</string>
+    <string name="core_tab_workout_line">%1$s, %2$s</string>
+    <string name="core_tab_habit_age_updated">Actualizado %1$s</string>
+    <string name="core_tab_first_estimate">Primera estimación %1$s</string>
+    <string name="core_tab_age_for_now">Tu edad actual</string>
+    <string name="core_tab_age_for_now_waiting">%1$s</string>
+    <string name="core_tab_habit_age_likely">Probablemente de %1$d a %2$d</string>
+    <plurals name="core_tab_habit_age_younger">
+        <item quantity="one">%d año más joven que la última semana</item>
+        <item quantity="many">%d años más joven que la última semana</item>
+        <item quantity="other">%d años más joven que la última semana</item>
+    </plurals>
+    <plurals name="core_tab_habit_age_older">
+        <item quantity="one">%d año más viejo que la última semana</item>
+        <item quantity="many">%d años más viejo que la última semana</item>
+        <item quantity="other">%d años más viejo que la última semana</item>
+    </plurals>
+    <string name="core_tab_habit_age_same">Igual que la semana pasada</string>
+    <string name="core_tab_age_range">%1$d a %2$d</string>
+    <string name="core_tab_your_age">Tú, %1$d</string>
+</resources>

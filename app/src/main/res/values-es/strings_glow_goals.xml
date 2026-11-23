@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="glow_goals_title">Metas y mejores marcas</string>
+    <string name="glow_goals_loading">Cargando</string>
+    <string name="glow_goals_this_week">Esta semana</string>
+    <plurals name="glow_goals_count_of_goal">
+        <item quantity="one">%1$d de %2$d entrenamiento</item>
+        <item quantity="many">%1$d de %2$d entrenamientos</item>
+        <item quantity="other">%1$d de %2$d entrenamientos</item>
+    </plurals>
+    <string name="glow_goals_personal_bests">Mejores marcas personales</string>
+    <string name="glow_goals_set_count" tools:ignore="PluralsCandidate">%1$d de %2$d logradas</string>
+    <string name="glow_goals_badges">Insignias</string>
+    <string name="glow_goals_next_badge">Próxima insignia</string>
+    <string name="glow_goals_not_set">Aún sin lograr</string>
+    <string name="glow_goals_not_earned">Aún sin obtener</string>
+    <string name="glow_goals_earned_on">Obtenida el %1$s</string>
+    <string name="glow_goals_badge_described">%1$s, %2$s</string>
+    <string name="glow_goals_counts_rule">Cuentan los entrenamientos de 10 min o más, tanto si los inicias como si los conservas.</string>
+    <string name="glow_goals_best_fastest_how">Tu %1$s más rápido en cualquier carrera medida con GPS.</string>
+    <string name="glow_goals_best_longest_run_how">Tu carrera más larga de una sola vez medida con GPS.</string>
+    <string name="glow_goals_best_longest_workout_how">El entrenamiento más largo que iniciaste, en tiempo en movimiento.</string>
+    <string name="glow_goals_best_lift_how">La serie más pesada que registraste en este ejercicio, con sus repeticiones.</string>
+    <string name="glow_goals_best_steps_how">La mayor cantidad de pasos que contó la banda en un solo día.</string>
+    <string name="glow_goals_all_badges">Todas las insignias</string>
+    <string name="glow_goals_last_week">La semana pasada</string>
+    <string name="glow_goals_celebrations">Celebraciones</string>
+    <string name="glow_goals_earned_count" tools:ignore="PluralsCandidate">%1$d de %2$d obtenidas</string>
+    <string name="glow_goals_group_firsts">Primeras veces</string>
+    <string name="glow_goals_group_milestones">Hitos</string>
+    <string name="glow_goals_group_kinds">Algo nuevo</string>
+    <string name="glow_goals_weekly_goal">Meta semanal</string>
+    <string name="glow_goals_sheet_note">Cuenta cualquier entrenamiento de 10 min o más. Los cambios empiezan esta semana y tus semanas seguidas continúan.</string>
+    <string name="glow_goals_recap_title">Resumen semanal</string>
+    <plurals name="glow_goals_weekly_streak">
+        <item quantity="one">Meta cumplida %d semana seguida</item>
+        <item quantity="many">Meta cumplida %d semanas seguidas</item>
+        <item quantity="other">Meta cumplida %d semanas seguidas</item>
+    </plurals>
+    <plurals name="glow_goals_short_of_goal">
+        <item quantity="one">Falta %d entrenamiento para tu meta</item>
+        <item quantity="many">Faltan %d entrenamientos para tu meta</item>
+        <item quantity="other">Faltan %d entrenamientos para tu meta</item>
+    </plurals>
+    <string name="glow_goals_highlights">Destacados</string>
+    <string name="glow_goals_best">%1$s, %2$s</string>
+    <string name="glow_goals_in_all">En total</string>
+    <plurals name="glow_goals_workouts_count">
+        <item quantity="one">%d entrenamiento</item>
+        <item quantity="many">%d entrenamientos</item>
+        <item quantity="other">%d entrenamientos</item>
+    </plurals>
+    <string name="glow_goals_hours">Tiempo</string>
+    <string name="glow_goals_distance">Distancia</string>
+    <string name="glow_goals_active_kcal">Kcal activas</string>
+    <string name="glow_goals_share_week">Compartir semana</string>
+    <plurals name="glow_goals_workouts_word">
+        <item quantity="one">entrenamiento</item>
+        <item quantity="many">entrenamientos</item>
+        <item quantity="other">entrenamientos</item>
+    </plurals>
+    <string name="glow_goals_story_goal">%1$s, meta %2$d</string>
+    <plurals name="glow_goals_weeks_in_a_row">
+        <item quantity="one">%d semana seguida</item>
+        <item quantity="many">%d semanas seguidas</item>
+        <item quantity="other">%d semanas seguidas</item>
+    </plurals>
+    <string name="glow_goals_count_big" tools:ignore="PluralsCandidate">%1$d de %2$d</string>
+    <plurals name="glow_goals_workouts_this_week">
+        <item quantity="one">%d entrenamiento esta semana</item>
+        <item quantity="many">%d entrenamientos esta semana</item>
+        <item quantity="other">%d entrenamientos esta semana</item>
+    </plurals>
+    <string name="glow_goals_workouts_goal_met">entrenamientos, meta cumplida</string>
+    <plurals name="glow_goals_bests_count">
+        <item quantity="one">%d mejor marca personal</item>
+        <item quantity="many">%d mejores marcas personales</item>
+        <item quantity="other">%d mejores marcas personales</item>
+    </plurals>
+    <string name="glow_goals_what_it_measures">Qué mide</string>
+    <string name="glow_goals_celebrations_both">Momento de meta y tu semana</string>
+    <string name="glow_goals_celebrations_goal">Momento de meta</string>
+    <string name="glow_goals_celebrations_recap">Tu semana</string>
+    <string name="glow_goals_celebrations_off">Desactivado</string>
+    <string name="glow_goals_unit_kcal">kcal</string>
+    <string name="glow_goals_per_week">a la semana</string>
+    <string name="glow_goals_lower">Bajar %1$s</string>
+    <string name="glow_goals_raise">Subir %1$s</string>
+    <string name="glow_goals_type">Escribir %1$s</string>
+    <string name="glow_goals_about">Acerca de metas y marcas</string>
+    <string name="glow_goals_about_goal">Cuenta un entrenamiento de 10 min o más, dos al día como máximo.</string>
+    <string name="glow_goals_about_bests">Una marca la logra un entrenamiento que iniciaste, en tiempo en movimiento. Las carreras se miden con GPS y la marca de pasos es el conteo de la banda en un día. Una marca solo se reemplaza por una mejor.</string>
+    <string name="glow_goals_about_badges">Una insignia se obtiene una vez y se queda. Los entrenamientos de 10 min o más cuentan para las que cuentan entrenamientos, tanto si los inicias como si los conservas.</string>
+</resources>

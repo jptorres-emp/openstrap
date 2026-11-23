@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_band_recovery_easy">Tómatelo con calma</string>
+    <string name="core_band_recovery_moderate">Moderado</string>
+    <string name="core_band_recovery_ready">Listo</string>
+    <string name="core_band_recovery_more">Listo para más</string>
+    <string name="core_band_sleep_poor">Bajo</string>
+    <string name="core_band_sleep_fair">Normal</string>
+    <string name="core_band_sleep_good">Bueno</string>
+    <string name="core_band_sleep_great">Excelente</string>
+    <string name="core_band_load_above">Por encima de lo habitual</string>
+    <string name="core_band_load_usual">Habitual</string>
+    <string name="core_band_load_below">Por debajo de lo habitual</string>
+    <string name="core_band_load_so_far">Hoy </string>
+</resources>

@@ -25,6 +25,9 @@ glance = "1.2.0"
 # Newer than the 2.7.1 Glance 1.2.0 asks for (built on a 2021 Room); named so the app can set WorkManager up itself (widget/WidgetWork.kt).
 work = "2.12.0"
 documentfile = "1.1.0"
+# Not used directly: Health Connect pulls Guava 32.0.0 in through kotlinx-coroutines-guava, which OSV-Scanner flags
+# (GHSA-xxph-c9ww-hj94). app/build.gradle.kts raises it to this fixed release.
+guava = "33.7.2-android"
 # The baseline profile (app/src/main/baseline-prof.txt): profileinstaller writes it for ART on phones that install the APK
 # outside the Play Store, and the :baselineprofile module records it.
 profileinstaller = "1.4.1"
@@ -69,6 +72,7 @@ coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-
 window = { group = "androidx.window", name = "window", version.ref = "window" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }

@@ -9,3 +9,5 @@ captures/
 *.keystore
 *.jks
 signing.env
+# Written in CI for OSV-Scanner (.github/workflows/osv-scanner.yml), never committed.
+*gradle.lockfile

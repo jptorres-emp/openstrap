@@ -21,16 +21,8 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - uses: gradle/actions/setup-gradle@v5
-
-      - name: Install Android SDK packages
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.2" "build-tools;36.0.0" > /dev/null
+      # The same Java, Gradle and Android SDK packages as the build jobs (android.yml).
+      - uses: ./.github/actions/setup
 
       # Gradle keeps no lockfile, so one is written here for the scanner: only the release APK's runtime libraries, since
       # build tools (lint, KSP) and test libraries never reach a phone.

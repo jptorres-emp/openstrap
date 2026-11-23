@@ -6,6 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.openstrap.app.ui.glow.BigNumberSpec
 import org.openstrap.app.ui.glow.ChipSize
+import org.openstrap.app.ui.glow.FIGURE_PART
+import org.openstrap.app.ui.glow.ONLY_DIGITS
+import org.openstrap.app.ui.glow.draw.DotFont
 import org.openstrap.app.ui.glow.ChipSpec
 import org.openstrap.app.ui.glow.ChipVariant
 import org.openstrap.app.ui.glow.FigureSpec
@@ -23,6 +26,7 @@ import org.openstrap.app.ui.glow.TagVariant
 import org.openstrap.app.ui.glow.TileSize
 import org.openstrap.app.ui.glow.TileSpec
 import org.openstrap.app.ui.glow.TokenSize
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.theme.Greys
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.Space
@@ -155,5 +159,15 @@ class HaloSmallPartsTest {
         val dots = ui.find(Regex("""(?<![\w.])BigNumberText\("""), setOf("glow/ShareCards.kt", "glow/HaloBigNumber.kt"))
             .filterNot { it.startsWith("glow/GlowType.kt:") && "fun BigNumberText" in it }
         assertTrue("Only HaloBigNumber and the share pictures draw BigNumberText:\n" + dots.joinToString("\n"), dots.isEmpty())
+    }
+
+    @Test fun `a grouped big number is one dot number, its groups two columns apart, not two numbers edge to edge`() {
+        val steps = Units.count(25_559, Units.DOT_LOCALE)
+        assertEquals("25\u2009559", steps)
+        assertTrue("A grouped number is dots alone", ONLY_DIGITS.matches(steps))
+        val figure = Units.count(25_559, Units.DOT_LOCALE) + " of " + Units.count(30_000, Units.DOT_LOCALE)
+        assertEquals(listOf(steps, " of ", "30\u2009000"), FIGURE_PART.findAll(figure).map { it.value }.toList())
+        // DotFont spaces the groups: the thin space adds one empty column to the one between digits.
+        assertEquals(DotFont.columns("25") + 2 + DotFont.columns("559"), DotFont.columns(steps))
     }
 }

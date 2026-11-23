@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.ui.glow.draw.DotSize
@@ -43,11 +44,15 @@ internal object BigNumberSpec {
     val DashHeight = 6.dp
 }
 
-/** Runs of digits (with a point, comma or colon), a slash, and the words between. */
-private val FIGURE_PART = Regex("[0-9][0-9.,:]*|/|[^0-9/]+")
+/**
+ * Runs of digits (with a point, comma, colon or the thin space grouping big numbers, [Units.DOT_GROUP_SPACE]), a slash,
+ * and the words between. The thin space stays inside its run, so "25 559" is one dot number with its groups two columns
+ * apart, not two numbers drawn edge to edge.
+ */
+internal val FIGURE_PART = Regex("[0-9][0-9.,:${Units.DOT_GROUP_SPACE}]*|/|[^0-9/]+")
 
-/** A number that is dots alone: digits with their point, comma, colon or a dash. */
-private val ONLY_DIGITS = Regex("[0-9.,:-]*")
+/** A number that is dots alone: digits with their point, comma, colon, group space or a dash. */
+internal val ONLY_DIGITS = Regex("[0-9.,:${Units.DOT_GROUP_SPACE}-]*")
 
 /**
  * The screen's one big number in DotSpec dots at the board's Doto [size]. Digits are dots; a slash is the display type

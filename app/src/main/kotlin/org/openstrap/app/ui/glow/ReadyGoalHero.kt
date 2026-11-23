@@ -13,14 +13,13 @@ import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 import org.openstrap.app.R
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.Pace
+import org.openstrap.app.presentation.TimeOfDay
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.glow.live.HeroLine
 import org.openstrap.app.ui.glow.live.LiveFigures
@@ -163,8 +162,9 @@ internal fun ReadyLastRow(last: ReadyLast?) {
 @androidx.compose.runtime.ReadOnlyComposable
 internal fun endsAbout(seconds: Long?, nowMillis: Long): String? {
     if (seconds == null || seconds <= 0) return null
-    val at = Instant.ofEpochMilli(nowMillis + seconds * MS_PER_S).atZone(ZoneId.systemDefault())
-    return stringResource(R.string.workout_start_ends_near, DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(at))
+    // The phone's 12 or 24 hour setting, as every other time of day in the app.
+    val at = (nowMillis + seconds * MS_PER_S) / MS_PER_S
+    return stringResource(R.string.workout_start_ends_near, TimeOfDay.format(at, ZoneId.systemDefault()))
 }
 
 /** The clock "Ends about" counts from, read again every half minute. */

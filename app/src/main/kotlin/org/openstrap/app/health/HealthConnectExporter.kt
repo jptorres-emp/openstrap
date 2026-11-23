@@ -41,13 +41,21 @@ import org.openstrap.app.data.db.SleepStage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Pushes locally stored data into Android Health Connect, and reads it back. Each exported record carries a stable
  * clientRecordId, so re-exporting the same range updates rather than duplicates. [import] reads only what this app
  * wrote (Health Connect keeps it after an uninstall), so it restores OpenStrap's own data and nothing else's.
  */
-class HealthConnectExporter(private val context: Context, private val dao: HealthDao) {
+class HealthConnectExporter(
+    private val context: Context,
+    private val dao: HealthDao,
+    /** Where [export] builds its records: 30 days of them, never on the main thread a view model calls from. */
+    private val work: CoroutineDispatcher = Dispatchers.Default,
+) {
     /** Health Connect's writes and OpenStrap's own records in it, for [RecordStore.write]. */
     private val store = object : RecordStore {
         override suspend fun insert(records: List<Record>) {
@@ -172,7 +180,7 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         ZoneId.systemDefault().rules.getOffset(Instant.ofEpochSecond(epochSeconds))
 
     /** Exports everything in [from, to] (epoch seconds). Returns the number of records written. */
-    suspend fun export(from: Long, to: Long, now: Long = System.currentTimeMillis() / 1000): Int {
+    suspend fun export(from: Long, to: Long, now: Long = System.currentTimeMillis() / 1000): Int = withContext(work) {
         val records = mutableListOf<Record>()
         records += heartRate(from, to)
         records += steps(from, to)
@@ -211,7 +219,7 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
             dropMovedRestingHr(resting)
             dropStaleStrapWorkouts(from, to, strapSessions)
         }
-        return records.size
+        records.size
     }
 
     /**

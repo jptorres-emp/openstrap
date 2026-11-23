@@ -435,6 +435,13 @@ private fun GamesCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>, zo
     }
 }
 
+/** Whether a distance workout has a run card ([runCard]): a route, splits or laps. Without one it has the indoor card. */
+internal fun hasRunCard(summary: PhoneSummary, liveRoute: List<Route.Point> = emptyList()): Boolean {
+    if (Route.mappable(summary.route)) return true
+    val rows = splitRowsOf(summary, liveRoute)
+    return rows.isNotEmpty() || manualLaps(summary, rows).isNotEmpty()
+}
+
 /**
  * A run's card (board HaloSummaryRun): the route in its zones' colours with the climb under it, then each kilometre as
  * a bar, then the laps when any were marked apart from the splits ([manualLaps]). Draws nothing and returns false

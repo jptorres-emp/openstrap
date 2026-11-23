@@ -51,7 +51,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.WorkoutAnalysis
-import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
@@ -189,7 +188,6 @@ private fun PastSummary(
     onOpenDay: (() -> Unit)?,
     foundTag: Boolean,
 ) {
-    val heartZones = LocalHeartZones.current
     val a = summary.analysis
     val w = a.workout
     val list = rememberLazyListState()
@@ -232,10 +230,9 @@ private fun PastSummary(
                 Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
                     // The header's corner holds Share, so a workout the strap found says so here.
                     if (foundTag) HaloTag(TabCopy.AUTO_DETECTED)
-                    val zones = remember(a, heartZones) {
-                        val shown = a.heartRate.filter { it.timestamp <= a.end }.map { it.timestamp to it.bpm }
-                        ZoneSeconds(WorkoutRecorder.liveZoneSeconds(shown, a.maxHeartRate, heartZones).toList())
-                    }
+                    // The stored time in zones, as the summary, the share card and the family section read it, so
+                    // the page shows one total.
+                    val zones = remember(a) { ZoneSeconds(a.zoneSeconds) }
                     // The page's sentence ("An easy 40 min walk") where the kind has none of its own.
                     val hero = pastHero(summaryHero(family, summary, usual), a, usual, zones)
                     SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
@@ -257,8 +254,7 @@ private fun PastSummary(
                         CaloriesCopy.inYourDay(sport, k, dayActiveKcal?.roundToInt(), date, LocalDate.now(), true)
                     }
                     // Zones and splits for the kinds whose section doesn't already show them.
-                    val zonesShown = zones.sum() > 0 && family !in setOf(Workouts.Family.IndoorCardio, Workouts.Family.Games)
-                    if (zonesShown) ZoneStripPanel(zones)
+                    if (zonesPanelShown(family, summary, zones)) ZoneStripPanel(zones)
                     if (inDay != null) InYourDayCard(inDay, onOpenDay)
                     val drop = WorkoutDetailCopy.dropLine(a.recovery60, a.recoveryIsMeaningful, null)
                     if (w.trainingLoad != null || (a.recoveryMinutes ?: 0) > 0 || drop != null) {
@@ -272,6 +268,17 @@ private fun PastSummary(
     }
     if (info) EffectInfo(a, usual, summary.strapWorkouts, summary.effectFromStrap, onDismiss = { info = false })
     HaloTrimSheet(trim)
+}
+
+/**
+ * Whether a past phone workout's page has its own time in zones panel: not when the family section already shows them,
+ * as an indoor card does, and a run with no route, splits or laps has one ([hasRunCard]).
+ */
+private fun zonesPanelShown(family: Workouts.Family, summary: PhoneSummary, zones: ZoneSeconds): Boolean = when {
+    zones.sum() <= 0 -> false
+    family == Workouts.Family.IndoorCardio || family == Workouts.Family.Games -> false
+    family == Workouts.Family.Distance -> hasRunCard(summary)
+    else -> true
 }
 
 /**

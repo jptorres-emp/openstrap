@@ -63,7 +63,7 @@ jobs:
           # updater reads this fork's releases (update/Releases.kt), so a phone on an older one is offered it.
           if [ -f out/OpenStrap.apk ] && ! gh release view "v$FORK_VERSION" > /dev/null 2>&1; then
             gh release create "v$FORK_VERSION" out/OpenStrap.apk --target "${{ github.sha }}" --title "OpenStrap $FORK_VERSION" \
-              --notes "The original's ${FORK_VERSION%-fork} with the fork's changes (Portuguese, the weight log, the reports and the journal), signed with this fork's own key."
+              --notes "The original's ${FORK_VERSION%-fork} with the fork's changes (Portuguese, the weight log, the reports with their Training view, the journal, the week's report on Today, and the whole track of workouts started in Zepp's app), signed with this fork's own key."
           fi
           if [ -f out/OpenStrap.apk ]; then
             gh release delete latest --yes --cleanup-tag 2>/dev/null || true

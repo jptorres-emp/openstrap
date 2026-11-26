@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
 /**
  * The words of the fork's Reports page (jptorres-emp/openstrap), as plain Kotlin for the tests: the sentence under the
  * chart, today's lines, the days against their target and the days of the week. The rows of the stretch against the
- * one before are [ReportsRows], the habits [HabitWords].
+ * one before are [ReportsRows], the habits [HabitWords], the rest of the Training view [TrainingWords].
  */
 object ReportsCopy {
     /** Under this much of a change the Load reads as the same, in percent. */
@@ -47,6 +47,22 @@ object ReportsCopy {
         return listOfNotNull(recovery, load).joinToString(" ")
     }
 
+    /**
+     * Today's weekly report card: the last 7 days' average Recovery ("74", null without one) and the line under it, how
+     * it stands against the 3 weeks before.
+     */
+    fun weekCard(week: ForkReports.Stretch, strings: Strings = Strings.app): Pair<String?, String> {
+        val now = week.now.recovery?.roundToInt() ?: return null to strings.get(R.string.fork_rep_hero_none)
+        val before = week.before?.recovery?.roundToInt()
+        val line = when {
+            before == null -> strings.get(R.string.fork_today_report_alone)
+            now > before -> strings.format(R.string.fork_today_report_up, now - before)
+            now < before -> strings.format(R.string.fork_today_report_down, before - now)
+            else -> strings.get(R.string.fork_today_report_same)
+        }
+        return now.toString() to line
+    }
+
     /** The Load a day [now] against [before] in whole percent, or null without both. */
     fun loadChange(now: Float?, before: Float?): Int? =
         if (now == null || before == null || before < 1f) null else ((now - before) / before * PERCENT).roundToInt()
@@ -61,11 +77,16 @@ object ReportsCopy {
         },
     )
 
-    /** The Load target's value ("110 to 205") and the line under it (what the day is for, the Load so far). */
-    fun target(plan: ForkPlan.Plan, strings: Strings = Strings.app): Pair<String?, String> = plan.target?.let { t ->
-        strings.format(R.string.fork_rep_target_value, t.range.first, t.range.last) to
-            strings.format(R.string.fork_rep_target_line, kind(t.kind, strings), plan.load.roundToInt())
-    } ?: (null to strings.get(R.string.fork_rep_target_none))
+    /** The Training view's hero: the day's Load target ("110 to 205"), what the day is for, and the Load so far. */
+    data class TargetWords(val value: String, val word: String, val note: String)
+
+    /** Today's [TargetWords], or null before a week of wear gives a target. */
+    fun target(plan: ForkPlan.Plan, strings: Strings = Strings.app): TargetWords? = plan.target?.let { t ->
+        TargetWords(
+            strings.format(R.string.fork_rep_target_value, t.range.first, t.range.last), kind(t.kind, strings),
+            strings.format(R.string.fork_rep_target_line, plan.load.roundToInt()),
+        )
+    }
 
     /** Tonight's bedtime ("22:12") and the line under it: the time asleep it allows, the waking, the extra for short nights. */
     fun bedtime(plan: ForkPlan.Plan, strings: Strings = Strings.app): Pair<String?, String> {

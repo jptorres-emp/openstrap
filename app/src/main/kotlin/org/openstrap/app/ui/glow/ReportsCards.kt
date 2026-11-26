@@ -25,11 +25,10 @@ import org.openstrap.app.ui.theme.MetricColors
 @Immutable
 private class ReportRows(val rows: List<ReportRow>)
 
-/** Today: the morning's Recovery and its word, the Load target with the Load so far, and tonight's bedtime. */
+/** Today, under the Training view's target: the morning's Recovery behind it with its word, and tonight's bedtime. */
 @Composable
 internal fun TodayCard(plan: ForkPlan.Plan) {
     val recovery = plan.recovery
-    val (target, targetLine) = remember(plan) { ReportsCopy.target(plan) }
     val (bedtime, bedtimeLine) = remember(plan) { ReportsCopy.bedtime(plan) }
     val word = when {
         recovery == null -> null
@@ -41,7 +40,6 @@ internal fun TodayCard(plan: ForkPlan.Plan) {
         ReportRows(
             listOf(
                 ReportRow(stringResource(R.string.fork_rep_recovery), recovery?.toString(), word),
-                ReportRow(stringResource(R.string.fork_rep_target), target, targetLine),
                 ReportRow(stringResource(R.string.fork_rep_bedtime), bedtime, bedtimeLine),
             ),
         ),

@@ -196,6 +196,10 @@ fun GlowTodayScreen(
     firstScore: Boolean = false,
     /** Each day's steps and the best before, for the Steps card's goal tag ([ActivityHistory.stepsFacts]). Null climbs only to what the goal tells. */
     activity: org.openstrap.app.ui.dashboard.ActivityHistory? = null,
+    /** The fork's weekly report (jptorres-emp/openstrap), the last 7 days for its card; null leaves the card out. */
+    weekReport: org.openstrap.app.data.ForkReports.Stretch? = null,
+    /** Opens the fork's Reports page, from the weekly report card. */
+    onOpenReports: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -238,6 +242,7 @@ fun GlowTodayScreen(
             val asOf = Instant.ofEpochSecond(r.asOf).atZone(zone).toLocalDate()
             habitAgeNew(asOf, habitAgeSeenAsOf == asOf, state.date, now.atZone(zone).toLocalDate())
         } == true,
+        report = weekReport != null && isToday, reportFirst = state.date.dayOfWeek == java.time.DayOfWeek.MONDAY,
     )
     // Before the first estimate Habit Age never shows on Today, pinned or not.
     val unavailable = if (healthspan?.result == null) setOf(TodayCard.HabitAge) else emptySet()
@@ -321,6 +326,7 @@ fun GlowTodayScreen(
                                                 icon = AppIcons.SlidersHorizontal, size = HaloButtonSize.Card,
                                             )
                                         }
+                                        TodayCard.Report -> weekReport?.let { ForkReportCard(it, onOpenReports) }
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenMetric,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, suggestion,
                                             onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
@@ -997,6 +1003,8 @@ private fun TodayRow(
         TodayCard.StartWorkout -> if (ctx.moment != Moment.Night) StartWorkoutStrip(ctx.usualSport, onStartSport)
         // Right now is in no moment any more, and a pin of it saved before drops out.
         TodayCard.Hero, TodayCard.EditToday -> Unit
+        // The fork's weekly report is drawn by the screen, which has the report.
+        TodayCard.Report -> Unit
     }
 }
 

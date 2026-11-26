@@ -42,8 +42,8 @@ class ReportsCopyTest {
 
     @Test fun `today says the target with the Load so far, and the bedtime with the sleep it allows`() {
         val target = ForkTarget.Target(ForkTarget.DayKind.Usual, 110..205, personal = true, fromStrap = false)
-        assertEquals("110 to 205" to "A usual day, 11 so far", ReportsCopy.target(plan(target)))
-        assertEquals(null to "After a week of wear", ReportsCopy.target(plan(null)))
+        assertEquals(ReportsCopy.TargetWords("110 to 205", "A usual day", "Load target, 11 so far"), ReportsCopy.target(plan(target)))
+        assertNull(ReportsCopy.target(plan(null)))
         assertEquals("22:12" to "8 h 25 asleep, up at 07:05, 25 min more for short nights", ReportsCopy.bedtime(plan(target)))
         assertEquals("22:12" to "8 h 25 asleep, up at 07:05", ReportsCopy.bedtime(plan(target, extra = 0)))
         assertEquals(null to "After a night with its waking", ReportsCopy.bedtime(plan(target, bedtime = null)))

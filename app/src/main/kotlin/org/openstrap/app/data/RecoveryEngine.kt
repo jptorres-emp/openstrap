@@ -214,7 +214,8 @@ class RecoveryEngine(private val dao: HealthDao) {
         val usualByDay = base.loadDays.indices.filter { it >= TREND_DAYS - 1 }
             .associate { span.dayOf(base.loadDays[it].first) to trend[it].ctl }
         val loads = base.loadDays.associate { span.dayOf(it.first) to it.second }
-        return ForkReports.Mornings(mornings, loads, base.todaySplit.total, usual, usualByDay, base.sleepNeed)
+        val fatigue = if (base.loads.size >= TREND_DAYS) trend.last().atl else null
+        return ForkReports.Mornings(mornings, loads, base.todaySplit.total, usual, usualByDay, base.sleepNeed, fatigue)
     }
 
     /** The spans [compute] reads and scores for [date]. */

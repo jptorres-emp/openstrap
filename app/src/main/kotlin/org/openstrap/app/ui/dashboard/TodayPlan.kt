@@ -41,6 +41,8 @@ enum class TodayCard(@StringRes private val labelRes: Int?, val editable: Boolea
     Recover(R.string.day_card_recover, pinnable = true),
     Workout(R.string.day_card_workout),
     Week(R.string.day_card_week, pinnable = true),
+    /** The fork's weekly report (jptorres-emp/openstrap): the last 7 days, opening the Reports page. */
+    Report(R.string.fork_today_report),
     HabitAge(R.string.day_card_habit_age, pinnable = true),
     /** Start a workout (spec 4.2): a strip above Edit Today, opening Ready with your usual sport. */
     StartWorkout(R.string.day_card_start_workout),
@@ -79,6 +81,10 @@ data class TodayFacts(
      * body list, with no week, Start a workout or Edit Today (boards HaloTodayNoStrap, HaloTodayLoading, HaloTodayFirstDay).
      */
     val bare: Boolean = false,
+    /** The fork's weekly report is worked out for today, so its card shows. */
+    val report: Boolean = false,
+    /** Monday: the weekly report is fresh, so it comes right under the hero instead of after the week. */
+    val reportFirst: Boolean = false,
 )
 
 /**
@@ -122,14 +128,18 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
         Moment.Night -> pair(TodayCard.Charge, TodayCard.HeartRate) + wide(TodayCard.Activity) + strip(TodayCard.LastNight)
     }
     // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
-    // workout, except where the hero is the workout or has Start of its own, and at night (spec 4.2).
+    // workout, except where the hero is the workout or has Start of its own, and at night (spec 4.2). The fork's weekly
+    // report follows the week, and on Mondays comes right under the hero.
+    val report = wide(TodayCard.Report).takeIf { facts.report && !facts.bare }
     return fitRows(
         listOfNotNull(
             TodaySlot(TodayCard.Hero, CardSize.Large),
             strip(TodayCard.Suggestion).takeIf { facts.suggestion && facts.isToday },
             strip(TodayCard.Alerts).takeIf { facts.alerts },
+            report?.takeIf { facts.reportFirst },
         ) + own + listOfNotNull(
             wide(TodayCard.Week).takeIf { !facts.bare },
+            report?.takeIf { !facts.reportFirst },
             wide(TodayCard.HabitAge).takeIf { facts.healthspan && !facts.bare },
             strip(TodayCard.StartWorkout).takeIf {
                 !facts.bare && facts.isToday && m != Moment.During && m != Moment.WorkoutWindow && m != Moment.Night

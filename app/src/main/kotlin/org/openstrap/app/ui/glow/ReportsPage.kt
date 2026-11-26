@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,6 +24,7 @@ import org.openstrap.app.data.ForkReports
 import org.openstrap.app.presentation.DayWords
 import org.openstrap.app.presentation.RecoveryBands
 import org.openstrap.app.presentation.ReportsCopy
+import org.openstrap.app.presentation.TrainingWords
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.Ink
@@ -33,18 +35,21 @@ import kotlin.math.roundToInt
 /**
  * The fork's Reports page (jptorres-emp/openstrap), opened from the You page, as WHOOP's weekly and monthly
  * assessments read: the week or the month ([GlowSegments]) in its average Recovery and Load a day, Recovery day by day
- * against your normal, and the sentence on both against the stretch before; then today's Recovery, Load target and
- * bedtime (the week), the days' Load against their targets, the stretch against the one before row by row, your
- * mornings, the days of the week and the sports (the month), and what moves your Recovery, with yesterday's journal.
- * [report] is null while it's worked out. [onJournal] opens yesterday's journal.
+ * against your normal, and the sentence on both against the stretch before; then the days' Load against their targets,
+ * the stretch against the one before row by row, your mornings, the days of the week and the sports (the month), and
+ * what moves your Recovery, with yesterday's journal. The third segment is the old fork's Training tab: today's Load
+ * target in your sports, the Recovery behind it and tonight's bedtime, your sports, the last week's Load against your
+ * usual and the calories burned a day. [report] is null while it's worked out. [onJournal] opens yesterday's journal.
  */
 @Composable
 internal fun ReportsPage(report: ForkReports.Report?, contentPadding: PaddingValues, onJournal: () -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    var month by rememberSaveable { mutableStateOf(false) }
+    var view by rememberSaveable { mutableIntStateOf(WEEK) }
     var about by rememberSaveable { mutableStateOf(false) }
     val title = stringResource(R.string.fork_reports_title)
-    val stretches = listOf(stringResource(R.string.fork_rep_week), stringResource(R.string.fork_rep_month))
+    val views = listOf(
+        stringResource(R.string.fork_rep_week), stringResource(R.string.fork_rep_month), stringResource(R.string.fork_rep_training),
+    )
     HaloPageList(contentPadding, variant = PageVariant.Detail) {
         item {
             HaloPageHeader(title, onBack) {
@@ -54,10 +59,8 @@ internal fun ReportsPage(report: ForkReports.Report?, contentPadding: PaddingVal
         if (report == null) {
             item { DetailEmpty(stringResource(R.string.fork_reports_loading)) }
         } else {
-            item {
-                GlowSegments(stretches, if (month) 1 else 0, { month = it == 1 }, role = Role.Tab, size = SegmentSize.Compact)
-            }
-            reportItems(report, month, onJournal)
+            item { GlowSegments(views, view, { view = it }, role = Role.Tab, size = SegmentSize.Compact) }
+            if (view == TRAINING) trainingItems(report) else reportItems(report, view == MONTH, onJournal)
         }
     }
     if (about) ReportsAbout { about = false }
@@ -69,7 +72,6 @@ private fun LazyListScope.reportItems(report: ForkReports.Report, month: Boolean
     item(key = "hero") { ReportsHero(stretch, month) }
     item(key = "chart") { RecoveryChart(stretch, report.normal, month) }
     ReportsCopy.sentence(stretch, month)?.let { item(key = "sentence") { DetailSentence(it) } }
-    if (!month) item(key = "today") { TodayCard(report.plan) }
     if (month) item(key = "mornings") { MorningsCard(stretch.now) }
     item(key = "target") { TargetCard(stretch, month) }
     item(key = "compare") { CompareCard(stretch, month) }
@@ -79,6 +81,21 @@ private fun LazyListScope.reportItems(report: ForkReports.Report, month: Boolean
     }
     item(key = "effects") { EffectsCard(report, onJournal) }
     effectNotes(report)
+}
+
+/**
+ * The Training view's blocks, in order: today's Load target and what fits it in your sports, the Recovery behind it and
+ * tonight's bedtime, your sports one by one, the last week's Load against your usual, and the calories burned a day.
+ */
+private fun LazyListScope.trainingItems(report: ForkReports.Report) {
+    val plan = report.plan
+    val training = report.training
+    item(key = "trainingHero") { TrainingHero(plan) }
+    plan.target?.let { t -> item(key = "plan") { DetailSentence(TrainingWords.plan(t, training.sports)) } }
+    item(key = "today") { TodayCard(plan) }
+    if (training.sports.isNotEmpty()) item(key = "fit") { SportsFitCard(training, plan.target) }
+    item(key = "risk") { BalanceCard(training) }
+    item(key = "kcal") { CaloriesCard(training) }
 }
 
 /**
@@ -148,10 +165,18 @@ private fun ReportsAbout(onDismiss: () -> Unit) {
     ) {
         SheetSection(stringResource(R.string.fork_rep_info_stretch_title), stringResource(R.string.fork_rep_info_stretch))
         SheetSection(stringResource(R.string.fork_rep_target), stringResource(R.string.fork_rep_info_target))
+        SheetSection(stringResource(R.string.fork_rep_fit_title), stringResource(R.string.fork_rep_info_sports))
+        SheetSection(stringResource(R.string.fork_rep_risk_title), remember { TrainingWords.withPercent(R.string.fork_rep_info_risk) })
+        SheetSection(stringResource(R.string.fork_rep_kcal_title), remember { TrainingWords.withPercent(R.string.fork_rep_info_kcal) })
         SheetSection(stringResource(R.string.fork_rep_bedtime), stringResource(R.string.fork_rep_info_bedtime))
         SheetSection(stringResource(R.string.fork_rep_effects), stringResource(R.string.fork_rep_info_habits))
     }
 }
+
+/** The segments: the week, the month and the Training view. */
+private const val WEEK = 0
+private const val MONTH = 1
+private const val TRAINING = 2
 
 /** Where the month's chart names its days: the first, two between and the last. */
 private val MONTH_LABEL_AT = listOf(0f, 1 / 3f, 2 / 3f, 1f)

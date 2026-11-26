@@ -1,24 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   The fork's reports and journal (jptorres-emp/openstrap): the Reports page from the You page, with the week and the
-  month against the stretch before, today's Load target and bedtime, the days of the week, the sports and what moves
-  your Recovery, and the journal sheet (ui/glow/ReportsPage.kt, ui/device/JournalSheet.kt). Translated into
-  Portuguese only.
+  month against the stretch before, the days of the week, the sports and what moves your Recovery, the Training view
+  (today's Load target in your sports, Recovery and bedtime, the last week's Load against your usual, the calories
+  burned a day), the week's card on Today, and the journal sheet (ui/glow/ReportsPage.kt, ui/glow/TrainingCards.kt,
+  ui/device/JournalSheet.kt). Translated into Portuguese only.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2" tools:ignore="MissingTranslation">
     <!-- The You page's rows that open the reports and the journal, and what they say under their names. -->
     <string name="fork_reports_row">Reports</string>
-    <string name="fork_reports_row_line">Week, month, today\'s effort and habits</string>
+    <string name="fork_reports_row_line">Week, month, training and habits</string>
     <string name="fork_journal_row">Journal</string>
     <string name="fork_journal_line_open">Yesterday\'s to fill in</string>
     <string name="fork_journal_line_done">Yesterday\'s filled in</string>
 
-    <!-- The Reports page: its title, what the (i) says to a screen reader, while it's worked out, and the two stretches. -->
+    <!-- The Reports page: its title, what the (i) says to a screen reader, while it's worked out, the two stretches and the Training view. -->
     <string name="fork_reports_title">Reports</string>
     <string name="fork_reports_about">About the reports</string>
     <string name="fork_reports_loading">Working out your reports</string>
     <string name="fork_rep_week">Week</string>
     <string name="fork_rep_month">Month</string>
+    <string name="fork_rep_training">Training</string>
+
+    <!-- Today's weekly report card, which opens the Reports page: its name (in Edit Today too), what it averages, and the
+         line under the last 7 days' Recovery against the 3 weeks before. -->
+    <string name="fork_today_report">Weekly report</string>
+    <string name="fork_today_report_note">Last 7 days</string>
+    <string name="fork_today_report_up">Recovery, up <xliff:g id="change" example="2">%1$d</xliff:g> on the 3 weeks before</string>
+    <string name="fork_today_report_down">Recovery, down <xliff:g id="change" example="2">%1$d</xliff:g> on the 3 weeks before</string>
+    <string name="fork_today_report_same">Recovery, the same as the 3 weeks before</string>
+    <string name="fork_today_report_alone">Average Recovery</string>
 
     <!-- The (i) sheet: how each part is worked out. -->
     <string name="fork_rep_info_title">How the reports work</string>
@@ -26,6 +37,10 @@
     <string name="fork_rep_info_stretch">The week is the last 7 days against the 3 weeks before, a week on average. The month is the last 30 days against the 30 before.</string>
     <string name="fork_rep_info_target">Today\'s Load target comes from your own training days in the last 6 weeks, or from your usual Load until there are 4 of them. Recovery says what the day is for.</string>
     <string name="fork_rep_info_bedtime">Bedtime tonight is the sleep you need, plus some for the last week\'s short nights, before your usual waking, at your usual time asleep against time in bed.</string>
+    <string name="fork_rep_info_sports">A sport\'s usual day is the median Load of the days in the last 6 weeks you did that sport and no other, once there are 2 of them. Load comes from heart rate, so heavy lifting with long rests reads lower than it feels.</string>
+    <!-- Read through Strings.format, so a percent sign is written twice. -->
+    <string name="fork_rep_info_risk">Fatigue (the last 7 days\' Load, the latest counting most) over fitness (the last 42 days\'), as the day began. 75 to 125%% is steady, the band Activity\'s Load card uses, and over 150%% is a spike. It\'s a guide, not a diagnosis: studies disagree on how well it predicts injuries. Days without the strap count as no Load.</string>
+    <string name="fork_rep_info_kcal">The app\'s own estimate, as Calories on Activity has it: what you burn at rest from your age, weight and height, plus steps, heart rate and workouts, averaged over each week\'s whole days. Estimates like this are often 10 to 20%% off. Food isn\'t in this count: to lose fat, burn more than you eat, and training and steps add to this number.</string>
     <string name="fork_rep_info_habits">What moves your Recovery compares your HRV on the mornings after a day with each habit against the mornings after a day without it, over the last 60 days. A permutation test says how sure that is.</string>
 
     <!-- The hero: the stretch's average Recovery, what it averages, and the Load a day beside it. -->
@@ -54,8 +69,8 @@
     <string name="fork_rep_from_strap">The strap\'s score, while yours learns</string>
     <string name="fork_rep_target">Load target</string>
     <string name="fork_rep_target_value"><xliff:g id="low" example="110">%1$d</xliff:g> to <xliff:g id="high" example="205">%2$d</xliff:g></string>
-    <!-- Under the target: what the day is for (fork_rep_kind_*), then the Load so far today. -->
-    <string name="fork_rep_target_line"><xliff:g id="kind" example="A usual day">%1$s</xliff:g>, <xliff:g id="load" example="11">%2$d</xliff:g> so far</string>
+    <!-- Under the target and what the day is for (fork_rep_kind_*): the Load so far today. -->
+    <string name="fork_rep_target_line">Load target, <xliff:g id="load" example="11">%1$d</xliff:g> so far</string>
     <string name="fork_rep_target_none">After a week of wear</string>
     <string name="fork_rep_kind_recover">A day to recover</string>
     <string name="fork_rep_kind_moderate">A moderate day</string>
@@ -65,6 +80,49 @@
     <string name="fork_rep_bedtime_line"><xliff:g id="asleep" example="8 h 25">%1$s</xliff:g> asleep, up at <xliff:g id="wake" example="07:05">%2$s</xliff:g></string>
     <string name="fork_rep_bedtime_line_extra"><xliff:g id="asleep" example="8 h 25">%1$s</xliff:g> asleep, up at <xliff:g id="wake" example="07:05">%2$s</xliff:g>, <xliff:g id="extra" example="25">%3$d</xliff:g> min more for short nights</string>
     <string name="fork_rep_bedtime_none">After a night with its waking</string>
+
+    <!-- The Training view's sentence under the target, in your sports: a sport's name is in lower case unless it's written
+         with capitals inside ("CrossFit"), and the number after the ≈ is a usual day's Load of it. Without any, in words. -->
+    <string name="fork_rep_plan_fits">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈ <xliff:g id="load" example="142">%2$d</xliff:g>).</string>
+    <string name="fork_rep_plan_fits_two">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈ <xliff:g id="load" example="142">%2$d</xliff:g>), or one of <xliff:g id="other" example="CrossFit">%3$s</xliff:g> (≈ <xliff:g id="other_load" example="120">%4$d</xliff:g>).</string>
+    <string name="fork_rep_plan_over">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈ <xliff:g id="load" example="142">%2$d</xliff:g>) goes over the target: keep it lighter.</string>
+    <string name="fork_rep_plan_under">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈ <xliff:g id="load" example="142">%2$d</xliff:g>) stays under the target: room to go harder.</string>
+    <string name="fork_rep_plan_recover">Keep it light today: a walk or mobility.</string>
+    <string name="fork_rep_plan_moderate">Train, but lighter than usual.</string>
+    <string name="fork_rep_plan_usual">Your usual training fits today.</string>
+    <string name="fork_rep_plan_push">A day to go harder than usual.</string>
+
+    <!-- Your sports: each one's usual day of Load, where it lands against today's target, and the days you did it. -->
+    <string name="fork_rep_fit_title">Your sports</string>
+    <string name="fork_rep_fit_note">A usual day\'s Load</string>
+    <string name="fork_rep_fit_under">Under today\'s target</string>
+    <string name="fork_rep_fit_within">Fits today\'s target</string>
+    <string name="fork_rep_fit_over">Over today\'s target</string>
+    <plurals name="fork_rep_fit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one"><xliff:g id="days" example="1">%1$d</xliff:g> day in 6 weeks</item>
+        <item quantity="other"><xliff:g id="days" example="9">%1$d</xliff:g> days in 6 weeks</item>
+    </plurals>
+
+    <!-- The last week's Load against your usual: the card's title and note, the share, the zone over 150% (the others are
+         core_tab_balance_*), and what each zone means. -->
+    <string name="fork_rep_risk_title">Load and injury risk</string>
+    <string name="fork_rep_risk_note">Last 7 days against your usual</string>
+    <string name="fork_rep_percent"><xliff:g id="percent" example="118">%1$d</xliff:g>%%</string>
+    <string name="fork_rep_balance_spike">Spike</string>
+    <string name="fork_rep_balance_easing">Under your usual: fine for a lighter week, but fitness fades if it lasts.</string>
+    <string name="fork_rep_balance_steady">The safe zone: build from here little by little.</string>
+    <string name="fork_rep_balance_building">Rising fast: keep the next days steady.</string>
+    <string name="fork_rep_balance_spike_line">A spike, the zone tied most to injuries: ease off.</string>
+
+    <!-- The calories burned a day, week by week, for fat loss: the card's title and note, the last 7 days against the
+         weeks before, and while there are none. -->
+    <string name="fork_rep_kcal_title">Calories burned</string>
+    <string name="fork_rep_kcal_note">kcal a day, by week</string>
+    <string name="fork_rep_kcal_alone"><xliff:g id="kcal" example="2,450">%1$s</xliff:g> kcal a day in the last 7 days.</string>
+    <string name="fork_rep_kcal_up"><xliff:g id="kcal" example="2,450">%1$s</xliff:g> kcal a day in the last 7 days, <xliff:g id="change" example="120">%2$s</xliff:g> more than the weeks before.</string>
+    <string name="fork_rep_kcal_down"><xliff:g id="kcal" example="2,450">%1$s</xliff:g> kcal a day in the last 7 days, <xliff:g id="change" example="120">%2$s</xliff:g> less than the weeks before.</string>
+    <string name="fork_rep_kcal_same"><xliff:g id="kcal" example="2,450">%1$s</xliff:g> kcal a day in the last 7 days, about the same as the weeks before.</string>
+    <string name="fork_rep_kcal_none">Shows after a whole day of wear, with your age, weight and height in your profile.</string>
 
     <!-- The days' Load against each day's own target: the counts, then the stretch before's. -->
     <string name="fork_rep_vs_target">Load against your target</string>

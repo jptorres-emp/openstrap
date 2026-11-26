@@ -32,6 +32,7 @@ import org.openstrap.app.data.ForkPlan
 import org.openstrap.app.data.ForkReports
 import org.openstrap.app.data.ForkTally
 import org.openstrap.app.data.ForkTarget
+import org.openstrap.app.data.ForkTraining
 import org.openstrap.app.data.JournalHabit
 import org.openstrap.app.data.db.WeightEntry
 import org.openstrap.app.R
@@ -54,9 +55,9 @@ import kotlin.random.Random
 
 /**
  * The fork's own pieces drawn to PNGs under build/shots, for a look without a phone: the numbers in Barlow Condensed
- * at every size, the weight sheet's body, the Reports page's week and month (from 60 made-up days run through the
- * reports' own sums) and the journal, in Portuguese (the fork's language) and English. Off unless OPENSTRAP_SHOTS is set
- * (the wip check sets it).
+ * at every size, the weight sheet's body, the Reports page's week, month and Training view (from 60 made-up days run
+ * through the reports' own sums) and the journal, in Portuguese (the fork's language) and English. Off unless
+ * OPENSTRAP_SHOTS is set (the wip check sets it).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -119,7 +120,7 @@ class ForkShotsTest {
                 date, recovery = 58 + random.nextInt(30), hrv = 46f + random.nextInt(14), restingHr = 52f + random.nextInt(6),
                 asleepMinutes = asleep, bedtime = 610 + random.nextInt(80), wakeTime = 410 + random.nextInt(50),
                 inBedMinutes = asleep + 40, deepRem = 120 + random.nextInt(50), load = 20f + random.nextInt(90),
-                steps = 6000 + random.nextInt(6000),
+                steps = 6000 + random.nextInt(6000), kcal = 2200f + random.nextInt(600),
                 sessions = listOfNotNull(
                     ForkReports.Session(SOCCER, 5400, late = true).takeIf { soccer },
                     ForkReports.Session(CROSS_TRAINING, 3600).takeIf { cross },
@@ -142,22 +143,30 @@ class ForkShotsTest {
         ForkReports.Report(
             today, ForkReports.week(marked, today, usual), ForkReports.month(marked, today, usual), ForkReports.normal(marked),
             ForkTally.weekdays(marked), ForkPlan.plan(marked, 480, target, 32f), ForkHabits.effects(marked, 55f), yesterday = null,
+            training = ForkTraining.training(marked, today.minusDays(1), fatigue = 68f, usual = 55f),
         )
     }
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
-    private fun page(name: String, month: Boolean) = shot(
-        name, then = if (month) ({ rules.compose.onNodeWithText(context.getString(R.string.fork_rep_month)).performClick() }) else null,
-    ) {
+    /** The page, on the segment named [segment] (the week when null). */
+    private fun page(name: String, segment: Int? = null) = shot(name, then = if (segment == null) null else ({ select(segment) })) {
         Box(Modifier.width(380.dp)) { ReportsPage(report, PaddingValues(0.dp), {}, {}) }
     }
 
-    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsPortuguese() = page("fork_reports_pt", month = false)
+    private fun select(segment: Int) {
+        rules.compose.onNodeWithText(context.getString(segment)).performClick()
+    }
 
-    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsMonthPortuguese() = page("fork_reports_month_pt", month = true)
+    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsPortuguese() = page("fork_reports_pt")
 
-    @Test @Config(qualifiers = "+h3200dp") fun reportsEnglish() = page("fork_reports_en", month = false)
+    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsMonthPortuguese() = page("fork_reports_month_pt", R.string.fork_rep_month)
+
+    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun trainingPortuguese() = page("fork_training_pt", R.string.fork_rep_training)
+
+    @Test @Config(qualifiers = "+h3200dp") fun reportsEnglish() = page("fork_reports_en")
+
+    @Test @Config(qualifiers = "+h3200dp") fun trainingEnglish() = page("fork_training_en", R.string.fork_rep_training)
 
     @Test @Config(qualifiers = "+pt-rPT") fun journalPortuguese() = shot("fork_journal_pt") {
         Box(Modifier.width(380.dp)) { JournalContent(JournalTicks(setOf(JournalHabit.Alcohol, JournalHabit.Stretching)), { _, _ -> }) }

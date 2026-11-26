@@ -44,7 +44,8 @@ object ForkReports {
 
     /**
      * What [RecoveryEngine.mornings] reads: the [mornings], oldest first, each worn day's [loads], the Load so far and
-     * the usual, your usual (fitness) Load through each worn day ([usual]) and the sleep you need.
+     * the usual, your usual (fitness) Load through each worn day ([usual]), the sleep you need, and the last week's Load
+     * (fatigue) as the usual is read.
      */
     data class Mornings(
         val mornings: List<Morning>,
@@ -53,17 +54,21 @@ object ForkReports {
         val usualLoad: Float?,
         val usual: Map<LocalDate, Float> = emptyMap(),
         val sleepNeed: Int = Recovery.SLEEP_NEED_MINUTES,
+        val fatigue: Float? = null,
     )
 
-    /** A workout on a day: its sport type, how long it lasted, and whether it started at 20:00 or later. */
-    data class Session(val sport: Int, val seconds: Long, val late: Boolean = false)
+    /**
+     * A workout on a day: its sport type, how long it lasted, whether it started at 20:00 or later, and whether you
+     * started it ([byYou]) rather than the strap noticing it by itself.
+     */
+    data class Session(val sport: Int, val seconds: Long, val late: Boolean = false, val byYou: Boolean = true)
 
     /**
      * A date's morning and the day after it: Recovery (the app's, or the strap's while the app's learns), the night's
      * HRV, resting heart rate, time asleep, [bedtime] (minutes after the noon before, so 23:30 is 690 and 00:30 is 750),
      * [wakeTime] (minutes after midnight), time in bed and deep and REM minutes, and the day's Load, steps and workouts.
      * [partial] marks today, whose Load and steps are so far. [journal] is the day's answer, [versus] where its Load
-     * ended against its target ([ForkTarget.mark]).
+     * ended against its target ([ForkTarget.mark]), [kcal] the energy spent that day.
      */
     data class Day(
         val date: LocalDate,
@@ -83,6 +88,7 @@ object ForkReports {
         val partial: Boolean = false,
         val journal: Set<JournalHabit>? = null,
         val versus: ForkTarget.Versus? = null,
+        val kcal: Float? = null,
     ) {
         val workouts: Int get() = sessions.size
         val lateWorkout: Boolean get() = sessions.any { it.late }
@@ -133,7 +139,8 @@ object ForkReports {
 
     /**
      * Everything the Reports page shows, worked out for [today]: the week and the month, your [normal] Recovery, the
-     * days of the week ([ForkTally.weekdays]), today's [plan], the habits' [effects] and yesterday's journal.
+     * days of the week ([ForkTally.weekdays]), today's [plan], the habits' [effects], yesterday's journal and the
+     * Training view ([training]).
      */
     data class Report(
         val today: LocalDate,
@@ -144,6 +151,7 @@ object ForkReports {
         val plan: ForkPlan.Plan,
         val effects: List<ForkHabits.Effect>,
         val yesterday: Set<JournalHabit>?,
+        val training: ForkTraining.Training = ForkTraining.Training(),
     )
 
     /** [days] in figures, the counts divided by [per] (3 for the three weeks a week is compared with). */

@@ -60,6 +60,8 @@ private fun ownLook(slot: TodaySlot, moment: Moment?): CardLook = when (slot.car
     TodayCard.Recover -> picture(Hue.Load, PictureKind.CountdownRing)
     TodayCard.Workout -> picture(Hue.Heart, PictureKind.ZoneBar)
     TodayCard.Week -> picture(Hue.Steps, PictureKind.WeekRings)
+    // The fork's weekly report: the week's Recovery in columns of dots, a picture no other Today card draws.
+    TodayCard.Report -> picture(Hue.Recovery, PictureKind.DayBars)
     TodayCard.HabitAge -> picture(Hue.HabitAge, PictureKind.AgeScale)
     TodayCard.EditToday -> CardLook(Tier.Plain, Hue.Neutral)
 }

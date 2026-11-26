@@ -34,12 +34,14 @@ class ForkReportsSource(private val dao: HealthDao, private val workouts: Workou
         val all = workouts.workouts().first().filter { it.workout.sportType != Workouts.GENERIC_ACTIVITY }
         val sessions = all.groupBy({ Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }) { w ->
             val late = Instant.ofEpochSecond(w.workout.start).atZone(zone).hour >= LATE_WORKOUT_HOUR
-            ForkReports.Session(w.workout.sportType, (w.end - w.workout.start).coerceAtLeast(0), late)
+            ForkReports.Session(w.workout.sportType, (w.end - w.workout.start).coerceAtLeast(0), late, w.startedByYou)
         }
+        val kcal = dao.dailyCaloriesOnce(from, today).filter { !it.partial }.associate { it.day to it.totalKcal }
         val days = generateSequence(from) { it.plusDays(1) }.takeWhile { it <= today }.map { date ->
             day(date, mornings[date], zone).copy(
                 load = if (date == today) read.todayLoad else read.loads[date], steps = steps[date],
                 sessions = sessions[date].orEmpty(), partial = date == today, journal = tags[date]?.let { JournalHabit.ofDay(it) },
+                kcal = kcal[date],
             )
         }.toList()
         val training = sessions.filterValues { list -> list.any { it.seconds >= TRAINING_SECONDS } }.keys
@@ -49,6 +51,7 @@ class ForkReportsSource(private val dao: HealthDao, private val workouts: Workou
             today, ForkReports.week(marked, today, read.usual), ForkReports.month(marked, today, read.usual),
             ForkReports.normal(marked), ForkTally.weekdays(marked), ForkPlan.plan(marked, read.sleepNeed, target, read.todayLoad),
             ForkHabits.effects(marked, read.usualLoad), marked.firstOrNull { it.date == today.minusDays(1) }?.journal,
+            ForkTraining.training(marked, today.minusDays(1), read.fatigue, read.usualLoad),
         )
     }
 

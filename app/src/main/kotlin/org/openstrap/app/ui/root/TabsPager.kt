@@ -273,6 +273,8 @@ private fun TabRoot(
         Tab.Today -> CompositionLocalProvider(LocalGlowMood provides (today.moment?.let(::momentMood) ?: GlowMood.Day)) {
             val edits by rootVm.todayEdits.collectAsStateWithLifecycle()
             val habitAgeSeen by rootVm.habitAgeSeenAsOf.collectAsStateWithLifecycle()
+            // The fork's weekly report card: worked out again when the morning's Recovery arrives or changes.
+            val weekReport = rememberForkWeek(container, shown.recovery?.let { it.date to it.readiness.score })
             GlowTodayScreen(
                 day, live.bpm, header = { TabHeader(Tab.Today, header) }, contentPadding = padding, moment = today.moment,
                 onOpenMetric = { openStack(Tab.Today, Detail.OfMetric(it)) },
@@ -308,6 +310,7 @@ private fun TabRoot(
                 onSyncNow = container.strap::syncNow,
                 usualBedtime = today.usualBedtime,
                 wear = shown.wear, firstScore = shown.firstScore,
+                weekReport = weekReport, onOpenReports = { onOpenPage(Page.Reports) },
             )
         }
         Tab.Recovery -> GlowRecoveryScreen(

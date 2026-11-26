@@ -12,6 +12,7 @@ import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.DayKey
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.Days
+import org.openstrap.app.data.ForkMirrored
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.catching
 import org.openstrap.app.data.db.ActivityExtendedMinute
@@ -40,6 +41,7 @@ import org.openstrap.app.data.db.SkinTemperature
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.history.ActivityLayout
 import org.openstrap.protocol.history.ActivitySample
@@ -105,6 +107,8 @@ class HistorySync internal constructor(
     private val log: (String) -> Unit,
     /** Called for a newly synced workout the strap auto-detected, to notify about it (codemap 05 §8). */
     private val onAutoDetected: (Workout) -> Unit = {},
+    /** The profile, for the fork's whole-track fix of workouts mirrored from Zepp's app ([ForkMirrored]). */
+    private val profile: suspend () -> UserProfile = { UserProfile() },
 ) {
     constructor(
         session: ChannelSession,
@@ -114,7 +118,7 @@ class HistorySync internal constructor(
         state: MutableStateFlow<SyncState>,
         log: (String) -> Unit,
         onAutoDetected: (Workout) -> Unit = {},
-    ) : this(session, gatt.asHistoryGatt(), dao, settings.asSyncCursors(), state, log, onAutoDetected)
+    ) : this(session, gatt.asHistoryGatt(), dao, settings.asSyncCursors(), state, log, onAutoDetected, { settings.profile.first() })
 
     private val zone = ZoneId.systemDefault()
     private val useChannel = session.services.has(Endpoints.HISTORY)
@@ -126,6 +130,11 @@ class HistorySync internal constructor(
     /** Syncs every type, or only the codes in [only] (an on-demand sync after a data-available push). */
     suspend fun run(only: Set<Int>? = null) = coroutineScope {
         state.value = SyncState.Running(Strings.app.get(R.string.system_sync_preparing))
+        // The fork's, once: the mirrored workouts stored before its whole-track fix take their whole track.
+        if (cursors.get(ForkMirrored.REPAIR_KEY) == null) {
+            ForkMirrored.repair(dao, dao.workouts().first(), profile(), zone, log)
+            cursors.set(ForkMirrored.REPAIR_KEY, Instant.now().epochSecond)
+        }
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
             if (useChannel) {
@@ -674,7 +683,11 @@ class HistorySync internal constructor(
         if (breath.isNotEmpty()) dao.insertBreathRate(breath)
         if (pai.isNotEmpty()) dao.insertPai(pai)
         if (sdnn.isNotEmpty()) dao.insertHrvSdnn(sdnn)
-        if (workouts.isNotEmpty()) dao.insertWorkouts(workouts)
+        if (workouts.isNotEmpty()) {
+            dao.insertWorkouts(workouts)
+            // The fork's: a workout started in Zepp's app is summed up over its first minutes only, so it takes its whole track.
+            ForkMirrored.repair(dao, workouts, profile(), zone, log)
+        }
         if (effects.isNotEmpty()) dao.insertSportEffects(effects)
         if (sleepSpo2.isNotEmpty()) dao.insertSleepSpo2(sleepSpo2)
         if (osaEvents.isNotEmpty()) dao.insertOsaEvents(osaEvents)

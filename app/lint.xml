@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The fork's lint settings (jptorres-emp/openstrap), on top of the build's lint block. Text the original adds shows in
+  English in the fork's Portuguese until it is translated, so a missing translation warns rather than fails: the
+  upstream sync merges the original every day (.github/workflows/upstream-sync.yml) and its summary lists what's new.
+-->
+<lint>
+    <issue id="MissingTranslation" severity="warning" />
+</lint>

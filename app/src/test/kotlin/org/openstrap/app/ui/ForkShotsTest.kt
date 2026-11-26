@@ -1,12 +1,13 @@
 package org.openstrap.app.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -16,38 +17,46 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.openstrap.app.data.ForkHabits
+import org.openstrap.app.data.ForkPlan
 import org.openstrap.app.data.ForkReports
+import org.openstrap.app.data.ForkTally
 import org.openstrap.app.data.ForkTarget
 import org.openstrap.app.data.JournalHabit
 import org.openstrap.app.data.db.WeightEntry
+import org.openstrap.app.R
+import org.openstrap.app.testing.ComposeRules
 import org.openstrap.app.ui.device.JournalContent
 import org.openstrap.app.ui.device.JournalTicks
-import org.openstrap.app.ui.glow.ReportsPage
-import androidx.compose.foundation.layout.PaddingValues
-import org.openstrap.app.testing.ComposeRules
 import org.openstrap.app.ui.device.WeightContent
 import org.openstrap.app.ui.glow.DotMatrixText
 import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.ReportsPage
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.theme.OpenStrapTheme
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.time.DayOfWeek
 import java.time.LocalDate
+import kotlin.random.Random
 
 /**
  * The fork's own pieces drawn to PNGs under build/shots, for a look without a phone: the numbers in Barlow Condensed
- * at every size, the weight sheet's body, and the Reports page and the journal in Portuguese (the fork's language) and
- * English. Off unless OPENSTRAP_SHOTS is set (the wip check sets it).
+ * at every size, the weight sheet's body, the Reports page's week and month (from 60 made-up days run through the
+ * reports' own sums) and the journal, in Portuguese (the fork's language) and English. Off unless OPENSTRAP_SHOTS is set
+ * (the wip check sets it).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -57,9 +66,13 @@ class ForkShotsTest {
 
     @Before fun only() = assumeTrue(System.getenv("OPENSTRAP_SHOTS") != null)
 
-    private fun shot(name: String, content: @Composable () -> Unit) {
+    private fun shot(name: String, then: (() -> Unit)? = null, content: @Composable () -> Unit) {
         rules.compose.setContent { OpenStrapTheme { Box(Modifier.background(Color.Black).padding(16.dp)) { content() } } }
         rules.compose.waitForIdle()
+        if (then != null) {
+            then()
+            rules.compose.waitForIdle()
+        }
         val bitmap = rules.compose.onRoot().captureToImage().asAndroidBitmap()
         val dir = File("build/shots").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -92,34 +105,68 @@ class ForkShotsTest {
         }
     }
 
-    private val report = run {
-        val week = ForkReports.Figures(64f, 3f, 1f, 52f, 54f, 412f, 48f, 4f, 8432f)
-        val before = ForkReports.Figures(58f, 2.3f, 1.3f, 49f, 56f, 398f, 41f, 3.3f, 7900f)
+    /** 60 made-up days, as the source would read them, through the reports' own sums. */
+    private val report: ForkReports.Report by lazy {
+        val today = LocalDate.of(2026, 11, 21)
+        val random = Random(3)
+        val raw = (ForkReports.DAYS - 1L downTo 0L).map { back ->
+            val date = today.minusDays(back)
+            val soccer = date.dayOfWeek == DayOfWeek.TUESDAY || date.dayOfWeek == DayOfWeek.THURSDAY
+            val cross = date.dayOfWeek in setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.SATURDAY)
+            val alcohol = date.dayOfWeek == DayOfWeek.FRIDAY
+            val asleep = 400 + random.nextInt(90)
+            ForkReports.Day(
+                date, recovery = 58 + random.nextInt(30), hrv = 46f + random.nextInt(14), restingHr = 52f + random.nextInt(6),
+                asleepMinutes = asleep, bedtime = 610 + random.nextInt(80), wakeTime = 410 + random.nextInt(50),
+                inBedMinutes = asleep + 40, deepRem = 120 + random.nextInt(50), load = 20f + random.nextInt(90),
+                steps = 6000 + random.nextInt(6000),
+                sessions = listOfNotNull(
+                    ForkReports.Session(SOCCER, 5400, late = true).takeIf { soccer },
+                    ForkReports.Session(CROSS_TRAINING, 3600).takeIf { cross },
+                ),
+                partial = back == 0L,
+                journal = if (back % 9 == 4L) null else if (alcohol) setOf(JournalHabit.Alcohol) else emptySet(),
+            )
+        }
+        // The mornings after soccer and a drink, a little lower, so the habits have something to show.
+        val days = raw.mapIndexed { i, d ->
+            val before = raw.getOrNull(i - 1)
+            val after = before != null && (before.sessions.any { it.sport == SOCCER } || before.journal.orEmpty().isNotEmpty())
+            if (after) d.copy(hrv = d.hrv!! * 0.85f, recovery = d.recovery!! - 9) else d
+        }
+        val loads = days.filter { !it.partial }.associate { it.date to it.load!! }
+        val usual = days.associate { it.date to 55f }
+        val training = days.filter { it.sessions.isNotEmpty() }.map { it.date }.toSet()
+        val marked = ForkTarget.mark(days, loads, training, usual)
+        val target = ForkTarget.target(marked.last(), loads, training, 55f)
         ForkReports.Report(
-            LocalDate.of(2026, 11, 21),
-            ForkReports.Compare(week, before),
-            ForkReports.Compare(week.copy(ready = 14f, low = 4f, workouts = 15f), before.copy(ready = 11f, low = 6f, workouts = 12f)),
-            ForkTarget.Target(ForkTarget.DayKind.Usual, 40..60, personal = true, fromStrap = false), 32f, 45f,
-            listOf(
-                ForkHabits.Effect(ForkHabits.Habit.Logged(JournalHabit.Alcohol), 6, 20, 52f, 66f, -14f, ForkHabits.Verdict.Clear),
-                ForkHabits.Effect(ForkHabits.Habit.ShortNight, 5, 21, 55f, 64f, -9f, ForkHabits.Verdict.Likely),
-                ForkHabits.Effect(ForkHabits.Habit.Logged(JournalHabit.Meditation), 2, 24, 70f, 63f, null, ForkHabits.Verdict.TooFew),
-            ),
-            yesterday = null,
+            today, ForkReports.week(marked, today, usual), ForkReports.month(marked, today, usual), ForkReports.normal(marked),
+            ForkTally.weekdays(marked), ForkPlan.plan(marked, 480, target, 32f), ForkHabits.effects(marked, 55f), yesterday = null,
         )
     }
 
-    @Test @Config(qualifiers = "+pt-rPT") fun reportsPortuguese() = shot("fork_reports_pt") {
+    private val context: Context get() = ApplicationProvider.getApplicationContext()
+
+    private fun page(name: String, month: Boolean) = shot(
+        name, then = if (month) ({ rules.compose.onNodeWithText(context.getString(R.string.fork_rep_month)).performClick() }) else null,
+    ) {
         Box(Modifier.width(380.dp)) { ReportsPage(report, PaddingValues(0.dp), {}, {}) }
     }
 
-    @Test fun reportsEnglish() = shot("fork_reports_en") {
-        Box(Modifier.width(380.dp)) { ReportsPage(report, PaddingValues(0.dp), {}, {}) }
-    }
+    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsPortuguese() = page("fork_reports_pt", month = false)
+
+    @Test @Config(qualifiers = "+pt-rPT-h3200dp") fun reportsMonthPortuguese() = page("fork_reports_month_pt", month = true)
+
+    @Test @Config(qualifiers = "+h3200dp") fun reportsEnglish() = page("fork_reports_en", month = false)
 
     @Test @Config(qualifiers = "+pt-rPT") fun journalPortuguese() = shot("fork_journal_pt") {
         Box(Modifier.width(380.dp)) { JournalContent(JournalTicks(setOf(JournalHabit.Alcohol, JournalHabit.Stretching)), { _, _ -> }) }
     }
 
     @Test @Config(qualifiers = "+pt-rPT") fun weightPortuguese() = weight("fork_weight_pt")
+
+    private companion object {
+        const val SOCCER = 191
+        const val CROSS_TRAINING = 130
+    }
 }

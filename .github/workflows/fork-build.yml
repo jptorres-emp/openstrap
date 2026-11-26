@@ -16,16 +16,21 @@ concurrency:
 permissions:
   contents: write
 
-env:
-  # The original's release this fork is built on, and the fork's own build of it (3.0.7-fork installs as 30007).
-  FORK_VERSION: 3.0.7-fork
-
 jobs:
   build:
     runs-on: ubuntu-26.04
     steps:
+      # The whole history, for the tags.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
+
+      # The original's last release in this history, and the fork's own build of it (3.1.0-fork installs as 30100).
+      - name: Version
+        run: |
+          v=$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude '*-fork') || { echo "No release of the original in the history: run the upstream sync, which brings its tags" >&2; exit 1; }
+          echo "FORK_VERSION=${v#v}-fork" >> "$GITHUB_ENV"
 
       - name: Test and build
         id: build
@@ -52,8 +57,14 @@ jobs:
           git commit -qm "Build of ${{ github.sha }}: $OUTCOME"
           git push -fq "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-results
           cd ..
+          # The first build of each of the original's releases is a release of its own too, v3.1.0-fork: the app's
+          # updater reads this fork's releases (update/Releases.kt), so a phone on an older one is offered it.
+          if [ -f out/OpenStrap.apk ] && ! gh release view "v$FORK_VERSION" > /dev/null 2>&1; then
+            gh release create "v$FORK_VERSION" out/OpenStrap.apk --target "${{ github.sha }}" --title "OpenStrap $FORK_VERSION" \
+              --notes "The original's ${FORK_VERSION%-fork} with the fork's changes (Portuguese, the weight log, the reports and the journal), signed with this fork's own key."
+          fi
           if [ -f out/OpenStrap.apk ]; then
             gh release delete latest --yes --cleanup-tag 2>/dev/null || true
             gh release create latest out/OpenStrap.apk --prerelease --target "${{ github.sha }}" \
-              --title "OpenStrap $FORK_VERSION (fork build)" --notes "Release build (R8) of ${{ github.sha }}, the original's 3.0.7 with the fork's changes, signed with this fork's own key."
+              --title "OpenStrap $FORK_VERSION (fork build)" --notes "Release build (R8) of ${{ github.sha }}, the original's ${FORK_VERSION%-fork} with the fork's changes, signed with this fork's own key."
           fi

@@ -2,8 +2,6 @@ package org.openstrap.app.ui.device
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -23,12 +20,14 @@ import org.openstrap.app.data.db.WeightEntry
 import org.openstrap.app.data.settings.Units
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.ui.glow.ButtonPair
 import org.openstrap.app.ui.glow.GlowLineChart
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.HaloSheet
 import org.openstrap.app.ui.glow.PageNumberField
-import org.openstrap.app.ui.glow.PageSheet
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.Space
 import java.time.LocalDate
 import kotlin.math.abs
 
@@ -69,7 +68,7 @@ class WeightEntries(val list: List<WeightEntry>)
  * weight and makes it the profile's ([onSave] gets kilograms); Cancel, or pulling the sheet down, changes nothing.
  */
 @Composable
-fun WeightSheet(
+internal fun WeightSheet(
     entries: WeightEntries,
     today: LocalDate,
     imperial: Boolean,
@@ -82,12 +81,16 @@ fun WeightSheet(
         mutableStateOf(todays?.kg?.let { "%.1f".format(java.util.Locale.ROOT, if (imperial) Units.kgToLb(it) else it) }.orEmpty())
     }
     val kg = WeightLog.parse(text, imperial)
-    PageSheet(onDismiss, stringResource(R.string.fork_weight_title), note = stringResource(R.string.fork_weight_note)) {
+    HaloSheet(
+        onDismiss, stringResource(R.string.fork_weight_title), note = stringResource(R.string.fork_weight_note),
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { kg?.let(onSave) },
+                rightEnabled = kg != null,
+            )
+        },
+    ) {
         WeightContent(entries, today, imperial, text, { text = it }, kg, modifier)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { kg?.let(onSave) }, Modifier.weight(1f), enabled = kg != null, primary = true)
-        }
     }
 }
 
@@ -99,18 +102,16 @@ internal fun WeightContent(
 ) {
     val summary = remember(entries, today) { WeightLog.summary(entries.list, today) }
     val weeks = remember(entries, today) { WeightLog.weeks(entries.list, today) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.S16)) {
         PageNumberField(
             text, onText, stringResource(R.string.fork_weight_field),
             stringResource(if (imperial) R.string.fork_weight_unit_lb else R.string.fork_weight_unit_kg),
             error = text.isNotBlank() && kg == null, decimal = true,
         )
         summary?.week?.let { week ->
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.fork_weight_average, weightText(week, imperial)), color = Color.White, style = GlowType.body)
-                weightChange(summary, imperial)?.let {
-                    Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S4)) {
+                Text(stringResource(R.string.fork_weight_average, weightText(week, imperial)), color = Ink.Primary, style = GlowType.body)
+                weightChange(summary, imperial)?.let { Text(it, color = Ink.Secondary, style = GlowType.secondary) }
             }
         }
         val shown = weeks.dropWhile { it.kg == null }

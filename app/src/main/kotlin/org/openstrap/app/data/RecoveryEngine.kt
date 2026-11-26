@@ -203,10 +203,18 @@ class RecoveryEngine(private val dao: HealthDao) {
             val n = nights.last()
             val r = Recovery.readiness(n, base.nights, loadsBefore(base.loadDays, day), base.causes, base.sleepNeed)
             val strap = n.strapDay?.let(reads.strapNights::get)?.score
-            ForkReports.Morning(span.dayOf(day), r.score, r.strainAlert, strap, n.hrv, n.restingHr, n.asleepMinutes)
+            val deepRem = n.deepMinutes?.let { deep -> n.remMinutes?.let { deep + it } }
+            ForkReports.Morning(
+                span.dayOf(day), r.score, r.strainAlert, strap, n.hrv, n.restingHr, n.asleepMinutes, n.start, n.end, deepRem,
+            )
         }.sortedBy { it.date }
-        val usual = if (base.loads.size >= TREND_DAYS) Recovery.fitnessFatigue(base.loads).last().ctl else null
-        return ForkReports.Mornings(mornings, base.loadDays.associate { span.dayOf(it.first) to it.second }, base.todaySplit.total, usual)
+        val trend = Recovery.fitnessFatigue(base.loads)
+        val usual = if (base.loads.size >= TREND_DAYS) trend.last().ctl else null
+        // Fitness through each worn day, once a week of them is behind it, for each day's own Load target.
+        val usualByDay = base.loadDays.indices.filter { it >= TREND_DAYS - 1 }
+            .associate { span.dayOf(base.loadDays[it].first) to trend[it].ctl }
+        val loads = base.loadDays.associate { span.dayOf(it.first) to it.second }
+        return ForkReports.Mornings(mornings, loads, base.todaySplit.total, usual, usualByDay, base.sleepNeed)
     }
 
     /** The spans [compute] reads and scores for [date]. */

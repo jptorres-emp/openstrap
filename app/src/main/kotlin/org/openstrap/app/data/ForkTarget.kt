@@ -94,6 +94,26 @@ object ForkTarget {
         return start..start + MIN_WIDTH
     }
 
+    /**
+     * [days] with each finished day's Load read against that day's own target ([ForkTarget.Versus]), as the morning set
+     * it: the loads and the [training] days before it, and your [usual] Load up to the day before ([usualBefore]).
+     */
+    fun mark(
+        days: List<ForkReports.Day>,
+        loads: Map<LocalDate, Float>,
+        training: Set<LocalDate>,
+        usual: Map<LocalDate, Float>,
+    ): List<ForkReports.Day> =
+        days.map { day ->
+            val load = day.load?.takeIf { !day.partial }
+            val target = load?.let { target(day, loads, training, usualBefore(usual, day.date)) }
+            if (load == null || target == null) day else day.copy(versus = versus(load, target.range))
+        }
+
+    /** Your usual Load through the last worn day before [date], from [usual] ([ForkReports.Mornings.usual]). */
+    fun usualBefore(usual: Map<LocalDate, Float>, date: LocalDate): Float? =
+        usual.entries.filter { it.key < date }.maxByOrNull { it.key }?.value
+
     /** Where [load] sits against [target]. */
     fun versus(load: Float, target: IntRange): Versus = load.roundToInt().let {
         when {

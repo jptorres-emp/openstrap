@@ -18,5 +18,6 @@
     <string name="fork_sleep_performance_line">%1$d%% do sono de que precisas</string>
     <string name="fork_sleep_performance">Desempenho</string>
     <string name="fork_sleep_efficiency">Eficiência</string>
+    <string name="fork_workouts_sport_futsal">Futsal</string>
     <string name="fork_percent">%1$d%%</string>
 </resources>

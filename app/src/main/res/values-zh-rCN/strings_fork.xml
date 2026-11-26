@@ -1,22 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="fork_weight_row">体重</string>
-    <string name="fork_weight_line_none">记录体重即可查看趋势</string>
-    <string name="fork_weight_line"><xliff:g id="weight" example="92.4 公斤">%1$s</xliff:g>，7 天平均 <xliff:g id="average" example="92.8 公斤">%2$s</xliff:g></string>
-    <string name="fork_weight_kg"><xliff:g id="kilograms" example="92.4">%1$.1f</xliff:g> 公斤</string>
-    <string name="fork_weight_lb"><xliff:g id="pounds" example="203.7">%1$.1f</xliff:g> 磅</string>
-    <string name="fork_weight_unit_kg">公斤</string>
-    <string name="fork_weight_unit_lb">磅</string>
-    <string name="fork_weight_title">体重</string>
-    <string name="fork_weight_note">早上早餐前称重。7 天平均值能看出趋势，不受每天起伏影响。保存后也会更新个人资料中的体重。</string>
-    <string name="fork_weight_field">今天的体重</string>
-    <string name="fork_weight_average">7 天平均 <xliff:g id="average" example="92.8 公斤">%1$s</xliff:g></string>
-    <string name="fork_weight_down">比前 7 天少 <xliff:g id="change" example="0.5 公斤">%1$s</xliff:g></string>
-    <string name="fork_weight_up">比前 7 天多 <xliff:g id="change" example="0.3 公斤">%1$s</xliff:g></string>
-    <string name="fork_weight_same">与前 7 天相同</string>
-    <string name="fork_weight_chart">每周的 7 天平均体重：<xliff:g id="first" example="92.8 公斤">%1$s</xliff:g> 到 <xliff:g id="last" example="91.6 公斤">%2$s</xliff:g></string>
-    <string name="fork_sleep_performance_line">达到所需睡眠的 <xliff:g id="percent" example="92">%1$d</xliff:g>%%</string>
-    <string name="fork_sleep_performance">达成率</string>
-    <string name="fork_sleep_efficiency">效率</string>
-    <string name="fork_percent"><xliff:g id="percent" example="92">%1$d</xliff:g>%%</string>
+<!-- The fork's own text (jptorres-emp/openstrap) in Chinese: so far only the sport it names that the original doesn't. -->
+<resources>
+    <string name="fork_workouts_sport_futsal">五人制足球</string>
 </resources>

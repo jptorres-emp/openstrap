@@ -104,11 +104,10 @@
         <item quantity="other"><xliff:g id="days" example="9">%1$d</xliff:g> days in 6 weeks</item>
     </plurals>
 
-    <!-- The last week's Load against your usual: the card's title and note, the share, the zone over 150% (the others are
-         core_tab_balance_*), and what each zone means. -->
+    <!-- The last week's Load against your usual: the card's title and note, the zone over 150% (the others are
+         core_tab_balance_*), and what each zone means. The share is fork_percent. -->
     <string name="fork_rep_risk_title">Load and injury risk</string>
     <string name="fork_rep_risk_note">Last 7 days against your usual</string>
-    <string name="fork_rep_percent"><xliff:g id="percent" example="118">%1$d</xliff:g>%%</string>
     <string name="fork_rep_balance_spike">Spike</string>
     <string name="fork_rep_balance_easing">Under your usual: fine for a lighter week, but fitness fades if it lasts.</string>
     <string name="fork_rep_balance_steady">The safe zone: build from here little by little.</string>

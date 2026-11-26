@@ -34,6 +34,8 @@
     <string name="fork_sleep_performance">Performance</string>
     <!-- A figure's name in the sleep details: the time asleep against the time in bed. -->
     <string name="fork_sleep_efficiency">Efficiency</string>
+    <!-- A sport's name: futsal, which the strap has as a sport of its own (164) and the original doesn't name. -->
+    <string name="fork_workouts_sport_futsal">Futsal</string>
     <!-- A figure's value: a percentage. -->
     <string name="fork_percent"><xliff:g id="percent" example="92">%1$d</xliff:g>%%</string>
 </resources>

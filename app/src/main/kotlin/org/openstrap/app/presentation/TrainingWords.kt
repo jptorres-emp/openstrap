@@ -77,7 +77,7 @@ object TrainingWords {
             ForkTraining.Zone.Building -> R.string.core_tab_balance_building to R.string.fork_rep_balance_building
             ForkTraining.Zone.Spike -> R.string.fork_rep_balance_spike to R.string.fork_rep_balance_spike_line
         }
-        return ReportRow(strings.get(word), strings.format(R.string.fork_rep_percent, (ratio * PERCENT).roundToInt()), strings.get(line))
+        return ReportRow(strings.get(word), strings.format(R.string.fork_percent, (ratio * PERCENT).roundToInt()), strings.get(line))
     }
 
     /** The calories burned a day in the last week against the weeks before it; null without the last week's. */

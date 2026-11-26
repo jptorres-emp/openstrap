@@ -75,7 +75,6 @@
     </plurals>
     <string name="fork_rep_risk_title">Carga e risco de lesão</string>
     <string name="fork_rep_risk_note">Últimos 7 dias face ao habitual</string>
-    <string name="fork_rep_percent">%1$d%%</string>
     <string name="fork_rep_balance_spike">Pico</string>
     <string name="fork_rep_balance_easing">Abaixo do habitual: bom numa semana leve, mas perdes forma se durar.</string>
     <string name="fork_rep_balance_steady">A zona segura: daqui, aumenta aos poucos.</string>

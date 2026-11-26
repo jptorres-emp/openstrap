@@ -26,9 +26,11 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
 
-      # The original's last release in this history, and the fork's own build of it (3.1.0-fork installs as 30100).
+      # The original's last release in this history, and the fork's own build of it (3.1.0-fork installs as 30100). Its
+      # tags are read from the original, as a fork doesn't get the ones made after it was forked.
       - name: Version
         run: |
+          git fetch -q --tags https://github.com/sayed0am/unstrap.git
           v=$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude '*-fork') || { echo "No release of the original in the history: run the upstream sync, which brings its tags" >&2; exit 1; }
           echo "FORK_VERSION=${v#v}-fork" >> "$GITHUB_ENV"
 

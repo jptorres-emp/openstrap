@@ -511,8 +511,8 @@ object Workouts {
         204 to R.string.core_workouts_sport_pickleball, 205 to R.string.core_workouts_sport_padel,
         191 to R.string.core_workouts_sport_soccer, 216 to R.string.core_workouts_sport_padel,
         227 to R.string.core_workouts_sport_pickleball,
-        // The fork's: futsal, on the strap's own list (0x004D) as 164 and offered under More sports.
-        164 to R.string.fork_workouts_sport_futsal,
+        // The fork's: futsal, on the strap's own list and offered under More sports.
+        ForkSports.FUTSAL to R.string.fork_workouts_sport_futsal,
         215 to R.string.core_workouts_sport_dog_walking, 222 to R.string.core_workouts_sport_hyrox_training,
         223 to R.string.core_workouts_sport_activity, 224 to R.string.core_workouts_sport_mountain_hike,
         225 to R.string.core_workouts_sport_rucking, 226 to R.string.core_workouts_sport_hybrid_training,

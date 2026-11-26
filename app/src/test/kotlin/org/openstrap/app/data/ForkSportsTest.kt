@@ -20,7 +20,7 @@ class ForkSportsTest {
     }
 
     private companion object {
-        const val FUTSAL = 164
+        const val FUTSAL = ForkSports.FUTSAL
         const val FOOTBALL = 191
     }
 }

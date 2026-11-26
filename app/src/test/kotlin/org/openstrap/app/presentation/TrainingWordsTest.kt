@@ -22,12 +22,12 @@ class TrainingWordsTest {
 
     @Test fun `the sentence says what fits today in your sports, or in words without any`() {
         assertEquals(
-            "A usual day of football fits (≈ 142), or one of cross-training (≈ 120).", TrainingWords.plan(target, listOf(football, cross)),
+            "A usual day of football fits (≈\u00A0142), or one of cross-training (≈\u00A0120).", TrainingWords.plan(target, listOf(football, cross)),
         )
-        assertEquals("A usual day of football fits (≈ 142).", TrainingWords.plan(target, listOf(football, hiit)))
-        assertEquals("A usual day of HIIT (≈ 230) goes over the target: keep it lighter.", TrainingWords.plan(target, listOf(hiit, football)))
+        assertEquals("A usual day of football fits (≈\u00A0142).", TrainingWords.plan(target, listOf(football, hiit)))
+        assertEquals("A usual day of HIIT (≈\u00A0230) goes over the target: keep it lighter.", TrainingWords.plan(target, listOf(hiit, football)))
         assertEquals(
-            "A usual day of cross-training (≈ 120) stays under the target: room to go harder.",
+            "A usual day of cross-training (≈\u00A0120) stays under the target: room to go harder.",
             TrainingWords.plan(target.copy(range = 130..220), listOf(cross)),
         )
         assertEquals("Keep it light today: a walk or mobility.", TrainingWords.plan(target.copy(kind = ForkTarget.DayKind.Recover), emptyList()))

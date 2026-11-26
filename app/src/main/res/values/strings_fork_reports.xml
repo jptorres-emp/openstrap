@@ -82,11 +82,12 @@
     <string name="fork_rep_bedtime_none">After a night with its waking</string>
 
     <!-- The Training view's sentence under the target, in your sports: a sport's name is in lower case unless it's written
-         with capitals inside ("CrossFit"), and the number after the ≈ is a usual day's Load of it. Without any, in words. -->
-    <string name="fork_rep_plan_fits">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈ <xliff:g id="load" example="142">%2$d</xliff:g>).</string>
-    <string name="fork_rep_plan_fits_two">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈ <xliff:g id="load" example="142">%2$d</xliff:g>), or one of <xliff:g id="other" example="CrossFit">%3$s</xliff:g> (≈ <xliff:g id="other_load" example="120">%4$d</xliff:g>).</string>
-    <string name="fork_rep_plan_over">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈ <xliff:g id="load" example="142">%2$d</xliff:g>) goes over the target: keep it lighter.</string>
-    <string name="fork_rep_plan_under">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈ <xliff:g id="load" example="142">%2$d</xliff:g>) stays under the target: room to go harder.</string>
+         with capitals inside ("CrossFit"), and the number after the ≈ (a no-break space between them) is a usual day's
+         Load of it. Without any, in words. -->
+    <string name="fork_rep_plan_fits">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈&#160;<xliff:g id="load" example="142">%2$d</xliff:g>).</string>
+    <string name="fork_rep_plan_fits_two">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> fits (≈&#160;<xliff:g id="load" example="142">%2$d</xliff:g>), or one of <xliff:g id="other" example="CrossFit">%3$s</xliff:g> (≈&#160;<xliff:g id="other_load" example="120">%4$d</xliff:g>).</string>
+    <string name="fork_rep_plan_over">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈&#160;<xliff:g id="load" example="142">%2$d</xliff:g>) goes over the target: keep it lighter.</string>
+    <string name="fork_rep_plan_under">A usual day of <xliff:g id="sport" example="football">%1$s</xliff:g> (≈&#160;<xliff:g id="load" example="142">%2$d</xliff:g>) stays under the target: room to go harder.</string>
     <string name="fork_rep_plan_recover">Keep it light today: a walk or mobility.</string>
     <string name="fork_rep_plan_moderate">Train, but lighter than usual.</string>
     <string name="fork_rep_plan_usual">Your usual training fits today.</string>

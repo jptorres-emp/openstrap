@@ -20,6 +20,8 @@ object DayWords {
 
     /** A day this many days back or fewer, past yesterday, goes by its weekday. A week back would repeat today's. */
     private const val WEEKDAY_WITHIN_DAYS = 6L
+    /** The letters of a Portuguese weekday on a week's strip of bars ("seg"). */
+    private const val PT_WEEKDAY_LETTERS = 3
 
     private const val SHORT = "EEE d MMM"
     private const val SHORT_WITH_YEAR = "EEE d MMM yyyy"
@@ -87,7 +89,7 @@ object DayWords {
      * too wide for seven bars, so the fork's Portuguese takes their first three letters ("seg"), as a calendar does.
      */
     fun weekdayShort(date: LocalDate, locale: Locale = Locale.getDefault()): String =
-        date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).let { if (locale.language == "pt") it.take(3) else it }
+        date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).let { if (locale.language == "pt") it.take(PT_WEEKDAY_LETTERS) else it }
 
     /** The weekday in full with the day and month, for a date further out: "Sunday 22 Nov". */
     fun weekdayDayMonth(date: LocalDate, locale: Locale = Locale.getDefault()): String =

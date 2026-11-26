@@ -55,10 +55,10 @@
     <string name="fork_rep_bedtime_line">%1$s a dormir, acordar às %2$s</string>
     <string name="fork_rep_bedtime_line_extra">%1$s a dormir, acordar às %2$s, mais %3$d min pelas noites curtas</string>
     <string name="fork_rep_bedtime_none">Depois de uma noite com hora de acordar</string>
-    <string name="fork_rep_plan_fits">Cabe um dia habitual de %1$s (≈ %2$d).</string>
-    <string name="fork_rep_plan_fits_two">Cabe um dia habitual de %1$s (≈ %2$d), ou de %3$s (≈ %4$d).</string>
-    <string name="fork_rep_plan_over">Um dia habitual de %1$s (≈ %2$d) passa do alvo: faz mais leve.</string>
-    <string name="fork_rep_plan_under">Um dia habitual de %1$s (≈ %2$d) fica abaixo do alvo: dá para puxar mais.</string>
+    <string name="fork_rep_plan_fits">Cabe um dia habitual de %1$s (≈&#160;%2$d).</string>
+    <string name="fork_rep_plan_fits_two">Cabe um dia habitual de %1$s (≈&#160;%2$d), ou de %3$s (≈&#160;%4$d).</string>
+    <string name="fork_rep_plan_over">Um dia habitual de %1$s (≈&#160;%2$d) passa do alvo: faz mais leve.</string>
+    <string name="fork_rep_plan_under">Um dia habitual de %1$s (≈&#160;%2$d) fica abaixo do alvo: dá para puxar mais.</string>
     <string name="fork_rep_plan_recover">Hoje, mantém leve: uma caminhada ou mobilidade.</string>
     <string name="fork_rep_plan_moderate">Treina, mas mais leve do que o habitual.</string>
     <string name="fork_rep_plan_usual">Hoje cabe o teu treino habitual.</string>

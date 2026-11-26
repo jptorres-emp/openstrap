@@ -7,6 +7,7 @@ import org.openstrap.app.data.ForkTally
 import org.openstrap.app.data.ForkTarget
 import org.openstrap.app.i18n.Strings
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
@@ -90,9 +91,9 @@ object ReportsCopy {
     fun amount(v: Float, locale: Locale = Locale.getDefault()): String =
         if (abs(v - v.roundToInt()) < HALF_TENTH) Units.count(v.roundToInt(), locale) else Units.decimal(v, 1, locale)
 
-    /** The days of the week, Monday first, short ("Mon"), for the chart. */
+    /** The days of the week, Monday first, short as a week's bars name them ("Mon"), for the chart. */
     fun weekdayLabels(locale: Locale = Locale.getDefault()): List<String> =
-        DayOfWeek.entries.map { it.getDisplayName(TextStyle.SHORT, locale) }
+        DayOfWeek.entries.map { DayWords.weekdayShort(A_MONDAY.plusDays(it.ordinal.toLong()), locale) }
 
     /** What the days of the week say: the best and the worst for Recovery, or that they're alike. */
     fun weekdays(weekdays: List<Float?>, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String? {
@@ -104,4 +105,7 @@ object ReportsCopy {
     }
 
     private const val HALF_TENTH = 0.05f
+
+    /** Any Monday, to name the days of the week from. */
+    private val A_MONDAY = LocalDate.of(2024, 1, 1)
 }

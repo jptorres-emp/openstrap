@@ -82,9 +82,12 @@ object DayWords {
     /** A day for a chart or a short label, always dated: "Tue 21 Oct". */
     fun short(date: LocalDate, locale: Locale = Locale.getDefault()): String = date.format(Formatters.of(SHORT, locale))
 
-    /** A weekday's short name, for a week's strip of bars: "Tue". */
+    /**
+     * A weekday's short name, for a week's strip of bars: "Tue". Portugal's short names are the whole word ("segunda"),
+     * too wide for seven bars, so the fork's Portuguese takes their first three letters ("seg"), as a calendar does.
+     */
     fun weekdayShort(date: LocalDate, locale: Locale = Locale.getDefault()): String =
-        date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
+        date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).let { if (locale.language == "pt") it.take(3) else it }
 
     /** The weekday in full with the day and month, for a date further out: "Sunday 22 Nov". */
     fun weekdayDayMonth(date: LocalDate, locale: Locale = Locale.getDefault()): String =

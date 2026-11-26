@@ -32,10 +32,10 @@ class ReportsCopyTest {
     @Test fun `the sentence reads Recovery and Load against the stretch before`() {
         val week = stretch(figures(), figures(recovery = 72f, load = 25f))
         assertEquals(
-            "Recovery averaged 74, 2 up on the 3 weeks before. Your Load was 36% higher.", ReportsCopy.sentence(week, month = false),
+            "Recovery averaged 74, up 2 on the 3 weeks before. Your Load was 36% higher.", ReportsCopy.sentence(week, month = false),
         )
         val month = stretch(figures(recovery = 70f, load = 25.5f), figures(recovery = 73f, load = 25f))
-        assertEquals("Recovery averaged 70, 3 down on the 30 days before. Your Load was about the same.", ReportsCopy.sentence(month, month = true))
+        assertEquals("Recovery averaged 70, down 3 on the 30 days before. Your Load was about the same.", ReportsCopy.sentence(month, month = true))
         assertEquals("Recovery averaged 74.", ReportsCopy.sentence(stretch(figures(), null), month = true))
         assertNull(ReportsCopy.sentence(stretch(figures(recovery = null), null), month = false))
     }

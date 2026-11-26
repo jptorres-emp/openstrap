@@ -231,7 +231,10 @@ class StepsWidgetModelTest {
             val total = WidgetText.line(WidgetText.TITLE_SP, scale) + row.height(scale) + line + 2 * StepsLayout.MIN_GAP_DP
             assertTrue("at $scale: $total", total <= wide.second + 1e-3f)
         }
-        assertEquals(StepsLayout.LINE_DP, StepsLayout.wideLine(wide.second, StepsLayout.numberRow("8,432", "1,568 to go", wide.first, 1f), 1f)!!, 0f)
+        // The fork's narrower Barlow figures keep the Wide's number bigger than the original's dots, so the line takes
+        // what's left under it: more than its least, if short of its full height.
+        val line = StepsLayout.wideLine(wide.second, StepsLayout.numberRow("8,432", "1,568 to go", wide.first, 1f), 1f)!!
+        assertTrue("line $line", line >= StepsLayout.MIN_LINE_DP && line <= StepsLayout.LINE_DP)
         // A font too large for the line drops it rather than clip.
         assertNull(StepsLayout.wideLine(wide.second, StepsLayout.numberRow("8,432", "1,568 to go", wide.first, 2.4f), 2.4f))
     }

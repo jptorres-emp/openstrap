@@ -23,7 +23,7 @@ import org.openstrap.app.ui.theme.MetricColors
 
 /** A card's rows, as one stable value for Compose. */
 @Immutable
-internal class ReportRows(val rows: List<ReportRow>)
+private class ReportRows(val rows: List<ReportRow>)
 
 /** Today: the morning's Recovery and its word, the Load target with the Load so far, and tonight's bedtime. */
 @Composable

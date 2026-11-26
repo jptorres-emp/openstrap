@@ -39,8 +39,8 @@
     <string name="fork_rep_normal">Your normal, <xliff:g id="low" example="69">%1$d</xliff:g> to <xliff:g id="high" example="77">%2$d</xliff:g></string>
 
     <!-- The sentence under the chart: Recovery against the stretch before (fork_rep_before_week or _month), then the Load. -->
-    <string name="fork_rep_sentence_up">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>, <xliff:g id="change" example="2">%2$d</xliff:g> up on <xliff:g id="before" example="the 3 weeks before">%3$s</xliff:g>.</string>
-    <string name="fork_rep_sentence_down">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>, <xliff:g id="change" example="2">%2$d</xliff:g> down on <xliff:g id="before" example="the 3 weeks before">%3$s</xliff:g>.</string>
+    <string name="fork_rep_sentence_up">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>, up <xliff:g id="change" example="2">%2$d</xliff:g> on <xliff:g id="before" example="the 3 weeks before">%3$s</xliff:g>.</string>
+    <string name="fork_rep_sentence_down">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>, down <xliff:g id="change" example="2">%2$d</xliff:g> on <xliff:g id="before" example="the 3 weeks before">%3$s</xliff:g>.</string>
     <string name="fork_rep_sentence_same">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>, the same as <xliff:g id="before" example="the 3 weeks before">%2$s</xliff:g>.</string>
     <string name="fork_rep_sentence_alone">Recovery averaged <xliff:g id="average" example="74">%1$d</xliff:g>.</string>
     <string name="fork_rep_before_week">the 3 weeks before</string>

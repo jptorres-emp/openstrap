@@ -53,11 +53,26 @@ object WidgetRefresh {
 
     /**
      * Debug builds: the strap status line every widget shows instead of the real one, for the gallery: "notpaired",
-     * "low", "stale" (4 hours ago), "yesterday", "week" (3 days ago), "syncing", "failed", "bluetooth", or "none" for no line; null reads
+     * "low", "stale" (4 hours ago), "yesterday", "week" (3 days ago), "syncing", "failed", "bluetooth", "synced" (all
+     * well, ten minutes ago), or "none" for no line; null reads
      * the strap.
      */
     @Volatile
     var debugStrap: String? = null
+
+    /** Debug builds: every widget shows its sample day ([WidgetSamples]) instead of the database, for the gallery. */
+    @Volatile
+    var debugSample: Boolean = false
+
+    /** Debug builds: with [debugSample], Start shows a workout recording, for the gallery. */
+    @Volatile
+    var debugRecording: Boolean = false
+
+    /** [debugRecording] where it applies. */
+    val recordingOverride: Boolean get() = BuildConfig.DEBUG && debugSample && debugRecording
+
+    /** [debugSample] where it applies. */
+    val sampleOverride: Boolean get() = BuildConfig.DEBUG && debugSample
 
     /** [debugStrap] where it applies. */
     val statusOverride: String? get() = if (BuildConfig.DEBUG) debugStrap else null
@@ -72,10 +87,14 @@ object WidgetRefresh {
         "syncing" -> StrapStatus.Syncing
         "failed" -> StrapStatus.SyncFailed
         "bluetooth" -> StrapStatus.BluetoothOff
+        "synced" -> StrapStatus.Synced(now - SYNCED_AGO_S)
         else -> null
     }
 
     /** [debugMoment] and [debugPlaced] where they apply. */
     val momentOverride: org.openstrap.app.data.Moment? get() = if (BuildConfig.DEBUG) debugMoment else null
     val placedOverride: Set<WidgetKind>? get() = if (BuildConfig.DEBUG) debugPlaced else null
+
+    /** How long ago the gallery's "synced" line last synced, seconds. */
+    private const val SYNCED_AGO_S = 600L
 }

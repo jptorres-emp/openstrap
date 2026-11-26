@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="core_coach_zone">Zona %1$d</string>
+    <string name="core_coach_zones">Zona %1$d a %2$d</string>
+    <string name="core_coach_minutes">%1$d min</string>
+    <string name="core_coach_kcal" tools:ignore="PluralsCandidate">%1$d kcal</string>
+    <string name="core_coach_meters">%1$s m</string>
+    <string name="core_coach_feet">%1$s ft</string>
+    <string name="core_coach_km">%1$s km</string>
+    <string name="core_coach_mi">%1$s mi</string>
+</resources>

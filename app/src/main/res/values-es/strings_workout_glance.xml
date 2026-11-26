@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="workout_glance_unit_bpm">lpm</string>
+    <string name="workout_glance_unit_in_set">en esta serie</string>
+    <string name="workout_glance_unit_left">izquierda</string>
+    <string name="workout_glance_unit_min">min</string>
+    <string name="workout_glance_unit_min_of">min de %1$d min</string>
+    <string name="workout_glance_unit_m_to_go">m por recorrer</string>
+    <string name="workout_glance_unit_s_left_minute">s restantes del minuto</string>
+    <string name="workout_glance_unit_s_left">s restantes</string>
+    <string name="workout_glance_unit_s_rest">s de descanso</string>
+    <string name="workout_glance_figure_pace">Ritmo /km</string>
+    <string name="workout_glance_figure_pace_mi">Ritmo /mi</string>
+    <string name="workout_glance_figure_bpm">lpm</string>
+    <string name="workout_glance_figure_active_kcal">Kcal activas</string>
+    <string name="workout_glance_figure_km">km</string>
+    <string name="workout_glance_figure_mi">mi</string>
+    <string name="workout_glance_figure_km_from_steps">km de pasos</string>
+    <string name="workout_glance_figure_mi_from_steps">mi por pasos</string>
+    <string name="workout_glance_figure_average_bpm">Promedio de lpm</string>
+    <string name="workout_glance_figure_effort">Esfuerzo</string>
+    <string name="workout_glance_effort_of_5">%1$d de 5</string>
+    <plurals name="workout_glance_figure_sets_done">
+        <item quantity="one">Serie completada</item>
+        <item quantity="many">Series completadas</item>
+        <item quantity="other">Series completadas</item>
+    </plurals>
+    <string name="workout_glance_pause">Pausar</string>
+    <string name="workout_glance_resume">Reanudar</string>
+    <string name="workout_glance_still_going">¿Sigues ahí?</string>
+    <string name="workout_glance_in_car">Parece que vas en auto</string>
+    <string name="workout_glance_no_movement">Sin movimiento durante %1$d min</string>
+    <string name="workout_glance_keep_going">Sigue así</string>
+    <string name="workout_glance_end">Terminar</string>
+    <string name="workout_glance_paused_for">En pausa durante %1$s</string>
+    <string name="workout_glance_paused_so_far">%1$s, %2$s hasta ahora</string>
+    <string name="workout_glance_waiting">Esperando frecuencia cardíaca</string>
+    <string name="workout_glance_zone_lower">zona %1$d</string>
+    <string name="workout_glance_zone">Zona %1$d</string>
+    <string name="workout_glance_effort_lower">esfuerzo %1$d</string>
+    <string name="workout_glance_bpm">%1$d lpm</string>
+    <string name="workout_glance_bpm_down">%1$d lpm, bajó %2$d</string>
+    <string name="workout_glance_set">Serie %1$d</string>
+    <string name="workout_glance_next_set_what">Serie %1$d, %2$s</string>
+    <string name="workout_glance_load">%1$d × %2$s kg</string>
+    <string name="workout_glance_start_set">Iniciar serie %1$d</string>
+    <string name="workout_glance_set_of_time">Serie %1$d de %2$d, %3$s</string>
+    <string name="workout_glance_set_time">Serie %1$d, %2$s</string>
+    <string name="workout_glance_set_done">Serie completada</string>
+    <string name="workout_glance_rest_left">Quedan %1$s de descanso</string>
+    <string name="workout_glance_set_next_lower" tools:ignore="PluralsCandidate">sigue la serie %1$d</string>
+    <string name="workout_glance_rest_bpm_sentence">%1$d lpm</string>
+    <string name="workout_glance_rest_bpm_down_sentence">%1$d lpm, bajó %2$d</string>
+    <string name="workout_glance_rest_ends_sooner">termina antes por debajo de %1$d lpm</string>
+    <string name="workout_glance_add_rest_30">+30 s</string>
+    <string name="workout_glance_ready_for_set_1">Listos para la serie 1</string>
+    <string name="workout_glance_rest_over_of" tools:ignore="PluralsCandidate">Descanso terminado, sigue la serie %1$d de %2$d</string>
+    <string name="workout_glance_rest_over" tools:ignore="PluralsCandidate">Descanso terminado, sigue la serie %1$d</string>
+    <string name="workout_glance_mind_of">%1$s, %2$s de %3$d min</string>
+    <string name="workout_glance_break_left">%1$s, quedan %2$s</string>
+    <string name="workout_glance_start_period">Iniciar %1$s</string>
+    <string name="workout_glance_start">Empezar</string>
+    <string name="workout_glance_full_time">Tiempo cumplido, %1$s</string>
+    <string name="workout_glance_work_rep">Trabajo, repetición %1$d de %2$d</string>
+    <string name="workout_glance_work_round">Trabajo, ronda %1$d de %2$d</string>
+    <string name="workout_glance_then_rest">Luego %1$s de descanso</string>
+    <string name="workout_glance_last_one">El último</string>
+    <string name="workout_glance_done">Hecho</string>
+    <string name="workout_glance_rest_rep_next" tools:ignore="PluralsCandidate">Descanso, sigue la repetición %1$d</string>
+    <string name="workout_glance_rest_round_next" tools:ignore="PluralsCandidate">Descanso, sigue la ronda %1$d</string>
+    <string name="workout_glance_skip_rest">Omitir descanso</string>
+    <string name="workout_glance_add_rest_10">+10 s</string>
+    <string name="workout_glance_warming_up">Calentando, %1$s</string>
+    <string name="workout_glance_start_rounds">Comenzar rondas</string>
+    <plurals name="workout_glance_all_reps_done">
+        <item quantity="one">%1$d repetición hecha</item>
+        <item quantity="many">Las %1$d repeticiones hechas</item>
+        <item quantity="other">Las %1$d repeticiones hechas</item>
+    </plurals>
+    <plurals name="workout_glance_all_rounds_done">
+        <item quantity="one">%1$d ronda hecha</item>
+        <item quantity="many">Las %1$d rondas hechas</item>
+        <item quantity="other">Las %1$d rondas hechas</item>
+    </plurals>
+    <string name="workout_glance_join">%1$s, %2$s</string>
+    <string name="workout_glance_fastest_was">el más rápido hasta ahora fue el km %1$d</string>
+    <string name="workout_glance_fastest_was_mile">la más rápida hasta ahora fue la milla %1$d</string>
+    <string name="workout_glance_fastest_this">tu más rápido hasta ahora</string>
+    <string name="workout_glance_split_average">Promedio %1$d lpm</string>
+    <string name="workout_glance_target">Objetivo %1$s</string>
+    <string name="workout_glance_goal">Meta %1$s</string>
+    <string name="workout_glance_reached">Alcanzado</string>
+    <string name="workout_glance_about_minutes_to_go">Aprox. %1$d min para llegar</string>
+    <string name="workout_glance_about_under_a_minute">Menos de un minuto restante</string>
+    <string name="workout_glance_minutes_to_go">Faltan %1$d min</string>
+    <string name="workout_glance_under_a_minute">Menos de un minuto restante</string>
+    <string name="workout_glance_kcal_to_go" tools:ignore="PluralsCandidate">Faltan %1$d kcal</string>
+    <string name="workout_glance_to_go">Faltan %1$s</string>
+</resources>

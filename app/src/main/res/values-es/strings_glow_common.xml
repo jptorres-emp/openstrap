@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_cancel">Cancelar</string>
+    <string name="glow_done">Listo</string>
+    <string name="glow_save">Guardar</string>
+    <string name="glow_close">Cerrar</string>
+    <string name="glow_delete">Eliminar</string>
+    <string name="glow_continue">Continuar</string>
+    <string name="glow_share">Compartir</string>
+    <string name="glow_trim">Recortar</string>
+    <string name="glow_loading">Cargando</string>
+    <string name="glow_unit_bpm">lpm</string>
+    <string name="glow_unit_min">min</string>
+    <string name="glow_no_value">Sin lectura</string>
+    <string name="glow_no_night_value">No hay datos para esta noche</string>
+    <string name="glow_no_reading_yet">Aún no hay lecturas</string>
+    <string name="glow_after_next_sync">Tras la próxima sincronización</string>
+    <string name="glow_add_profile">Agrega edad, peso y estatura</string>
+    <string name="glow_no_value_yet">Aún sin lectura</string>
+    <string name="glow_back">Atrás</string>
+    <string name="glow_page_switch">Cambiar</string>
+    <string name="glow_page_change">Modificar</string>
+    <string name="glow_tag_about">Acerca de %1$s</string>
+    <string name="glow_info_what">Qué es</string>
+    <string name="glow_info_normal">Qué es normal para ti</string>
+    <string name="glow_info_how">Cómo se calcula</string>
+    <string name="glow_info_off">Por qué podría variar</string>
+    <string name="glow_tabletop_heart_rate">Frecuencia cardíaca</string>
+    <string name="glow_tabletop_latest">Última</string>
+    <string name="glow_tabletop_live">En vivo</string>
+    <string name="glow_tabletop_resting">En reposo %1$d</string>
+    <string name="glow_tabletop_bpm">%1$d lpm</string>
+    <string name="glow_unit_h">h</string>
+</resources>

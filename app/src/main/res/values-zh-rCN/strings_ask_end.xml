@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ask_end_page_title">运动</string>
+    <string name="ask_end_section">停下时询问是否结束</string>
+    <string name="ask_end_switch">停下时询问是否结束</string>
+    <string name="ask_end_switch_note">停止运动时振动提醒，不会自行结束运动</string>
+    <string name="ask_end_most">大多数运动</string>
+    <string name="ask_end_most_note">跑步、骑行、步行、力量、HIIT</string>
+    <string name="ask_end_games">球类与竞技</string>
+    <string name="ask_end_games_note">板式网球、网球、足球</string>
+    <string name="ask_end_mind_body">瑜伽与普拉提</string>
+    <string name="ask_end_mind_body_note">长时间静止本就是其中一部分</string>
+    <string name="ask_end_footnote">手环振动一次，应用会询问。继续运动的话，过同样的时间后会再次询问。</string>
+    <string name="ask_end_after">%1$d 分钟后</string>
+    <string name="ask_end_off">关闭</string>
+    <string name="ask_end_during">运动期间</string>
+    <string name="ask_end_zones_max">最大 %1$d 次/分</string>
+    <string name="ask_end_sheet_note">静止 %1$d 分钟后振动。关闭在列表末尾。</string>
+    <string name="ask_end_sheet_note_off">这些运动不振动也不询问。选择一个时间即可重新开启。</string>
+    <string name="ask_end_wheel">静止分钟数</string>
+    <string name="ask_end_you_line">%1$d 分钟后询问是否结束</string>
+    <string name="ask_end_you_line_some">部分运动会询问是否结束</string>
+    <string name="ask_end_you_line_off">询问是否结束已关闭</string>
+</resources>

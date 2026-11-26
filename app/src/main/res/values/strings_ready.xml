@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ready, the screen before a workout starts (board HaloReadyEveryKind): the goal type tabs or menu, the hero's ruler
+  and its line, the settings card under the hero and the Outdoor switch. In ui/glow/ReadyScreen.kt, ReadyCardio.kt,
+  ReadyGoalHero.kt and ReadyPlans.kt.
+-->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- The row label before the goal type menu, and what the ruler sets, for screen readers. One word. -->
+    <string name="ready_goal">Goal</string>
+    <!-- What the goal type tabs and menu choose, for screen readers. -->
+    <string name="ready_goal_type">Goal type</string>
+    <!-- The goal type menu button, for screen readers: "Goal type, Distance. Change it". -->
+    <string name="ready_goal_type_change">Goal type, <xliff:g id="type" example="Distance">%1$s</xliff:g>. Change it</string>
+
+    <!-- Tabs: no plan or length for strength and mind and body. Very short. -->
+    <string name="ready_tab_open">Open</string>
+    <!-- Tabs: HIIT and games with no rounds. Very short. -->
+    <string name="ready_tab_free">Free</string>
+    <!-- Tab: HIIT rounds of work and rest by the clock. Very short. -->
+    <string name="ready_tab_timed">Timed</string>
+    <!-- Tab: a game played in periods. Very short. -->
+    <string name="ready_tab_periods">Periods</string>
+
+    <!-- Under a distance goal: how long it takes at last time's pace. -->
+    <string name="ready_hero_pace_about">About <xliff:g id="minutes" example="31">%1$d</xliff:g> min at your pace</string>
+    <!-- Under a zone goal: the heart rates to keep between. -->
+    <string name="ready_hero_zone_keep">Keep <xliff:g id="low" example="120">%1$d</xliff:g> to <xliff:g id="high" example="155">%2$d</xliff:g> bpm</string>
+    <!-- Under a zone goal of the top zone: the heart rate to stay above. -->
+    <string name="ready_hero_zone_keep_up">Keep above <xliff:g id="low" example="172">%1$d</xliff:g> bpm</string>
+    <!-- After a zone goal's number, "2 to 3 heart zones". The form follows how many zones. -->
+    <plurals name="ready_hero_heart_zones">
+        <item quantity="one">heart zone</item>
+        <item quantity="other">heart zones</item>
+    </plurals>
+    <!-- After run intervals' count: "6 reps of 400 m". The form follows the reps. -->
+    <plurals name="ready_hero_reps_of">
+        <item quantity="one">rep of <xliff:g id="length" example="400 m">%1$s</xliff:g></item>
+        <item quantity="other">reps of <xliff:g id="length" example="400 m">%1$s</xliff:g></item>
+    </plurals>
+    <!-- Under run intervals: about how long the reps and rests take. -->
+    <string name="ready_hero_reps_about">About <xliff:g id="minutes" example="22">%1$d</xliff:g> min with rests</string>
+    <!-- After strength's sets in the hero. The form follows the sets. -->
+    <plurals name="ready_hero_sets">
+        <item quantity="one">set</item>
+        <item quantity="other">sets</item>
+    </plurals>
+    <!-- After HIIT's rounds in the hero. The form follows the rounds. -->
+    <plurals name="ready_hero_rounds">
+        <item quantity="one">round</item>
+        <item quantity="other">rounds</item>
+    </plurals>
+    <!-- After a game's periods in the hero. The form follows the periods. -->
+    <plurals name="ready_hero_periods">
+        <item quantity="one">period</item>
+        <item quantity="other">periods</item>
+    </plurals>
+    <!-- Under HIIT's timed rounds: all of their time, "4 min in all". -->
+    <string name="ready_hero_in_all"><xliff:g id="time" example="4 min">%1$s</xliff:g> in all</string>
+    <!-- Under HIIT's every minute rounds: all of their time, and that the rest is what is left of each round. -->
+    <string name="ready_hero_every_in_all"><xliff:g id="time" example="12 min">%1$s</xliff:g> in all, rest is what is left</string>
+    <!-- Under a game's periods: about how long the periods and breaks take. -->
+    <string name="ready_hero_periods_about">About <xliff:g id="minutes" example="70">%1$d</xliff:g> min with breaks</string>
+
+    <!-- The hero with no goal: what it says over last time's figures, "No goal, last session Wed". -->
+    <string name="ready_last_no_goal">No goal, last session <xliff:g id="day" example="Wed">%1$s</xliff:g></string>
+    <!-- The hero with no plan: what it says over last time's figures, "No plan, last session Sat". -->
+    <string name="ready_last_no_plan">No plan, last session <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
+    <!-- The no-goal hero's line: last time's figure and the rest, "5.2 km, 28 min at 5:40 per km". -->
+    <string name="ready_last_time_line">Last time <xliff:g id="last" example="5.2 km, 28 min at 5:40 per km">%1$s</xliff:g></string>
+    <!-- Under last time's distance in the hero: its time and pace, "28:10 at 11:44 per km". -->
+    <string name="ready_last_pace_line"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="11:44">%2$s</xliff:g> per km</string>
+    <!-- Under last time's distance in the hero, in miles: its time and pace, "28:10 at 8:40 per mile". -->
+    <string name="ready_last_pace_line_mi"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="8:40">%2$s</xliff:g> per mile</string>
+    <!-- The hero with no goal and no workout of the sport yet. Very short. -->
+    <string name="ready_no_goal">No goal</string>
+    <!-- The hero with no plan and no workout of the sport yet. Very short. -->
+    <string name="ready_no_plan">No plan</string>
+
+    <!-- Settings under the hero, each with a minus and plus. -->
+    <string name="ready_rest_between_sets">Rest between sets</string>
+    <string name="ready_work">Work</string>
+    <string name="ready_rest">Rest</string>
+    <string name="ready_round_every">Each round starts every</string>
+    <string name="ready_each_rep">Each rep</string>
+    <string name="ready_each_period">Each period</string>
+    <string name="ready_break">Break</string>
+    <!-- A setting's minus and plus buttons, for screen readers: "Rest, less" and "Rest, more". -->
+    <string name="ready_less"><xliff:g id="setting" example="Rest">%1$s</xliff:g>, less</string>
+    <string name="ready_more"><xliff:g id="setting" example="Rest">%1$s</xliff:g>, more</string>
+
+    <!-- The switch for a sport with an indoor side. One word. -->
+    <string name="ready_outdoor">Outdoor</string>
+    <!-- Under Outdoor when on and GPS has a fix: "GPS for distance and a map, accurate to 6 m". -->
+    <string name="ready_outdoor_gps_ready">GPS for distance and a map, accurate to <xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
+    <!-- Under Outdoor when on and GPS has a fix that isn't close enough yet. -->
+    <string name="ready_outdoor_gps_close">GPS for distance and a map, accurate to <xliff:g id="meters" example="40">%1$d</xliff:g> m for now</string>
+    <!-- Under Outdoor when on and GPS has no fix yet. -->
+    <string name="ready_outdoor_gps_finding">GPS for distance and a map, finding you</string>
+    <!-- Under Outdoor when off, for a sport on foot. -->
+    <string name="ready_outdoor_off_steps">Distance from your steps</string>
+    <!-- Under Outdoor when off, for a ride. -->
+    <string name="ready_outdoor_off">No distance indoors</string>
+    <!-- Under Outdoor when the phone's location is off. Followed by ready_location_turn_on. -->
+    <string name="ready_location_off">Location is off.</string>
+    <!-- After ready_location_off, a link that turns location on. -->
+    <string name="ready_location_turn_on">Turn it on</string>
+    <!-- Ready, a zone goal: opens the Heart rate zones page. -->
+    <string name="ready_your_zones">Your zones</string>
+    <!-- Ready, run intervals: names the reps to find again. Also the sheet's title. -->
+    <string name="ready_save_intervals">Save intervals</string>
+    <!-- Ready, run intervals: lists the intervals saved for the sport. -->
+    <string name="ready_saved_intervals">Saved</string>
+    <!-- Under the name in the Save intervals sheet. -->
+    <string name="ready_save_note">Find them when you start a workout. Up to ten are kept.</string>
+    <!-- The empty name field in the Save intervals sheet. -->
+    <string name="ready_name_hint">Name, like Tuesday intervals</string>
+    <!-- What tapping Ready's big goal number does, for a screen reader. -->
+    <string name="ready_type_goal">Type the goal</string>
+</resources>

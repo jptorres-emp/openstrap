@@ -219,7 +219,7 @@ class MomentWidgetModelTest {
         assertTrue(m.sentences.isEmpty() && m.figures.isEmpty())
         assertNull(m.chart)
         val r = m.recording!!
-        assertEquals("Outdoor run", r.sport.name)
+        assertEquals("Run", r.sport.name)
         assertEquals("Recording since 17:42", r.since)
         assertEquals("Since 17:42", r.sinceShort)
         assertTrue(m.opensLive)
@@ -454,9 +454,12 @@ class MomentWidgetModelTest {
 
     private val scales = listOf(1f, 1.08f, 1.3f)
 
-    /** One UI's cells inside the padding (spec 2.1), and the three sizes' minimums. */
-    private val oneUi = Triple(140f to 180f, 313f to 180f, 313f to 290f)
-    private val minimum = Triple(110f to 110f, 260f to 120f, 260f to 220f)
+    /**
+     * One UI's widths and the three sizes' minimum widths, inside the padding (spec 2.1), each at its bucket's own
+     * content height: rows are decided per size bucket, so a taller launcher cell only gives the flexible space more.
+     */
+    private val oneUi = Triple(140f to 110f, 313f to 120f, 313f to 220f)
+    private val minimum = Triple(110f to 110f, 240f to 120f, 240f to 220f)
 
     private fun everyMoment(): List<Pair<String, MomentWidgetModel>> = listOf(
         "waking" to wakingModel(),
@@ -502,12 +505,21 @@ class MomentWidgetModelTest {
         "Large" to cells.third to MomentLayout.large(m, cells.third.first, cells.third.second, s),
     )
 
-    @Test fun `on One UI's cells no gap is over 32 dp, at every moment and font`() {
+    /**
+     * Whether [fit] holds in [height] on the grid. The model counts the grid's 8 dp for every gap, but the widget puts only
+     * 4 dp between the Small's number and its word, and its one flexible space may close to nothing at the largest font
+     * (the top row is 32 dp high already), so a Small that is short by those gaps still fits: nothing is cut.
+     */
+    private fun fitsGrid(size: String, m: MomentWidgetModel, fit: MomentLayout.Fit, height: Float): Boolean =
+        fit.fits(height) ||
+            (size == "Small" && m.recording == null && fit.content + (fit.inner - 1) * WidgetGrid.GAP_TIGHT_DP <= height + 0.01f)
+
+    @Test fun `on One UI's widths every moment fits its bucket's height at every font, the grid's gaps kept`() {
         for ((what, m) in everyMoment()) for (s in scales) for ((key, fit) in fits(m, oneUi, s)) {
             val (size, cell) = key
-            val gap = fit.gap(cell.second)
-            assertTrue("$what $size at $s: gap $gap (content ${fit.content}, ${fit.inner} between)", gap <= MomentLayout.TARGET_GAP_DP)
-            assertTrue("$what $size at $s: doesn't fit ${cell.second}", fit.fits(cell.second))
+            // The content and the grid's 8 dp between its blocks fit the bucket, so the one flexible space is never negative.
+            assertTrue("$what $size at $s: content ${fit.content}, ${fit.inner} between, doesn't fit ${cell.second}", fitsGrid(size, m, fit, cell.second))
+            fit.top?.let { assertEquals("$what $size at $s: the top row is the grid's", WidgetGrid.TOP_ROW_DP, it.height, 0f) }
         }
     }
 
@@ -515,7 +527,7 @@ class MomentWidgetModelTest {
         for ((what, m) in everyMoment()) for (s in scales) for (cells in listOf(minimum, oneUi)) for ((key, fit) in fits(m, cells, s)) {
             val (size, cell) = key
             current = m
-            assertTrue("$what $size ${cell} at $s: content ${fit.content} + gaps", fit.fits(cell.second))
+            assertTrue("$what $size ${cell} at $s: content ${fit.content} + gaps", fitsGrid(size, m, fit, cell.second))
             assertOneLine("$what $size $cell at $s", fit, cell.first, s)
         }
     }
@@ -523,8 +535,9 @@ class MomentWidgetModelTest {
     @Test fun `the essentials stay at the minimums at the fonts phones use`() {
         for ((what, m) in everyMoment()) for (s in listOf(1f, 1.08f)) {
             val small = MomentLayout.small(m, 110f, 110f, s)
-            val wide = MomentLayout.wide(m, 260f, 120f, s)
-            val large = MomentLayout.large(m, 260f, 220f, s)
+            val wide = MomentLayout.wide(m, 240f, 120f, s)
+            val wideOneUi = MomentLayout.wide(m, 313f, 120f, s)
+            val large = MomentLayout.large(m, 240f, 220f, s)
             if (m.number != null) {
                 assertTrue("$what Small at $s keeps the number", small.dot > 0f)
                 assertNotNull("$what Small at $s keeps the word", small.word)
@@ -532,7 +545,9 @@ class MomentWidgetModelTest {
                 assertNotNull("$what Large at $s keeps the number row", large.row)
             }
             if (m.sentences.isNotEmpty()) {
-                assertNotNull("$what Wide at $s keeps a sentence", wide.sentence)
+                // The Wide's 120 dp holds the top row, one line of sentence and the number row: on One UI's width a shorter
+                // wording fits one line, and at the bucket's narrowest a long one gives way before it wraps to a third.
+                if (m.recording == null) assertNotNull("$what Wide at $s on One UI keeps a sentence", wideOneUi.sentence)
                 assertNotNull("$what Large at $s keeps a sentence", large.sentence)
             }
             if (m.chart != null) assertTrue("$what Large at $s keeps the chart", large.chart > 0f)
@@ -610,7 +625,11 @@ class MomentWidgetModelTest {
         assertEquals(StatusButton.SIZE_DP, wide.top!!.height, 0f)
         assertNotNull(wide.top.words)
         assertTrue(wide.fits(180f))
-        assertNull(MomentLayout.small(m, 140f, 180f, 1f, l).top!!.words)
-        assertNull(MomentLayout.wide(m, 313f, 180f, 1f).top)
+        assertNull(MomentLayout.small(m, 140f, 110f, 1f, l).top!!.words)
+        // With no status the top row is still the grid's, so a status arriving never moves what is under it.
+        val quiet = MomentLayout.wide(m, 313f, 180f, 1f).top!!
+        assertNull(quiet.status)
+        assertNull(quiet.words)
+        assertEquals(WidgetGrid.TOP_ROW_DP, quiet.height, 0f)
     }
 }

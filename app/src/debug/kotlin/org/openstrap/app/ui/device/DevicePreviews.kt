@@ -13,6 +13,7 @@ import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.LeafPreviews
 import org.openstrap.app.ui.glow.PreviewPage
 import org.openstrap.app.ui.glow.say
+import org.openstrap.app.ui.theme.Ink
 
 /** [StrapHero] connected and syncing, then away, as the Strap page shows it. No clock, so it reads the same every day. */
 @LeafPreviews
@@ -48,7 +49,7 @@ internal fun PairStepPreview() {
 /** A step's line, as the pairing panel writes it under the title. */
 @Composable
 private fun StepLine(text: String) {
-    Text(text, style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
+    Text(text, style = GlowType.secondary, color = Ink.Secondary)
 }
 
 /** The battery the connected strap shows. */

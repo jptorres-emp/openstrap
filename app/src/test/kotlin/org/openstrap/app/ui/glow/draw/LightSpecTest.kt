@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow.draw
 
 import androidx.compose.ui.graphics.Color
+import org.openstrap.app.ui.theme.Greys
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -104,7 +105,7 @@ class LightSpecTest {
         assertEquals(h - SoftGlow.depth.value * density, e.glow.y1, 1e-3f)
         assertEquals(0.70f, e.glow.colors.first().alpha, 1f / 255)
         assertEquals(0f, e.glow.colors.last().alpha, 1f / 255)
-        assertEquals(EdgeSurface, e.surface)
+        assertEquals(Greys.Card, e.surface)
         assertEquals(1f * density, e.hairlineWidth, 0f)
     }
 

@@ -1,40 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="glow_goals_title">目标与个人最佳</string>
-    <string name="glow_goals_loading">正在加载…</string>
+    <string name="glow_goals_loading">正在加载</string>
     <string name="glow_goals_this_week">本周</string>
-    <string name="glow_goals_goal_button">目标 %1$d</string>
-    <plurals name="glow_goals_of_workouts">
-        <item quantity="other">/ %d 次运动</item>
-    </plurals>
     <plurals name="glow_goals_count_of_goal">
         <item quantity="other">%1$d / %2$d 次运动</item>
     </plurals>
     <string name="glow_goals_personal_bests">个人最佳</string>
-    <string name="glow_goals_no_bests">完成首次运动后，你的最佳记录将显示在这里。</string>
+    <string name="glow_goals_set_count">已设置 %1$d / %2$d</string>
     <string name="glow_goals_badges">徽章</string>
     <string name="glow_goals_next_badge">下一枚徽章</string>
-    <string name="glow_goals_not_set">尚未创下</string>
+    <string name="glow_goals_not_set">尚未设置</string>
     <string name="glow_goals_not_earned">尚未获得</string>
     <string name="glow_goals_earned_on">获得于 %1$s</string>
     <string name="glow_goals_badge_described">%1$s，%2$s</string>
-    <string name="glow_goals_counts_rule">由你开始或保留、且时长达到 10 分钟的运动才会计入。</string>
+    <string name="glow_goals_counts_rule">满 10 分钟的锻炼才计入，无论是你开始的还是你保留的。</string>
     <string name="glow_goals_best_fastest_how">所有 GPS 记录的跑步中，你最快的 %1$s。</string>
     <string name="glow_goals_best_longest_run_how">GPS 记录的单次最远跑步。</string>
     <string name="glow_goals_best_longest_workout_how">你开始的运动中最长的一次，按运动时间计。</string>
     <string name="glow_goals_best_lift_how">你为这个动作记录过的最重一组，含次数。</string>
     <string name="glow_goals_best_steps_how">手环在单日记录到的最多步数。</string>
     <string name="glow_goals_all_badges">全部徽章</string>
-    <string name="glow_goals_last_week">上周回顾</string>
+    <string name="glow_goals_last_week">上周</string>
     <string name="glow_goals_celebrations">庆祝</string>
     <string name="glow_goals_earned_count">已获得 %1$d / %2$d</string>
     <string name="glow_goals_group_firsts">首次达成</string>
     <string name="glow_goals_group_milestones">里程碑</string>
     <string name="glow_goals_group_kinds">全新尝试</string>
     <string name="glow_goals_weekly_goal">周目标</string>
-    <string name="glow_goals_sheet_note">更改将应用于本周。以往各周保持原定目标不变。</string>
-    <string name="glow_goals_your_week">你的一周</string>
-    <string name="glow_goals_goal_met">已达标</string>
+    <string name="glow_goals_sheet_note">只要时长达到 10 分钟的运动都会计入。更改从本周开始，连续达标的周数会继续累计。</string>
+    <string name="glow_goals_recap_title">每周回顾</string>
     <plurals name="glow_goals_weekly_streak">
         <item quantity="other">连续 %d 周达成目标</item>
     </plurals>
@@ -47,10 +42,9 @@
     <plurals name="glow_goals_workouts_count">
         <item quantity="other">%d 次运动</item>
     </plurals>
-    <string name="glow_goals_hours">小时</string>
+    <string name="glow_goals_hours">时长</string>
     <string name="glow_goals_distance">距离</string>
     <string name="glow_goals_active_kcal">活动千卡</string>
-    <string name="glow_goals_next_week">下周：%1$d</string>
     <string name="glow_goals_share_week">分享本周</string>
     <plurals name="glow_goals_workouts_word">
         <item quantity="other">运动</item>
@@ -59,4 +53,26 @@
     <plurals name="glow_goals_weeks_in_a_row">
         <item quantity="other">连续 %d 周</item>
     </plurals>
+    <string name="glow_goals_count_big">%1$d / %2$d</string>
+    <plurals name="glow_goals_workouts_this_week">
+        <item quantity="other">本周 %d 次运动</item>
+    </plurals>
+    <string name="glow_goals_workouts_goal_met">次运动，目标已达成</string>
+    <plurals name="glow_goals_bests_count">
+        <item quantity="other">%d 项个人最佳</item>
+    </plurals>
+    <string name="glow_goals_what_it_measures">衡量内容</string>
+    <string name="glow_goals_celebrations_both">目标时刻和你的一周</string>
+    <string name="glow_goals_celebrations_goal">目标时刻</string>
+    <string name="glow_goals_celebrations_recap">你的一周</string>
+    <string name="glow_goals_celebrations_off">已关闭</string>
+    <string name="glow_goals_unit_kcal">千卡</string>
+    <string name="glow_goals_per_week">每周</string>
+    <string name="glow_goals_lower">降低%1$s</string>
+    <string name="glow_goals_raise">提高%1$s</string>
+    <string name="glow_goals_type">输入%1$s</string>
+    <string name="glow_goals_about">关于目标和纪录</string>
+    <string name="glow_goals_about_goal">满 10 分钟的锻炼才计入，每天最多两次。</string>
+    <string name="glow_goals_about_bests">纪录由你开始的锻炼创造，按运动时长计算。跑步以 GPS 测量，步数纪录是手环记录的单日步数。纪录只会被更好的成绩取代。</string>
+    <string name="glow_goals_about_badges">徽章获得后永久保留。满 10 分钟的锻炼才计入按次数统计的徽章，无论是你开始的还是你保留的。</string>
 </resources>

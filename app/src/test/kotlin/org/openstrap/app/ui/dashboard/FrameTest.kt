@@ -50,7 +50,7 @@ class FrameTest {
         // Gone for a while: how long, even with a failed sync behind it.
         assertEquals("18 min ago", strapChip(true, ConnectionState.Disconnected, SyncState.Failed("timeout"), now - 18 * 60, now).text)
         // Not paired outranks everything.
-        assertEquals("Not paired", strapChip(false, connected(64, charging = true), SyncState.Failed("x"), now, now).text)
+        assertEquals("No strap", strapChip(false, connected(64, charging = true), SyncState.Failed("x"), now, now).text)
         // A low battery is quieter than a failed sync.
         assertEquals("Not synced", strapChip(true, connected(10), SyncState.Failed("x"), now, now).text)
     }
@@ -61,8 +61,8 @@ class FrameTest {
         val failed = strapChip(true, connected(), SyncState.Failed("timeout"), now, now)
         assertEquals("Not synced", failed.text)
         assertEquals(StrapChip.Dot.Unsynced, failed.dot)
-        assertEquals("Not paired", strapChip(false, ConnectionState.NotPaired, SyncState.Idle, null, now).text)
-        assertEquals("Not paired", strapChip(true, ConnectionState.NotPaired, SyncState.Idle, null, now).text)
+        assertEquals("No strap", strapChip(false, ConnectionState.NotPaired, SyncState.Idle, null, now).text)
+        assertEquals("No strap", strapChip(true, ConnectionState.NotPaired, SyncState.Idle, null, now).text)
     }
 
     @Test fun `a low battery keeps the number and changes the dot`() {
@@ -81,26 +81,26 @@ class FrameTest {
 
     @Test fun `a moment's connecting stays quiet, a long one shows the time`() {
         val brief = strapChip(true, ConnectionState.Connecting, SyncState.Idle, now - 30, now)
-        assertEquals("", brief.text)
+        assertEquals("Connecting", brief.text)
         assertEquals(StrapChip.Dot.Quiet, brief.dot)
-        assertEquals("", strapChip(true, ConnectionState.Authenticating, SyncState.Idle, null, now).text)
+        assertEquals("Connecting", strapChip(true, ConnectionState.Authenticating, SyncState.Idle, null, now).text)
         assertEquals("3 h ago", strapChip(true, ConnectionState.Connecting, SyncState.Idle, now - 3 * 3600, now).text)
     }
 
     @Test fun `right after the app starts, a strap not back yet is a quiet dot`() {
         val starting = strapChip(true, ConnectionState.Disconnected, SyncState.Idle, now - 29 * 60, now, sinceStart = 10)
-        assertEquals("", starting.text)
+        assertEquals("Connecting", starting.text)
         assertEquals(StrapChip.Dot.Quiet, starting.dot)
-        assertEquals("", strapChip(true, ConnectionState.Connecting, SyncState.Idle, now - 29 * 60, now, sinceStart = 119).text)
+        assertEquals("Connecting", strapChip(true, ConnectionState.Connecting, SyncState.Idle, now - 29 * 60, now, sinceStart = 119).text)
         // After the grace, or once connected, as usual; an unpaired strap says so at once.
         assertEquals("29 min ago", strapChip(true, ConnectionState.Disconnected, SyncState.Idle, now - 29 * 60, now, sinceStart = STARTUP_GRACE_S).text)
         assertEquals("45%", strapChip(true, connected(45), SyncState.Idle, now, now, sinceStart = 5).text)
-        assertEquals("Not paired", strapChip(false, ConnectionState.NotPaired, SyncState.Idle, null, now, sinceStart = 5).text)
+        assertEquals("No strap", strapChip(false, ConnectionState.NotPaired, SyncState.Idle, null, now, sinceStart = 5).text)
     }
 
-    @Test fun `connected without a battery reading is just the dot`() {
+    @Test fun `connected without a battery reading says Connected`() {
         val chip = strapChip(true, connected(null), SyncState.Idle, now, now)
-        assertEquals("", chip.text)
+        assertEquals("Connected", chip.text)
         assertEquals(StrapChip.Dot.Fine, chip.dot)
     }
 
@@ -175,6 +175,8 @@ class FrameTest {
         assertEquals(Detail.Recovery, Detail.fromRoute("Recovery"))
         assertEquals(Detail.Sleep, Detail.fromRoute("Sleep"))
         assertEquals(Detail.OfScore(Score.Sleep), Detail.fromRoute(Detail.SLEEP_SCORE_ROUTE))
+        assertEquals(Detail.OfScore(Score.Energy), Detail.fromRoute("Energy"))
+        assertEquals(Detail.OfScore(Score.Load), Detail.fromRoute("Load"))
         assertNull(Detail.fromRoute("Readiness"))
     }
 
@@ -309,12 +311,12 @@ class FrameTest {
 
     @Test fun `the hero's light follows the moment`() {
         assertEquals(225f, heroLightAngle(org.openstrap.app.data.Moment.Waking))
-        // Midday's Charge rises from below to its level; during a workout the zone's light is from below too.
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
+        // HaloSystem board, the sun table.
+        assertEquals(90f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
         assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.WorkoutWindow))
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.After))
+        assertEquals(0f, heroLightAngle(org.openstrap.app.data.Moment.After))
         assertEquals(315f, heroLightAngle(org.openstrap.app.data.Moment.Evening))
         assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Night))
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.During))
+        assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.During))
     }
 }

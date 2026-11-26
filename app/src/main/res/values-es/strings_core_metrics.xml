@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_metric_heart_rate">Frecuencia cardíaca</string>
+    <string name="core_metric_resting_hr">Frecuencia cardíaca en reposo</string>
+    <string name="core_metric_hrv">VFC</string>
+    <string name="core_metric_spo2">Oxígeno en sangre</string>
+    <string name="core_metric_stress">Estrés</string>
+    <string name="core_metric_skin_temperature">Temperatura de la piel</string>
+    <string name="core_metric_breathing">Frecuencia respiratoria</string>
+    <string name="core_metric_steps">Pasos</string>
+    <string name="core_metric_range_day">Día</string>
+    <string name="core_metric_range_week">Semana</string>
+    <string name="core_metric_range_month">Mes</string>
+    <string name="core_metric_range_year">Año</string>
+</resources>

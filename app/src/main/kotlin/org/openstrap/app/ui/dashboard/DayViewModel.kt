@@ -280,6 +280,7 @@ private const val CHANGES_SETTLE_MS = 800L
 @OptIn(ExperimentalCoroutinesApi::class)
 // One flow per part of the day's screen state, plus the day picking.
 @Suppress("TooManyFunctions")
+@android.annotation.SuppressLint("VisibleForTests")
 class DayViewModel(
     private val repo: DayRepository,
     private val profile: Flow<UserProfile> = flowOf(UserProfile()),

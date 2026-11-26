@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_healthspan_habit_strength">Fuerza</string>
+    <string name="core_healthspan_habit_vo2max">VO2 max</string>
+    <string name="core_healthspan_habit_steps">Pasos</string>
+    <string name="core_healthspan_habit_regularity">Regularidad del sueño</string>
+    <string name="core_healthspan_habit_resting_hr">Frecuencia cardíaca en reposo</string>
+    <string name="core_healthspan_habit_time_asleep">Tiempo dormido</string>
+    <string name="core_healthspan_withheld_no_age">Agrega tu año de nacimiento a tu perfil</string>
+    <string name="core_healthspan_withheld_age">La Edad de hábitos es para edades de 20 a 79 años</string>
+    <string name="core_healthspan_withheld_sex">Agrega tu sexo a tu perfil</string>
+    <string name="core_healthspan_withheld_medication">No se muestra con betabloqueantes o embarazo</string>
+    <string name="core_healthspan_withheld_learning">Requiere 30 días de uso</string>
+    <string name="core_healthspan_withheld_resting_hr">Requiere más frecuencia cardíaca en reposo</string>
+    <string name="core_healthspan_withheld_steps">Requiere más días completos de uso</string>
+    <string name="core_healthspan_withheld_regularity">Requiere más semanas de regularidad</string>
+    <string name="core_healthspan_withheld_sleep">Requiere sueño registrado en más noches</string>
+</resources>

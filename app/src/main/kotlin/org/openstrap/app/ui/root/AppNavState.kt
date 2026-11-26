@@ -52,6 +52,7 @@ enum class Page(
     GoalsAndBests(PageRowKeys.GOALS_AND_BESTS),
     /** The fork's reports and the journal's effects (jptorres-emp/openstrap). */
     Reports(PageRowKeys.REPORTS),
+    WorkoutSettings(PageRowKeys.WORKOUTS),
     AllBadges,
     WeeklyRecap,
     Strap,

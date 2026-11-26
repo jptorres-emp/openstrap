@@ -21,13 +21,13 @@
     <!-- Goal tag: the goal met. -->
     <string name="glow_tag_goal_met">Goal met</string>
     <!-- Off tag for a body signal (resting heart rate, HRV, heart rate, breathing rate, skin temperature, blood oxygen). -->
-    <string name="glow_tag_above_normal">Above normal</string>
+    <string name="glow_tag_above_normal">Above your normal</string>
     <!-- Off tag for a body signal. -->
-    <string name="glow_tag_below_normal">Below normal</string>
+    <string name="glow_tag_below_normal">Below your normal</string>
     <!-- Off tag for Recovery, Stress or Load against your usual. -->
-    <string name="glow_tag_above_usual">Above usual</string>
+    <string name="glow_tag_above_usual">Above your normal</string>
     <!-- Off tag for Recovery, Stress or Load against your usual. -->
-    <string name="glow_tag_below_usual">Below usual</string>
+    <string name="glow_tag_below_usual">Below your normal</string>
     <!-- Off tag: last night was shorter than your usual. -->
     <string name="glow_tag_short">Short</string>
     <!-- Off tag: last night was longer than your usual. -->

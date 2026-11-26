@@ -79,7 +79,7 @@ class FirmwareViewModelTest {
         val vm = vm { null }
         assertEquals(listOf("Connect the strap."), vm.blockers())
         connection.value = ConnectionState.Connected(20, "3.25")
-        assertEquals(listOf("Charge the strap above 30% (now 20%)."), vm.blockers())
+        assertEquals(listOf("Charge the strap above 30% first, it's at 20%."), vm.blockers())
         assertEquals(connection.value, vm.connection.value)
     }
 

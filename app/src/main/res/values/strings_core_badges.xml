@@ -43,13 +43,13 @@
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
     <string name="core_badge_first_indoor">First indoor workout</string>
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
-    <string name="core_badge_first_log">First logged strength session</string>
+    <string name="core_badge_first_log">First logged set</string>
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
     <string name="core_badge_first_tabata">First Tabata</string>
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
     <string name="core_badge_first_reps">First run intervals</string>
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
-    <string name="core_badge_first_mind">First yoga or calm session</string>
+    <string name="core_badge_first_mind">First calm session</string>
     <!-- A badge's title, under its art in a grid of three. Up to two short lines. -->
     <string name="core_badge_first_game">First game</string>
 

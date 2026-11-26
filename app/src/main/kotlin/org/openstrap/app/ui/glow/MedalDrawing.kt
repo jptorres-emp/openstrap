@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -10,266 +11,156 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.glow.draw.GlowPalette
-import org.openstrap.app.ui.glow.draw.GlowStyle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 /*
- * How a medal ([Medal]) is drawn: its outline for each group, the face lit from below as a glow card is, the laurel and
- * the rosette's edge, and the line pictures. On a frame [FRAME] units across, the pictures on [EMBLEM_FRAME].
+ * How a token is drawn (boards HaloRewardsSettingsRules A1, HaloGoalsBests, HaloBestMoment), on a frame [FRAME] units
+ * across. Earned: the shape filled with a radial from the top, ink at 0.95 down to 0.55, a 1.2 unit rim at 0.3, the
+ * picture in black. Not yet earned: a #121317 fill, a #24262C rim and the picture in #4A4E57. A badge is a medal (a
+ * squircle tile with a ribbon notch at the foot), a best a rosette of 12 points, the weekly goal a ring of arcs.
  */
 
-/** A medal's outline: the group's shape, with where its face starts and ends on the frame, and its picture's room. */
-internal enum class MedalShape(val top: Float, val bottom: Float, val content: Float) {
-    /** Firsts: a round medal. */
-    Round(ROUND_TOP, ROUND_BOTTOM, ROUND_CONTENT),
+/** A token's outline: a badge's medal tile, or a best's rosette. */
+internal enum class MedalShape {
+    /** A badge: a tile with a ribbon notch at the foot. */
+    Tile,
 
-    /** Milestones: a hexagon, a count reached. */
-    Hex(HEX_TOP, HEX_BOTTOM, HEX_CONTENT),
-
-    /** The weekly goal: a round medal in a laurel, weeks kept up. */
-    Laurel(LAUREL_TOP, LAUREL_BOTTOM, LAUREL_CONTENT),
-
-    /** Something new: a soft square. */
-    Soft(SOFT_TOP, SOFT_BOTTOM, SOFT_CONTENT),
-
-    /** A personal best: a rosette, its edge scalloped. */
-    Rosette(ROSETTE_TOP, ROSETTE_BOTTOM, ROSETTE_CONTENT),
+    /** A personal best: a 12 point scalloped circle. */
+    Rosette,
 }
 
-/** A medal's tones from its ink, by the glow cards' formula: the light at the foot, the body, the core, the picture. */
-internal class MedalTones(ink: Color) {
-    private val palette = GlowPalette(GlowStyle(color = ink))
-    val light: Color = palette.light
-    val body: Color = palette.mid
-    val core: Color = palette.core
-    val mark: Color = lerp(Color.White, palette.light, MARK_TINT)
-}
+/** Where a token's picture and label sit on the frame, in frame units: the picture's box and the label's band. */
+internal class MedalLayout(val emblemAlone: Rect, val emblemOver: Rect, val labelAlone: Rect, val labelUnder: Rect)
 
-/** The medal on the frame: the laurel or rosette's edge behind, then the face, lit or quiet, and its inner ring. */
-internal fun DrawScope.drawFrame(shape: MedalShape, tones: MedalTones, locked: Boolean, lit: Float) {
+internal val MedalShape.layout: MedalLayout
+    get() = when (this) {
+        // Boards: the picture is 36 across (24 scaled 1.5) at (32, 28) on a medal, (32, 32) on a rosette.
+        MedalShape.Tile -> MedalLayout(
+            emblemAlone = Rect(32f, 28f, 68f, 64f), emblemOver = Rect(38f, 16f, 62f, 40f),
+            labelAlone = Rect(24f, 12f, 76f, 70f), labelUnder = Rect(24f, 42f, 76f, 70f),
+        )
+        MedalShape.Rosette -> MedalLayout(
+            emblemAlone = Rect(32f, 32f, 68f, 68f), emblemOver = Rect(38f, 22f, 62f, 46f),
+            labelAlone = Rect(26f, 24f, 74f, 76f), labelUnder = Rect(28f, 48f, 72f, 74f),
+        )
+    }
+
+/** The token on the frame: its outline, filled and rimmed, earned or quiet. [lit] (0..1) is how far an earned token's fill has risen. */
+internal fun DrawScope.drawToken(shape: MedalShape, ink: Color, locked: Boolean, lit: Float) {
     val face = faceOf(shape)
-    when (shape) {
-        MedalShape.Laurel -> drawLaurel(if (locked) LockedRim else tones.light)
-        MedalShape.Rosette -> drawRosetteEdge(tones, locked)
-        else -> Unit
-    }
     if (locked) {
-        drawPath(face, LockedFill)
+        drawPath(face, Greys.Raised)
         drawPath(face, LockedRim, style = Stroke(RIM_LINE))
-    } else {
-        drawLitFace(shape, face, tones, lit.coerceIn(0f, 1f))
+        return
     }
-    // The second ring just inside the rim, as a struck medal has.
-    scale(INNER_RING, pivot = Offset(MID, MID)) {
-        drawPath(face, if (locked) LockedInner else tones.light.copy(alpha = INNER_ALPHA), style = Stroke(INNER_LINE / INNER_RING))
+    val k = lerp(RISE_FLOOR, 1f, lit.coerceIn(0f, 1f))
+    val box = face.getBounds()
+    drawPath(
+        face,
+        Brush.radialGradient(
+            listOf(ink.copy(alpha = FILL_TOP * k), ink.copy(alpha = FILL_BOTTOM * k)),
+            center = Offset(MID, box.top + box.height * FILL_CENTRE_Y),
+            radius = box.height * FILL_RADIUS,
+        ),
+    )
+    drawPath(face, ink.copy(alpha = RIM_ALPHA), style = Stroke(RIM_LINE))
+}
+
+/**
+ * [e] in [box] (frame units), black on an earned token and #4A4E57 on a quiet one: its filled parts, then its lines, 2
+ * units wide on the picture's own 24 unit grid, as the boards draw them.
+ */
+internal fun DrawScope.drawEmblemIn(e: Emblem, box: Rect, color: Color) {
+    withTransform({
+        translate(box.left, box.top)
+        scale(box.width / EMBLEM_FRAME, box.width / EMBLEM_FRAME, pivot = Offset.Zero)
+    }) {
+        e.fill?.let { drawPath(it, color) }
+        e.stroke?.let { drawPath(it, color, style = Stroke(EMBLEM_LINE, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
     }
 }
 
 /**
- * [e] filling this scope, in [color]: its filled parts, then its lines. The lines grow with the picture up to
- * [EMBLEM_LINE_MAX], so a large medal (a sheet, the best card) keeps fine line art rather than heavy strokes.
+ * The weekly goal's ring: [goal] solid arcs round the frame, the first [count] of them in [ink] and the rest quiet, each
+ * arc 9 units thick with round ends, the gaps about a unit wide (boards HaloGoalMoment, HaloGoalsBests).
  */
-internal fun DrawScope.drawEmblem(e: Emblem, color: Color) {
-    val k = size.width / EMBLEM_FRAME
-    val line = Stroke(minOf(EMBLEM_LINE_WIDTH, EMBLEM_LINE_MAX.toPx() / k), cap = StrokeCap.Round, join = StrokeJoin.Round)
-    scale(k, pivot = Offset.Zero) {
-        e.fill?.let { drawPath(it, color) }
-        e.stroke?.let { drawPath(it, color, style = line) }
+internal fun DrawScope.drawGoalRing(count: Int, goal: Int, ink: Color) {
+    val n = goal.coerceAtLeast(1)
+    val ring = Offset(MID - RING_RADIUS, MID - RING_RADIUS)
+    val across = Size(RING_RADIUS * 2, RING_RADIUS * 2)
+    val line = Stroke(RING_LINE, cap = StrokeCap.Round)
+    if (n == 1) {
+        drawArc(if (count >= 1) ink else RingQuiet, 0f, FULL_TURN, false, ring, across, style = line)
+        return
+    }
+    val step = FULL_TURN / n
+    val span = step - RING_GAP
+    repeat(n) { i ->
+        val from = -QUARTER_TURN + RING_GAP / 2 + i * step
+        drawArc(if (i < count) ink else RingQuiet, from, span, false, ring, across, style = line)
     }
 }
 
 /** SVG path data as a path. */
 internal fun parsePath(d: String): Path = PathParser().parsePathString(d).toPath()
 
-/**
- * The face lit from below, as a glow card is: the light colour at the foot, melting into the body and on into the dark
- * core at the top, a soft sheen at the upper left, and the hairline bright at the top (its gloss) and lit at the foot.
- */
-private fun DrawScope.drawLitFace(shape: MedalShape, face: Path, tones: MedalTones, lit: Float) {
-    val height = shape.bottom - shape.top
-    drawPath(
-        face,
-        Brush.radialGradient(
-            0f to lerp(tones.body, tones.light, lit),
-            LIGHT_REACH to tones.body,
-            CORE_FROM to tones.core,
-            center = Offset(MID, shape.bottom + LIGHT_BELOW),
-            radius = height + LIGHT_BELOW,
-        ),
-    )
-    drawPath(
-        face,
-        Brush.radialGradient(
-            listOf(Color.White.copy(alpha = SHEEN_ALPHA), Color.Transparent),
-            center = Offset(SHEEN_X, shape.top + height * SHEEN_Y),
-            radius = height * SHEEN_RADIUS,
-        ),
-    )
-    drawPath(
-        face,
-        Brush.verticalGradient(
-            0f to Color.White.copy(alpha = GLOSS_ALPHA), 1f to tones.light.copy(alpha = lit),
-            startY = shape.top, endY = shape.bottom,
-        ),
-        style = Stroke(RIM_LINE),
-    )
-}
-
-/** The laurel round the weekly goal's medal: a stem up each side with its leaves, smaller toward the top. */
-private fun DrawScope.drawLaurel(color: Color) {
-    val stem = Stroke(STEM_LINE, cap = StrokeCap.Round)
-    val ring = Offset(MID - LAUREL_RADIUS, MID - LAUREL_RADIUS)
-    val across = Size(LAUREL_RADIUS * 2, LAUREL_RADIUS * 2)
-    drawArc(color, DOWN + LAUREL_FROM - STEM_LEAD, LAUREL_SPAN, false, ring, across, style = stem)
-    drawArc(color, DOWN - LAUREL_FROM + STEM_LEAD - LAUREL_SPAN, LAUREL_SPAN, false, ring, across, style = stem)
-    for (side in SIDES) {
-        for (i in 0 until LEAVES) {
-            val degrees = DOWN + side * (LAUREL_FROM + i * LAUREL_STEP)
-            val radians = degrees * PI / HALF_TURN
-            val c = Offset(MID + LAUREL_RADIUS * cos(radians).toFloat(), MID + LAUREL_RADIUS * sin(radians).toFloat())
-            val k = 1f - i * LEAF_SHRINK
-            rotate(degrees + QUARTER_TURN + side * LEAF_TILT, pivot = c) {
-                drawOval(color, Offset(c.x - LEAF_LENGTH * k / 2, c.y - LEAF_WIDTH * k / 2), Size(LEAF_LENGTH * k, LEAF_WIDTH * k))
-            }
-        }
-    }
-}
-
-/** A best's rosette: the scalloped edge round its face, a step darker than the face's body. */
-private fun DrawScope.drawRosetteEdge(tones: MedalTones, locked: Boolean) {
-    if (locked) {
-        drawPath(RosetteEdge, LockedFill)
-        drawPath(RosetteEdge, LockedRim, style = Stroke(RIM_LINE))
-    } else {
-        drawPath(RosetteEdge, lerp(tones.core, tones.body, EDGE_BODY))
-        drawPath(RosetteEdge, tones.light.copy(alpha = EDGE_RIM), style = Stroke(RIM_LINE))
-    }
-}
-
 private fun faceOf(shape: MedalShape): Path = when (shape) {
-    MedalShape.Round -> RoundFace
-    MedalShape.Hex -> HexFace
-    MedalShape.Laurel -> LaurelFace
-    MedalShape.Soft -> SoftFace
+    MedalShape.Tile -> TileFace
     MedalShape.Rosette -> RosetteFace
 }
 
-private fun circle(radius: Float): Path = Path().apply { addOval(Rect(Offset(MID, MID), radius)) }
+/** The medal tile (board HaloHistoryBadges): rounded corners, straight sides and a notch like a ribbon's end at the foot. */
+private val TileFace: Path by lazy {
+    parsePath("M14 10 Q14 4 20 4 H80 Q86 4 86 10 V70 Q86 76 80 78 L50 96 L20 78 Q14 76 14 70 Z")
+}
 
-/** The rosette's outline: a circle whose radius rises and falls [ROSETTE_POINTS] times round. */
-private fun rosette(): Path = Path().apply {
-    for (i in 0..ROSETTE_STEPS) {
-        val t = 2 * PI * i / ROSETTE_STEPS
-        val r = ROSETTE_RADIUS + ROSETTE_WAVE * cos(ROSETTE_POINTS * t)
-        val x = MID + (r * cos(t)).toFloat()
-        val y = MID + (r * sin(t)).toFloat()
-        if (i == 0) moveTo(x, y) else lineTo(x, y)
+/** The rosette (board HaloBestMoment): 12 points, its valleys [ROSETTE_VALLEY] from the middle and its tips [ROSETTE_TIP]. */
+private val RosetteFace: Path by lazy {
+    Path().apply {
+        for (i in 0 until ROSETTE_VERTICES) {
+            val r = if (i % 2 == 0) ROSETTE_TIP else ROSETTE_VALLEY
+            val t = -PI / 2 + 2 * PI * i / ROSETTE_VERTICES
+            val x = MID + (r * cos(t)).toFloat()
+            val y = MID + (r * sin(t)).toFloat()
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+        close()
     }
-    close()
 }
 
-private val RoundFace: Path by lazy { circle(ROUND_RADIUS) }
-private val LaurelFace: Path by lazy { circle(LAUREL_FACE_RADIUS) }
-private val RosetteFace: Path by lazy { circle(ROSETTE_FACE_RADIUS) }
-private val RosetteEdge: Path by lazy { rosette() }
+private val LockedRim = Greys.MedalQuiet
 
-/** A hexagon standing on a point, its corners rounded. */
-private val HexFace: Path by lazy {
-    parsePath(
-        "M55.2 6 L85.5 23.5 Q90.7 26.5 90.7 32.5 V67.5 Q90.7 73.5 85.5 76.5 L55.2 94 Q50 97 44.8 94 L14.5 76.5 " +
-            "Q9.3 73.5 9.3 67.5 V32.5 Q9.3 26.5 14.5 23.5 L44.8 6 Q50 3 55.2 6 Z",
-    )
-}
+/** The quiet arcs of the weekly goal's ring. */
+private val RingQuiet = Greys.MedalQuiet
 
-/** A square with its sides bowed out, between a square and a circle. */
-private val SoftFace: Path by lazy {
-    parsePath("M50 5 C82 5 95 18 95 50 C95 82 82 95 50 95 C18 95 5 82 5 50 C5 18 18 5 50 5 Z")
-}
-
-/** A medal still to earn: a faint face and hairline, its inner ring fainter. */
-private val LockedFill = Color.White.copy(alpha = 0.045f)
-private val LockedRim = Color.White.copy(alpha = 0.16f)
-private val LockedInner = Color.White.copy(alpha = 0.07f)
-
-/** The laurel's two sides: right (toward lower angles from the foot) and left. */
-private val SIDES = intArrayOf(-1, 1)
-
-/** The frame a medal is drawn on, units across, and its middle. */
+/** The frame a token is drawn on, units across, and its middle. */
 internal const val FRAME = 100f
 private const val MID = 50f
 private const val EMBLEM_FRAME = 24f
-private const val EMBLEM_LINE_WIDTH = 1.6f
+private const val EMBLEM_LINE = 2f
+private const val RIM_LINE = 1.2f
+private const val RIM_ALPHA = 0.3f
 
-/** The picture's lines are never drawn thicker than this, however large the medal. */
-private val EMBLEM_LINE_MAX = 2.4.dp
+/** The earned fill: a radial from the top at 0.95 to 0.55, centred 15% down and 90% across (boards, radialGradient). */
+private const val FILL_TOP = 0.95f
+private const val FILL_BOTTOM = 0.55f
+private const val FILL_CENTRE_Y = 0.15f
+private const val FILL_RADIUS = 0.9f
 
-private const val ROUND_RADIUS = 46f
-private const val ROUND_TOP = MID - ROUND_RADIUS
-private const val ROUND_BOTTOM = MID + ROUND_RADIUS
-private const val ROUND_CONTENT = 0.8f
-private const val HEX_TOP = 3f
-private const val HEX_BOTTOM = 97f
-private const val HEX_CONTENT = 0.74f
-private const val SOFT_TOP = 5f
-private const val SOFT_BOTTOM = 95f
-private const val SOFT_CONTENT = 0.78f
-private const val LAUREL_FACE_RADIUS = 34f
-private const val LAUREL_TOP = MID - LAUREL_FACE_RADIUS
-private const val LAUREL_BOTTOM = MID + LAUREL_FACE_RADIUS
-private const val LAUREL_CONTENT = 0.6f
-private const val ROSETTE_FACE_RADIUS = 36f
-private const val ROSETTE_TOP = MID - ROSETTE_FACE_RADIUS
-private const val ROSETTE_BOTTOM = MID + ROSETTE_FACE_RADIUS
-private const val ROSETTE_CONTENT = 0.58f
+/** An earned token's fill starts this share of its strength as its sheet opens. */
+private const val RISE_FLOOR = 0.2f
 
-/** The rosette's edge: its mean radius, how far it rises and falls, how many times round, and how finely drawn. */
-private const val ROSETTE_RADIUS = 46.5
-private const val ROSETTE_WAVE = 2.6
-private const val ROSETTE_POINTS = 16
-private const val ROSETTE_STEPS = 160
-private const val EDGE_BODY = 0.55f
-private const val EDGE_RIM = 0.7f
+private const val ROSETTE_VERTICES = 24
+private const val ROSETTE_TIP = 48.0
+private const val ROSETTE_VALLEY = 42.2
 
-/** The laurel: its radius, the leaves from the foot up each side, their size and lean, and the stems under them. */
-private const val LAUREL_RADIUS = 42.5f
-private const val LEAVES = 6
-private const val LAUREL_FROM = 26f
-private const val LAUREL_STEP = 24f
-private const val LAUREL_SPAN = 132f
-private const val STEM_LEAD = 8f
-private const val STEM_LINE = 1.1f
-private const val LEAF_LENGTH = 10f
-private const val LEAF_WIDTH = 4.4f
-private const val LEAF_SHRINK = 0.07f
-private const val LEAF_TILT = 22f
-private const val DOWN = 90f
+private const val RING_RADIUS = 42f
+private const val RING_LINE = 9f
+private const val RING_GAP = 13.6f
+private const val FULL_TURN = 360f
 private const val QUARTER_TURN = 90f
-private const val HALF_TURN = 180.0
-
-/**
- * The light: where it melts into the body and the core, and how far below the face it comes from. It reaches only the
- * foot, so a label under the picture sits in the body, as text sits in the dark on a glow card (spec 2.1).
- */
-private const val LIGHT_REACH = 0.27f
-private const val CORE_FROM = 0.92f
-private const val LIGHT_BELOW = 6f
-private const val SHEEN_ALPHA = 0.09f
-private const val SHEEN_X = 36f
-private const val SHEEN_Y = 0.26f
-private const val SHEEN_RADIUS = 0.42f
-private const val GLOSS_ALPHA = 0.55f
-private const val RIM_LINE = 1.6f
-private const val INNER_RING = 0.87f
-private const val INNER_LINE = 1f
-private const val INNER_ALPHA = 0.32f
-
-/** How far the picture is from white toward the light colour: near white, with the medal's hue. */
-private const val MARK_TINT = 0.18f

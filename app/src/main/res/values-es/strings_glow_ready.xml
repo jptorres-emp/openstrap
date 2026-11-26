@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_choose_title">Iniciar un entrenamiento</string>
+    <string name="glow_choose_search_all">Buscar en todos los deportes</string>
+    <string name="glow_choose_recent">Recientes</string>
+    <string name="glow_choose_all_sports">Todos los deportes</string>
+    <string name="glow_choose_your_usual">Tus habituales</string>
+    <string name="glow_choose_start">Iniciar</string>
+    <string name="glow_choose_outdoors">Al aire libre</string>
+    <string name="glow_ready_hero_zone_range">%1$d a %2$d</string>
+    <string name="glow_ready_last_caption">La última vez, %1$s</string>
+    <string name="glow_ready_last_today">hoy</string>
+    <string name="glow_ready_last_time">Tiempo</string>
+    <string name="glow_ready_last_distance">Distancia</string>
+    <string name="glow_ready_last_pace">Ritmo prom.</string>
+    <string name="glow_ready_last_avg_bpm">lpm prom.</string>
+    <string name="glow_ready_last_peak_bpm">lpm máx.</string>
+    <string name="glow_ready_last_kcal">kcal activas</string>
+    <string name="glow_ready_last_load">Carga</string>
+    <string name="glow_ready_last_sets">Series</string>
+    <string name="glow_choose_change_title">Cambiar deporte</string>
+    <string name="glow_choose_now">Ahora</string>
+    <string name="glow_choose_now_note">Tu meta se mantiene si encaja</string>
+    <string name="glow_choose_pick_title">Elige un deporte</string>
+    <string name="glow_choose_search">Buscar</string>
+    <string name="glow_choose_group_distance">Distancia</string>
+    <string name="glow_choose_group_indoor">Cardio en interior</string>
+    <string name="glow_choose_group_strength">Fuerza e intervalos</string>
+    <string name="glow_choose_group_mind">Mente y cuerpo</string>
+    <string name="glow_choose_group_games">Juegos</string>
+    <string name="glow_choose_group_other">Otros</string>
+    <string name="glow_choose_group_distance_note">Ruta, distancia y ritmo</string>
+    <string name="glow_choose_group_indoor_note">Tiempo, frecuencia cardíaca y calorías</string>
+    <string name="glow_choose_group_strength_note">Series, rondas y descanso</string>
+    <string name="glow_choose_group_mind_note">Frecuencia cardíaca en calma y tiempo</string>
+    <string name="glow_choose_group_games_note">Tiempo, frecuencia cardíaca y esfuerzo</string>
+    <string name="glow_choose_group_other_note">Cualquier otra cosa, tiempo y frecuencia cardíaca</string>
+    <string name="glow_choose_no_match">Ningún deporte llamado %1$s</string>
+    <string name="glow_choose_clear">Borrar</string>
+    <plurals name="glow_choose_sports_count">
+        <item quantity="one">%d deporte</item>
+        <item quantity="many">%d deportes</item>
+        <item quantity="other">%d deportes</item>
+    </plurals>
+    <string name="glow_ready_strap_disconnected">Banda desconectada, sin frecuencia cardíaca en vivo</string>
+    <string name="glow_ready_connect">Conectar banda</string>
+</resources>

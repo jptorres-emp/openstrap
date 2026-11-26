@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_workout_deleted">Este entrenamiento se eliminó.</string>
+    <string name="glow_workout_untitled">Entrenamiento</string>
+    <string name="glow_workout_loading">Cargando</string>
+    <string name="glow_workout_day_times">%1$s, %2$s</string>
+    <string name="glow_workout_zone_under">bajo %1$d lpm</string>
+    <string name="glow_workout_zone_range">%1$s lpm</string>
+    <string name="glow_workout_suggestion_title">Parece un entrenamiento</string>
+    <string name="glow_workout_suggestion_text">%1$s, %2$s, sobre todo zona %3$d, %4$d lpm de promedio</string>
+    <string name="glow_workout_suggestion_save">Guardar como entrenamiento</string>
+    <string name="glow_workout_suggestion_dismiss">No es un entrenamiento</string>
+    <string name="glow_workout_add_title">Añadir un entrenamiento</string>
+    <string name="glow_workout_add_no_heart">La banda todavía no ha enviado la frecuencia cardíaca de este día. Sincroniza e inténtalo de nuevo.</string>
+    <string name="glow_workout_add_sport">Deporte</string>
+    <string name="glow_workout_add_day">Día</string>
+    <string name="glow_workout_add_range_length">%1$d min</string>
+    <string name="glow_workout_add_range_note">%1$d min, promedio %2$d lpm</string>
+    <string name="glow_workout_add_when">¿Cuándo fue?</string>
+    <string name="glow_workout_add_hint">Arrastra los controles hasta donde empezó y terminó el entrenamiento. Su frecuencia cardíaca proviene de los registros por minuto de la banda.</string>
+    <string name="glow_workout_delete">Eliminar este entrenamiento</string>
+    <string name="glow_workout_delete_confirm">¿Eliminar este entrenamiento?</string>
+    <string name="glow_workout_delete_phone">Su frecuencia cardíaca y sus horas se eliminarán de unstrap. Se conservará el historial propio de la banda.</string>
+    <string name="glow_workout_delete_strap">Su frecuencia cardíaca y sus horas se eliminarán de unstrap, y la próxima sincronización no los recuperará. Se conservará el historial propio de la banda.</string>
+    <string name="glow_workout_trim_title">Recortar inicio y fin</string>
+    <string name="glow_workout_undo">Deshacer</string>
+    <string name="glow_workout_trim_start">Recortado para empezar a las %1$s. No se elimina nada.</string>
+    <string name="glow_workout_trim_seconds">%1$d s</string>
+    <string name="glow_workout_trim_minutes">%1$d min</string>
+    <string name="glow_workout_trim_car">Terminó a las %1$s. Se dejaron fuera %2$s de conducción.</string>
+    <string name="glow_workout_trim_auto">Terminó a las %1$s, cuando te detuviste. Se dejaron fuera %2$s posteriores.</string>
+    <string name="glow_workout_trim_range">Recortado, ahora de %1$s. No se elimina nada.</string>
+    <string name="glow_workout_heart_by_zone">Coloreado por zona</string>
+    <string name="glow_workout_heart_at">A las %1$s</string>
+    <string name="glow_workout_heart_at_after">A las %1$s, tras el final</string>
+    <string name="glow_workout_unit_bpm_average">lpm promedio</string>
+    <string name="glow_workout_heart_max_lowest">Máx. %1$d, mín. %2$d lpm</string>
+    <string name="glow_workout_heart_max">Máx. %1$d lpm</string>
+    <string name="glow_workout_heart_lowest">Mín. %1$d lpm</string>
+    <string name="glow_workout_heart_none">La banda todavía no ha enviado la frecuencia cardíaca de este entrenamiento.</string>
+    <string name="glow_workout_heart_drop_after">Descenso tras las %1$s</string>
+    <string name="glow_workout_heart_dimmed">%1$s aparece atenuado. Viene del historial de la banda.</string>
+    <string name="glow_workout_in_your_day">En tu día</string>
+    <string name="glow_workout_list_title">Entrenamientos</string>
+    <plurals name="glow_workout_list_recorded">
+        <item quantity="one">%d registrado</item>
+        <item quantity="many">%d registrados</item>
+        <item quantity="other">%d registrados</item>
+    </plurals>
+    <string name="glow_workout_list_empty">Aún no hay entrenamientos</string>
+    <string name="glow_workout_list_empty_text">Los entrenamientos que registres aparecen aquí, y los de la banda tras una sincronización.</string>
+    <string name="glow_workout_capsule_pause">Pausar</string>
+    <string name="glow_workout_capsule_next">Siguiente</string>
+    <string name="glow_workout_capsule_lines">%1$s, %2$s</string>
+</resources>

@@ -38,8 +38,8 @@ data class WorkoutCard(
     val kcalCollapsed: Boolean = false,
     val kcalExpanded: Boolean = false,
 ) {
-    /** The card as one line, for a Live Update's text: "152 bpm. Zone 3, tempo. 2.40 km". */
-    val text: String get() = listOfNotNull(bpm, zoneLine, detail).joinToString(". ")
+    /** The card as one line, for a Live Update's text: "152 bpm, Zone 3, tempo, 2.40 km" (text rules T4, a phrase). */
+    val text: String get() = listOfNotNull(bpm, zoneLine, detail).joinToString(", ")
 }
 
 object NotificationCopy {

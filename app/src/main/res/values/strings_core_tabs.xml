@@ -78,7 +78,7 @@
     <!-- A Recovery contributor's status word, when it lifts the score. Short. -->
     <string name="core_tab_contributor_helping">Helping</string>
     <!-- A Recovery contributor's status word, when it is as usual. Short. -->
-    <string name="core_tab_contributor_usual">Usual</string>
+    <string name="core_tab_contributor_usual">Your normal</string>
     <!-- A Recovery contributor's status word. Short. -->
     <string name="core_tab_contributor_little">Holding back a little</string>
     <!-- A Recovery contributor's status word. Short. -->
@@ -93,7 +93,7 @@
     <!-- A row of Energy today: what drained it. -->
     <string name="core_tab_charge_awake">Being awake</string>
     <!-- A row of Energy today's status, beside the amount: it filled Energy. Short. -->
-    <string name="core_tab_charge_recharged">Filled</string>
+    <string name="core_tab_charge_recharged">Recharged</string>
     <!-- A row of Energy today's status, beside the amount: it used Energy. Short. -->
     <string name="core_tab_charge_drained">Drained</string>
 
@@ -152,27 +152,27 @@
     <string name="core_tab_regularity_steady">Steady bedtimes this week</string>
     <!-- Sleep regularity from bedtimes alone, when they moved. Short. -->
     <string name="core_tab_regularity_moved">Bedtimes moved this week</string>
-    <!-- When you usually fall asleep and wake, as times of day ("23:10" or "11:10 PM"). -->
-    <string name="core_tab_usual_times">Usually asleep by <xliff:g id="bedtime" example="23:10">%1$s</xliff:g>, up at <xliff:g id="wake" example="06:50">%2$s</xliff:g>.</string>
+    <!-- Under Sleep regularity, a phrase of 36 characters at most: the usual bedtime and wake time. -->
+    <string name="core_tab_usual_times">Usually asleep by <xliff:g id="bed" example="23:10">%1$s</xliff:g>, up at <xliff:g id="wake" example="06:50">%2$s</xliff:g></string>
 
     <!-- Breathing disturbances before there is a usual: nights so far of the nights it needs. -->
     <plurals name="core_tab_breathing_learning">
-        <item quantity="one">Learning your usual, <xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other">Learning your usual, <xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
     </plurals>
     <!-- Breathing disturbances: your usual number of them an hour, "2.1". -->
-    <string name="core_tab_breathing_usual">Your usual is <xliff:g id="per_hour" example="2.1">%1$s</xliff:g> an hour</string>
-    <!-- Breathing disturbances on a small card before there is a usual. Short. -->
+    <string name="core_tab_breathing_usual">Your usual, <xliff:g id="rate" example="2.1">%1$s</xliff:g> an hour</string>
+    <!-- Under the breathing disturbances number, a word slot of 18 characters: the nights counted so far, "Learning, 3 of 7". -->
     <plurals name="core_tab_breathing_short_learning">
-        <item quantity="one">Learning, <xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other">Learning, <xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g></item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g></item>
     </plurals>
-    <!-- Breathing disturbances on a small card: your usual an hour, and that it is early. Short. -->
-    <string name="core_tab_breathing_short_usual">Usual <xliff:g id="per_hour" example="2.1">%1$s</xliff:g>, early estimate</string>
+    <!-- Under the breathing disturbances number, a word slot of 18 characters: "Your normal 2.1". -->
+    <string name="core_tab_breathing_short_usual">Your normal <xliff:g id="rate" example="2.1">%1$s</xliff:g></string>
 
     <!-- Under Load's number: your usual Load for a whole day. -->
-    <string name="core_tab_load_usual">Your usual is <xliff:g id="load" example="40">%1$d</xliff:g></string>
-    <!-- Under Load's number before there is a usual. -->
+    <string name="core_tab_load_usual">Your usual, <xliff:g id="usual" example="40">%1$d</xliff:g> a day</string>
+    <!-- Under Load's number while the usual is still being learned: the learning word. -->
     <string name="core_tab_load_learning">Learning your usual</string>
     <!-- The week's training balance: well above your usual. One word if it can. -->
     <string name="core_tab_balance_building">Building</string>
@@ -182,13 +182,16 @@
     <string name="core_tab_balance_steady">Steady</string>
 
     <!-- Active minutes over the last 7 days, with the goal reached. -->
-    <string name="core_tab_active_reached" tools:ignore="PluralsCandidate">Last 7 days, goal of <xliff:g id="goal" example="150">%1$d</xliff:g> reached</string>
+    <string name="core_tab_active_reached">Met this week</string>
     <!-- Active minutes over the last 7 days, with the goal. -->
-    <string name="core_tab_active_goal">Last 7 days, goal <xliff:g id="goal" example="150">%1$d</xliff:g></string>
+    <string name="core_tab_active_goal">Aim <xliff:g id="goal" example="150">%1$d</xliff:g> a week</string>
     <!-- Heart points over the last 7 days, with the aim reached. -->
-    <string name="core_tab_points_reached">Last 7 days, at <xliff:g id="aim" example="100">%1$d</xliff:g> or more</string>
+    <plurals name="core_tab_points_reached">
+        <item quantity="one">Met this week</item>
+        <item quantity="other">Met this week</item>
+    </plurals>
     <!-- Heart points over the last 7 days, with the aim. -->
-    <string name="core_tab_points_aim">Last 7 days, aim for <xliff:g id="aim" example="100">%1$d</xliff:g></string>
+    <string name="core_tab_points_aim">Aim <xliff:g id="aim" example="100">%1$d</xliff:g> a week</string>
     <!-- Under the calories number, today. kcal is kilocalories. -->
     <string name="core_tab_calories_today">Estimated kcal so far today</string>
     <!-- Under the calories number, a past day the strap was worn for part of. -->
@@ -212,10 +215,10 @@
     </plurals>
     <!-- Under the naps card with one nap: when it was, "14:10". -->
     <string name="core_tab_nap_at">At <xliff:g id="time" example="14:10">%1$s</xliff:g></string>
-    <!-- Under the naps card with more than one nap: how many, and when the first was. -->
+    <!-- Under the naps Small, 18 characters at most: how many naps and when the first began. -->
     <plurals name="core_tab_naps_first_at">
-        <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> nap, first at <xliff:g id="time" example="14:10">%2$s</xliff:g></item>
-        <item quantity="other"><xliff:g id="count" example="2">%1$d</xliff:g> naps, first at <xliff:g id="time" example="14:10">%2$s</xliff:g></item>
+        <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> nap from <xliff:g id="time" example="14:10">%2$s</xliff:g></item>
+        <item quantity="other"><xliff:g id="count" example="2">%1$d</xliff:g> naps from <xliff:g id="time" example="14:10">%2$s</xliff:g></item>
     </plurals>
     <!-- Under the Recovery hero's trend dots. Short. -->
     <string name="core_tab_last_7_days">Last 7 days</string>
@@ -240,8 +243,8 @@
     <string name="core_tab_first_estimate">First estimate <xliff:g id="date" example="Sunday 22 Nov">%1$s</xliff:g></string>
     <!-- Habit Age before its first estimate, under your own age in its place. -->
     <string name="core_tab_age_for_now">Your age for now</string>
-    <!-- The same, followed by what it waits for, a sentence from elsewhere. -->
-    <string name="core_tab_age_for_now_waiting">Your age for now. <xliff:g id="waiting" example="Needs 3 more nights of wear.">%1$s</xliff:g></string>
+    <!-- Under Habit Age's number while it waits: what it needs (a phrase, from core_healthspan_withheld_*). -->
+    <string name="core_tab_age_for_now_waiting"><xliff:g id="reason" example="Needs 30 days of wear">%1$s</xliff:g></string>
     <!-- Habit Age before there is last week's estimate: the likely range, in years. -->
     <string name="core_tab_habit_age_likely">Likely <xliff:g id="low" example="27">%1$d</xliff:g> to <xliff:g id="high" example="31">%2$d</xliff:g></string>
     <!-- Habit Age against last week's estimate, lower. -->

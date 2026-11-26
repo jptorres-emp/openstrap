@@ -1,28 +1,24 @@
 package org.openstrap.app.ui.dashboard
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import org.openstrap.app.ui.theme.ControlSurface
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,9 +43,9 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import org.openstrap.app.ui.components.growClick
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.RoundIconButton
-import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.HaloIconButton
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 
 /** How far a swipe on the header has to travel to change the day. */
 private val SwipeDistance = 56.dp
@@ -86,11 +82,11 @@ fun MomentHeader(
             // You and the Strap page grow out of the button tapped (spec 3.5).
             start = {
                 growClick(onOpenYou).let { g ->
-                    RoundIconButton(
+                    HaloIconButton(
                         AppIcons.User,
                         stringResource(if (updateWaiting) R.string.day_header_you_update else R.string.day_header_you),
                         g.onClick, g.modifier,
-                        surface = Avatar, iconSize = 20.dp, clickLabel = stringResource(R.string.day_header_open_you), dot = updateWaiting,
+                        clickLabel = stringResource(R.string.day_header_open_you), dot = updateWaiting,
                     )
                 }
             },
@@ -98,11 +94,11 @@ fun MomentHeader(
             end = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onOpenAllMetrics != null) {
-                        RoundIconButton(
-                            AppIcons.ChartBar, stringResource(R.string.day_header_all_metrics), onOpenAllMetrics, surface = Avatar,
-                            iconSize = 20.dp, clickLabel = stringResource(R.string.day_header_open_all_metrics),
+                        HaloIconButton(
+                            AppIcons.ChartBar, stringResource(R.string.day_header_all_metrics), onOpenAllMetrics,
+                            clickLabel = stringResource(R.string.day_header_open_all_metrics),
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(Space.S8))
                     }
                     growClick(onOpenStrap).let { g -> StrapPill(chip, g.onClick, g.modifier) }
                 }
@@ -122,7 +118,9 @@ fun MomentHeader(
 private fun CentredRow(
     overhang: androidx.compose.ui.unit.Dp, start: @Composable () -> Unit, centre: @Composable () -> Unit, end: @Composable () -> Unit,
 ) {
-    Layout(listOf(start, centre, end), Modifier.fillMaxWidth().height(60.dp)) { (s, c, e), constraints ->
+    Layout(
+        listOf(start, centre, end), Modifier.fillMaxWidth().height(org.openstrap.app.ui.glow.PageSpec.TabHeaderHeight),
+    ) { (s, c, e), constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val sp = s.first().measure(loose)
         val ep = e.first().measure(loose)
@@ -154,7 +152,7 @@ private fun DaySwitcher(
     val canNext by rememberUpdatedState(hasNext)
     val description = stringResource(R.string.day_header_day_description, title, dateLine(date))
     Row(
-        modifier.height(60.dp)
+        modifier.height(org.openstrap.app.ui.glow.PageSpec.TabHeaderHeight)
             .pointerInput(threshold) {
                 detectHorizontalDragGestures(
                     onDragStart = { dragging = true },
@@ -176,15 +174,15 @@ private fun DaySwitcher(
     ) {
         Peek(peekDay(date.minusDays(1)))
         Column(
-            Modifier.padding(horizontal = 16.dp).widthIn(max = 200.dp).clip(CircleShape)
+            Modifier.padding(horizontal = Space.S16).widthIn(max = 200.dp).clip(CircleShape)
                 .clickable(onClickLabel = stringResource(R.string.day_header_pick_day), onClick = onPick)
-                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .padding(horizontal = Space.S8, vertical = Space.S4)
                 .semantics { contentDescription = description },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Text(
-                title, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.moment,
+                title, color = Ink.Secondary, style = GlowType.moment,
                 maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
             )
             Text(
@@ -198,9 +196,8 @@ private fun DaySwitcher(
 
 @Composable
 private fun Peek(text: String) {
-    Text(text, Modifier.width(PeekWidth), color = Color.White.copy(alpha = 0.22f), style = GlowType.body, maxLines = 1, softWrap = false)
+    Text(text, Modifier.width(PeekWidth), color = Ink.Tertiary, style = GlowType.body, maxLines = 1, softWrap = false)
 }
 
-// The Control surface (spec 2.2): the avatar is a control.
-private val Avatar = ControlSurface
+// The avatar's surface when not glass; the header's buttons are the tab bar's glass ([RoundIconButton] glass).
 private val PeekWidth = 34.dp

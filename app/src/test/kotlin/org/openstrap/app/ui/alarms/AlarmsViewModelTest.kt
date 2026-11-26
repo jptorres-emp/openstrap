@@ -41,7 +41,7 @@ class AlarmsViewModelTest {
 
     @Test fun `an unexpected failure says it couldn't read, not its own text`() {
         val error = errorAfterRead(IllegalStateException("Room cannot verify the data integrity"))
-        assertEquals("Couldn't read from the strap", error)
+        assertEquals("Couldn't read from the strap.", error)
     }
 
     @Test fun `the strap's own reason and a timeout keep their words`() {

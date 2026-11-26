@@ -39,10 +39,15 @@ class WidgetTriggersTest {
         assertEquals(both, workoutKinds(recording, WorkoutState.Idle))
     }
 
-    @Test fun `a pause or a resume refreshes Start alone`() {
+    @Test fun `a pause or a resume refreshes the recording card, Start's and Moment's`() {
         val paused = recording.copy(workout = recording.workout.copy(pausedAt = NOW))
-        assertEquals(setOf(WidgetKind.Start), workoutKinds(recording, paused))
-        assertEquals(setOf(WidgetKind.Start), workoutKinds(paused, recording))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, paused))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(paused, recording))
+    }
+
+    @Test fun `a rest or the stop question refreshes the recording card`() {
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, recording.copy(restUntil = NOW + 60)))
+        assertEquals(setOf(WidgetKind.Moment, WidgetKind.Start), workoutKinds(recording, recording.copy(endPrompt = NOW)))
     }
 
     @Test fun `the same state, or a new reading while recording, refreshes nothing`() {

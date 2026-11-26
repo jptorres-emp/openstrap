@@ -37,8 +37,8 @@ class CaloriesCopyTest {
     )
 
     @Test fun `the row leads with active and says the goal and the total`() {
-        assertEquals("Active of 450. 1,468 total", CaloriesCopy.rowLine(348, 450, 1468, Locale.UK))
-        assertEquals("Active, goal met. Total 2,140", CaloriesCopy.rowLine(450, 450, 2140, Locale.UK))
+        assertEquals("Active of 450, 1,468 total", CaloriesCopy.rowLine(348, 450, 1468, Locale.UK))
+        assertEquals("Active goal met, 2,140 total", CaloriesCopy.rowLine(450, 450, 2140, Locale.UK))
         assertEquals(0.5f, CaloriesCopy.share(225, 450), 1e-6f)
         assertEquals(1f, CaloriesCopy.share(900, 450), 1e-6f)
     }

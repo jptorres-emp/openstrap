@@ -22,17 +22,17 @@ class UpdateCopyTest {
 
     @Test fun `the You page's row says a new version, checking, up to date, or just the version`() {
         assertEquals("unstrap 2.2.0 is ready to install", UpdateCopy.summary(UpdateState(listOf(r220, r210), checkedAt = now), "2.1.0", now, utc, Locale.UK))
-        assertEquals("Checking…", UpdateCopy.summary(UpdateState(listOf(r210), check = Check.Checking), "2.1.0", now, utc, Locale.UK))
-        assertEquals("Up to date. Checked today at 19:00", UpdateCopy.summary(UpdateState(listOf(r210), checkedAt = now - 3600), "2.1.0", now, utc, Locale.UK))
+        assertEquals("Checking", UpdateCopy.summary(UpdateState(listOf(r210), check = Check.Checking), "2.1.0", now, utc, Locale.UK))
+        assertEquals("Up to date, checked 19:00", UpdateCopy.summary(UpdateState(listOf(r210), checkedAt = now - 3600), "2.1.0", now, utc, Locale.UK))
         assertEquals("Version 2.1.0", UpdateCopy.summary(UpdateState(), "2.1.0", now, utc, Locale.UK))
     }
 
     @Test fun `Check now says when it last looked, and when GitHub couldn't be reached`() {
         assertEquals("Never checked", UpdateCopy.checkStatus(UpdateState(), now, utc, Locale.UK))
-        assertEquals("Checking GitHub…", UpdateCopy.checkStatus(UpdateState(check = Check.Checking), now, utc, Locale.UK))
-        assertEquals("Last checked yesterday at 23:50", UpdateCopy.checkStatus(UpdateState(checkedAt = 1792195200L - 600), now, utc, Locale.UK))
+        assertEquals("Checking GitHub", UpdateCopy.checkStatus(UpdateState(check = Check.Checking), now, utc, Locale.UK))
+        assertEquals("Last checked Yesterday 23:50", UpdateCopy.checkStatus(UpdateState(checkedAt = 1792195200L - 600), now, utc, Locale.UK))
         assertEquals(
-            "Couldn't reach GitHub. Last checked today at 19:00",
+            "Couldn't reach GitHub, last checked 19:00",
             UpdateCopy.checkStatus(UpdateState(checkedAt = now - 3600, check = Check.Failed), now, utc, Locale.UK),
         )
         assertEquals("Couldn't reach GitHub", UpdateCopy.checkStatus(UpdateState(check = Check.Failed), now, utc, Locale.UK))
@@ -40,16 +40,16 @@ class UpdateCopyTest {
 
     @Test fun `the install row follows the download and says why it stopped`() {
         assertEquals("Download and install, 20.3 MB", UpdateCopy.install(r220, Install.Idle, recording = false))
-        assertEquals("After your workout. Installing closes the app", UpdateCopy.install(r220, Install.Idle, recording = true))
+        assertEquals("Waits for your workout to end", UpdateCopy.install(r220, Install.Idle, recording = true))
         assertEquals("Downloading, 45%", UpdateCopy.install(r220, Install.Downloading("v2.2.0", 45, 100), recording = false))
-        assertEquals("Installing. unstrap closes when it's done", UpdateCopy.install(r220, Install.Installing("v2.2.0"), recording = false))
+        assertEquals("Installing, closes when done", UpdateCopy.install(r220, Install.Installing("v2.2.0"), recording = false))
         assertEquals(
-            "This copy of unstrap is signed with another key. Install it from GitHub instead",
+            "Signed with another key, use GitHub",
             UpdateCopy.install(r220, Install.Failed("v2.2.0", InstallFailure.Signature), recording = false),
         )
         // Another release's download isn't this one's.
         assertEquals("Download and install, 20.3 MB", UpdateCopy.install(r220, Install.Downloading("v2.1.0", 1, 2), recording = false))
-        assertEquals("No app file in this release. Open it on GitHub", UpdateCopy.install(r220.copy(apk = null), Install.Idle, recording = false))
+        assertEquals("No app file in this release", UpdateCopy.install(r220.copy(apk = null), Install.Idle, recording = false))
     }
 
     @Test fun `no user-facing line uses a semicolon, middle dot or dash`() {

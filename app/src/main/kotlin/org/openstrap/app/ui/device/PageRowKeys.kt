@@ -10,6 +10,7 @@ internal object PageRowKeys {
     const val HEART_ZONES = "Heart rate zones"
     const val GOALS_AND_BESTS = "Goals and bests"
     const val REPORTS = "Reports"
+    const val WORKOUTS = "Workouts"
     const val HEALTH_CONNECT = "Health Connect"
     const val BACKUP = "Backup"
     const val DELETED_SLEEP = "Deleted sleep"

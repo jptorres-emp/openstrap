@@ -29,7 +29,7 @@ class PageSwitchRowTest {
     private fun row(enabled: Boolean = true) {
         rules.compose.setContent {
             var on by remember { mutableStateOf(false) }
-            PageSwitchRow("Off-body reminder", "Buzzes when the strap comes off", on, { on = it }, enabled = enabled, icon = org.openstrap.app.ui.theme.AppIcons.HandPalm)
+            SwitchRow("Off-body reminder", "Buzzes when the strap comes off", on, { on = it }, enabled = enabled, icon = org.openstrap.app.ui.theme.AppIcons.HandPalm)
         }
     }
 

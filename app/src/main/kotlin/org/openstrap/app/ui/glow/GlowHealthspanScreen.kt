@@ -1,12 +1,28 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import org.openstrap.app.presentation.Range
+import org.openstrap.app.presentation.TabCopy
+import org.openstrap.app.ui.dashboard.InfoCopy
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,16 +32,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import org.openstrap.app.data.Healthspan
-import org.openstrap.app.ui.dashboard.ScreenList
 import kotlin.math.abs
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /** The scale on the Healthspan screen's bars: a habit this many years either side of the middle fills its half. */
@@ -46,39 +64,73 @@ private fun updatedText(asOf: Long): String {
 }
 
 /**
- * The page behind the Habit Age card (spec 5.4): the same picture card at the top, its (i) holding the method, then the
- * pace it's moving at and what moves it; or, before an estimate, only the card saying why it waits.
+ * Habit Age's detail (board HaloDetailHabitAge, kind Estimate): the years in Doto with "vs 34 actual" under the status, the
+ * pace on a solid scale from -1x to 3x, then each habit as a row with its effect on the same scale. There is no day strip
+ * and no range, since it is worked out weekly. Before an estimate, the headline's state word says why it waits.
  */
 @Composable
 fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValues, onBack: () -> Unit) {
-    BackHandler(onBack = onBack)
     val r = state?.result
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(
-                stringResource(R.string.glow_healthspan_title), onBack,
-                subtitle = r?.let { updatedText(it.asOf) } ?: stringResource(R.string.glow_healthspan_updated_weekly),
-            ) }
-        // The page is what the card opens, so here it opens nothing: no caret.
-        item { HabitAgeEdgeCard(state, onClick = null, onOpenProfile = null) }
+    var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val color = MetricColors.habitAge
+    val withheld = state?.withheld
+    val needsProfile = r == null && state?.missing?.isNotEmpty() == true && withheld?.profile == true
+    val waiting = when {
+        r != null -> null
+        needsProfile -> profileReminder(state.missing)
+        state?.firstEstimate != null -> TabCopy.firstEstimate(
+            java.time.Instant.ofEpochSecond(state.firstEstimate).atZone(java.time.ZoneId.systemDefault()).toLocalDate(),
+        )
+        else -> withheld?.reason
+    }
+    val shown = r?.estimate?.let { Math.round(it) } ?: state?.age
+    val line = r?.let { TabCopy.habitAgeLine(it.estimate, state.lastWeek, it.low, it.high) }
+    val years = stringResource(R.string.glow_healthspan_years)
+    val headline = when {
+        shown != null -> DetailHeadline(
+            shown.toString(),
+            stringResource(R.string.glow_healthspan_years_line, years, r?.let { updatedText(it.asOf) } ?: TabCopy.habitAgeForNow(waiting)),
+            line?.text, unit = years,
+        )
+        else -> DetailHeadline.none(
+            stringResource(R.string.glow_healthspan_title), waiting ?: stringResource(R.string.glow_healthspan_updated_weekly),
+        )
+    }
+    DetailTemplate(
+        stringResource(R.string.glow_healthspan_title), color, emptyList(), onInfo = { info = true }, onBack = onBack,
+        contentPadding = contentPadding, headline = headline, strip = emptyList(), onDay = {},
+        ranges = listOf(Range.Day), range = Range.Day, onRange = {},
+        heroBelow = r?.let { { RangeLine(TabCopy.ageRange(it.low, it.high)) } },
+    ) {
         if (r != null) {
             item { PacePanel(r.pace) }
             item { TermsPanel(r) }
         }
     }
+    if (info) {
+        val here = r?.let { InfoCopy.habitAgeBar(it.age - Math.round(it.estimate)) }
+        InfoSheet(InfoCopy.HABIT_AGE, color, here, here?.let { InfoCopy.HERE }, onDismiss = { info = false })
+    }
 }
 
+/** "Likely 29 to 33" under the headline. */
+@Composable
+private fun RangeLine(text: String) =
+    Text(text, color = Ink.Secondary, style = GlowType.secondary)
+
 /**
- * Where the last 30 days sit against the 6-month habits, as a grouped list (spec 5.4): the pace in the title row's
- * note, one row in Habit Age's ink saying what it means, and the scale from -1x to 3x under it. Opens nothing.
+ * Where the last 30 days sit against the 6-month habits: "Pace of aging" with its pace as the note, the scale from -1x to
+ * 3x with a marker at the pace, and a sentence in the Detail sentence type saying what it means.
  */
 @Composable
 private fun PacePanel(pace: Float?) {
-    ListPanel(
-        title = stringResource(R.string.glow_healthspan_pace_title),
-        note = pace?.let { stringResource(R.string.glow_healthspan_pace_note, paceLabel(it), paceText(it)) } ?: paceLabel(null),
-    ) {
-        ListRow(
-            stringResource(R.string.glow_healthspan_last_30_days), MetricColors.habitAge, null,
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        HaloTitle(
+            stringResource(R.string.glow_healthspan_pace_title), variant = TitleVariant.OutOfCard,
+            note = pace?.let { stringResource(R.string.glow_healthspan_pace_note, paceLabel(it), paceText(it)) } ?: paceLabel(null),
+        )
+        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge, Modifier.padding(horizontal = Space.S4))
+        Text(
             stringResource(
                 when {
                     pace == null -> R.string.glow_healthspan_pace_needs
@@ -87,17 +139,24 @@ private fun PacePanel(pace: Float?) {
                     else -> R.string.glow_healthspan_pace_match
                 },
             ),
-            divider = false, dash = false, icon = org.openstrap.app.ui.dashboard.Detail.Healthspan.rowIcon(),
+            color = Color.White, style = GlowType.detailSentence, modifier = Modifier.padding(horizontal = Space.S4),
         )
-        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge, Modifier.padding(start = RowIcon + RowIconGap, bottom = GlowLayout.RowPadding))
     }
 }
 
-/** A track from -1x to 3x with a dot at the pace, in the quiet panels' bar style: a faint track and a [glowDot]. */
+/** A solid track from -1x to 3x with the marker at the pace and the ends named under it. */
 @Composable
 private fun PaceScale(marker: Float, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        ScaleTrack { x0, x1, y -> glowDot(Offset(x0 + (x1 - x0) * marker.coerceIn(0f, 1f), y), color) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+        Canvas(Modifier.fillMaxWidth().height(16.dp)) {
+            val y = size.height / 2
+            val track = Size(size.width, 6.dp.toPx())
+            drawRoundRect(Greys.Raised, Offset(0f, y - 3.dp.toPx()), track, CornerRadius(3.dp.toPx()))
+            val x = 8.dp.toPx() + (size.width - 16.dp.toPx()) * marker.coerceIn(0f, 1f)
+            drawRoundRect(color, Offset(0f, y - 3.dp.toPx()), Size(x, 6.dp.toPx()), CornerRadius(3.dp.toPx()))
+            drawCircle(Color.Black, 8.dp.toPx(), Offset(x, y))
+            drawCircle(Color.White, 8.dp.toPx(), Offset(x, y), style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx()))
+        }
         ScaleLabels(
             stringResource(R.string.glow_healthspan_scale_slower), stringResource(R.string.glow_healthspan_scale_steady),
             stringResource(R.string.glow_healthspan_scale_faster),
@@ -106,52 +165,35 @@ private fun PaceScale(marker: Float, color: Color, modifier: Modifier = Modifier
 }
 
 /**
- * The quiet panels' scale, which the pace and each habit's effect are drawn on: a faint 2 dp track 12 dp tall, in from
- * each end by a [glowDot]'s halo so a dot at the end shows whole. [marks] draws on it from the track's ends and middle.
- */
-@Composable
-private fun ScaleTrack(modifier: Modifier = Modifier, marks: DrawScope.(x0: Float, x1: Float, y: Float) -> Unit) {
-    Canvas(modifier.fillMaxWidth().height(12.dp)) {
-        val y = size.height / 2
-        val r = 5.dp.toPx()
-        drawLine(Color.White.copy(alpha = 0.10f), Offset(r, y), Offset(size.width - r, y), 2.dp.toPx(), StrokeCap.Round)
-        marks(r, size.width - r, y)
-    }
-}
-
-/** The quiet panels' bar dot: a halo, the solid dot, and a white pip. */
-private fun DrawScope.glowDot(at: Offset, color: Color) {
-    drawCircle(color.copy(alpha = 0.30f), 5.dp.toPx(), at)
-    drawCircle(color, 3.dp.toPx(), at)
-    drawCircle(Color.White, 1.2.dp.toPx(), at)
-}
-
-/**
- * Each habit against its typical value, as a grouped list (spec 5.4): the habit's metric icon in its ink, what
- * it takes off or adds and the numbers behind it, and its bar on the shared scale. No row opens anything.
+ * Each habit against its typical value (board HaloDetailHabitAge, "What moves it"): one plain panel, a row a habit with its
+ * tile, what it takes off or adds on the right and the numbers behind it, and its bar on the one scale under it. No row
+ * opens anything.
  */
 @Composable
 private fun TermsPanel(r: Healthspan.Result) {
-    ListPanel(title = stringResource(R.string.glow_healthspan_terms_title), note = stringResource(R.string.glow_healthspan_terms_note)) {
-        // One scale for every bar below: a habit at either end takes off, or adds, BAR_FULL_YEARS or more.
-        ScaleLabels(
-            stringResource(R.string.glow_healthspan_scale_younger), "0", stringResource(R.string.glow_healthspan_scale_older),
-            Modifier.padding(start = RowIcon + RowIconGap, top = 4.dp, bottom = 2.dp),
-        )
+    DetailPanel(title = stringResource(R.string.glow_healthspan_terms_title), note = stringResource(R.string.glow_healthspan_terms_note)) {
         r.terms.forEachIndexed { i, t ->
             val (icon, ink) = habitIcon(t.habit)
-            ListRow(
-                t.habit.label, ink, null, "${effectText(t.years).replaceFirstChar { it.uppercase() }}\n${termDetail(t, r.age)}",
-                divider = i > 0, dash = false, icon = icon,
+            HaloRow(
+                t.habit.label, lead = RowLead.tile(icon, ink),
+                line = { RowLine(termDetail(t, r.age)) },
+                value = effectText(t.years), valueInk = effectInk(t.years),
+                valueStyle = GlowType.secondary.copy(textAlign = androidx.compose.ui.text.style.TextAlign.End),
+                valueModifier = Modifier.widthIn(max = 96.dp),
+                below = { EffectBar(t.years, Modifier.fillMaxWidth()) },
+                divider = i > 0,
             )
-            EffectBar(t.years, Modifier.padding(start = RowIcon + RowIconGap, bottom = GlowLayout.RowPadding))
         }
-        if (r.fitnessCapped) Text(
-            stringResource(R.string.glow_healthspan_fitness_capped),
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-            modifier = Modifier.padding(bottom = GlowLayout.RowPadding),
-        )
+        Row(Modifier.fillMaxWidth().rowSides().padding(start = IconSize.TileS + RowSpec.Gap, bottom = Space.S12),
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.glow_healthspan_scale_younger), color = DetailAxisInk, style = GlowType.caption)
+            Text(stringResource(R.string.glow_healthspan_scale_older), color = DetailAxisInk, style = GlowType.caption)
+        }
     }
+    if (r.fitnessCapped) Text(
+        stringResource(R.string.glow_healthspan_fitness_capped),
+        color = GlowType.footnoteColor, style = GlowType.footnote, modifier = Modifier.padding(horizontal = Space.S4),
+    )
 }
 
 /** A habit's metric icon and ink, as its metric's rows draw them (spec 2.5): Load's barbell, the heart, steps, sleep. */
@@ -175,27 +217,39 @@ private fun ScaleLabels(start: String, middle: String, end: String, modifier: Mo
 
 /** A scale's label in Caption, centred on [at] (0 to 1) across the scale and kept inside it. */
 @Composable
-internal fun BoxScope.ScaleLabel(text: String, at: Float, color: Color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA)) {
+internal fun BoxScope.ScaleLabel(text: String, at: Float, color: Color = Ink.Secondary) {
     // Centred on its point by aligning a share of the way across, as BiasAlignment does.
     Text(text, color = color, style = GlowType.caption, modifier = Modifier.align(BiasAlignment((at * 2f - 1f).coerceIn(-1f, 1f), 0f)))
 }
 
+/** A habit's effect in words: grey with none, the Habit Age tint when it takes years off, white when it adds. */
+private fun effectInk(years: Float): Color = when {
+    abs(years) < NO_EFFECT -> GlowType.noteColor
+    years < 0 -> statusTint(MetricColors.habitAge)
+    else -> Ink.Strong
+}
+
+/** Under this many years a habit has no effect to show. */
+private const val NO_EFFECT = 0.05f
+
 /**
- * One habit's effect as a bar out from the middle: left takes years off, right adds them. Drawn in the quiet
- * panels' bar style: a faint track, a glowing line and a dot at its end, in Habit Age's own ink either way. A habit
- * with no effect shows only the track and the middle mark.
+ * One habit's effect as a bar out from the middle: left takes years off, right adds them. A solid 4 dp track, a mark at the
+ * middle and the bar in Habit Age's own ink either way; a habit with no effect shows only the track and the mark.
  */
 @Composable
 private fun EffectBar(years: Float, modifier: Modifier = Modifier) {
-    ScaleTrack(modifier) { x0, _, y ->
+    Canvas(modifier.fillMaxWidth().height(10.dp)) {
         val mid = size.width / 2
-        drawLine(Color.White.copy(alpha = 0.35f), Offset(mid, y - 5.dp.toPx()), Offset(mid, y + 5.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
-        if (abs(years) < 0.05f) return@ScaleTrack
-        // Habit Age's own ink either way: the side of the centre says better or worse, never green or amber.
-        val color = MetricColors.habitAge
-        val end = Offset(mid + (years / BAR_FULL_YEARS).coerceIn(-1f, 1f) * (mid - x0), y)
-        drawLine(color.copy(alpha = 0.22f), Offset(mid, y), end, 6.dp.toPx(), StrokeCap.Round)
-        drawLine(color, Offset(mid, y), end, 2.2.dp.toPx(), StrokeCap.Round)
-        glowDot(end, color)
+        val track = Size(size.width, 4.dp.toPx())
+        drawRoundRect(Greys.Raised, Offset(0f, 3.dp.toPx()), track, CornerRadius(2.dp.toPx()))
+        if (abs(years) >= NO_EFFECT) {
+            val end = mid + (years / BAR_FULL_YEARS).coerceIn(-1f, 1f) * mid
+            drawRoundRect(
+                MetricColors.habitAge, Offset(minOf(mid, end), 1.dp.toPx()), Size(abs(end - mid), 8.dp.toPx()),
+                CornerRadius(4.dp.toPx()),
+            )
+        }
+        val mark = Size(2.dp.toPx(), 10.dp.toPx())
+        drawRoundRect(Ink.Tertiary, Offset(mid - 1.dp.toPx(), 0f), mark, CornerRadius(1.dp.toPx()))
     }
 }

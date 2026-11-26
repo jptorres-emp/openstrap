@@ -21,7 +21,7 @@
     <string name="day_notifications_blocked_text">unstrap 通过通知显示运动和手环状态。Android 不会再次询问，请在 unstrap 的系统设置中开启“通知”。</string>
     <string name="day_pull_sync_failed">无法同步。%1$s</string>
     <string name="day_pull_not_connected">手环未连接。</string>
-    <string name="day_pull_syncing">正在同步手环…</string>
+    <string name="day_pull_syncing">正在同步手环</string>
     <string name="day_pull_release">松开同步手环</string>
     <string name="day_pull_pull">下拉同步手环</string>
 </resources>

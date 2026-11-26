@@ -30,15 +30,12 @@ sealed interface WorkoutTarget {
         val label: String get() = Strings.app.format(R.string.core_coach_kcal, kcal)
     }
 
-    /** Metres: from GPS, or the strap's steps without it, as the workout counts its distance. */
+    /**
+     * Metres: from GPS, or the strap's steps without it, as the workout counts its distance. Its label is written in the
+     * distance system in force, so it lives with the formatter (`presentation`, `WorkoutTarget.Distance.label`).
+     */
     data class Distance(val meters: Int) : WorkoutTarget {
         override val code get() = "d:$meters"
-        /** "5 km", "21.1 km", "800 m". */
-        val label: String get() = when {
-            meters < 1000 -> Strings.app.format(R.string.core_coach_meters, meters)
-            meters % 1000 == 0 -> Strings.app.format(R.string.core_coach_km, (meters / 1000).toString())
-            else -> Strings.app.format(R.string.core_coach_km, String.format(java.util.Locale.ROOT, "%.1f", meters / 1000f))
-        }
     }
 
     companion object {

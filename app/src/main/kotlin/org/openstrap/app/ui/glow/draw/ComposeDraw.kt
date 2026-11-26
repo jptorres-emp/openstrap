@@ -2,14 +2,16 @@ package org.openstrap.app.ui.glow.draw
 
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.SolidSurface
 
 /*
  * The shared drawing in Compose: the specs in LightSpec, DotSpec and ChartSpec painted on a DrawScope, as the cards
@@ -34,19 +36,15 @@ fun LinearGradientSpec.brush(): Brush = Brush.linearGradient(*colorStops(), star
 fun GlossSpec.brush(): Brush =
     if (across) Brush.horizontalGradient(*stops.toTypedArray()) else Brush.verticalGradient(*stops.toTypedArray())
 
-/** An edge card's background: the surface, the light from [glow] (its [EdgePaint.glow] as a brush), the hairline. */
-fun DrawScope.drawEdge(paint: EdgePaint, glow: Brush) {
-    val radius = CornerRadius(paint.radius)
-    val stroke = paint.hairlineWidth
-    drawRoundRect(paint.surface, cornerRadius = radius)
-    drawRoundRect(glow, cornerRadius = radius)
-    drawRoundRect(
-        paint.hairline,
-        topLeft = Offset(stroke / 2, stroke / 2),
-        size = Size(size.width - stroke, size.height - stroke),
-        cornerRadius = CornerRadius(radius.x - stroke / 2),
-        style = Stroke(stroke),
-    )
+/**
+ * An edge card's background in the app: the solid surface, then the light from [glow] (its [EdgePaint.glow] as a
+ * brush), both in the card's squircle and with no white hairline (Halo System board, "Gone from the canvas"). The
+ * widgets' [org.openstrap.app.ui.glow.draw.drawEdge] on a canvas is a separate path and stays as it is.
+ */
+fun DrawScope.drawEdge(glow: Brush) {
+    val outline = GlowLayout.CardShape.createOutline(size, layoutDirection, this)
+    drawOutline(outline, SolidSurface)
+    drawOutline(outline, glow)
 }
 
 /** [layout]'s dots in [color], from the top left. */

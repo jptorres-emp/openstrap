@@ -161,14 +161,14 @@ abstract class LiveLandscapeLayoutTest {
     private companion object {
         fun texts(n: SemanticsNode): List<String> = n.config.getOrElseNullable(SemanticsProperties.Text) { null }.orEmpty().map { it.text }
 
-        val END_SQUARE = 64.dp
+        val END_SQUARE = 60.dp
         val SMALLEST_ICON = 20.dp
 
-        val CONTROL_DESCRIPTIONS = setOf("Pause", "Resume", "Hold to end the workout", "Lap", "Skip", "Skip rest")
+        val CONTROL_DESCRIPTIONS = setOf("Pause", "Resume", "Hold to stop the workout", "Lap", "Skip", "Skip rest")
 
         /** The controls' own labels, under them or on their pills, and the line under the paused buttons. */
         val CONTROL_LABELS = setOf(
-            "Pause", "Resume", "Hold to end", "Lap", "Skip", "Skip rest", "End workout",
+            "Pause", "Resume", "Hold to stop", "Lap", "Skip", "Skip rest", "+10 s", "Done", "End workout",
             "Hold End workout to finish. Resume carries on where you stopped.", "Tap anywhere to light the screen",
         )
 

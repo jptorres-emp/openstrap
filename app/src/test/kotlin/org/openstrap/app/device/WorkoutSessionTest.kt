@@ -813,6 +813,75 @@ class WorkoutSessionTest {
         assertEquals(t0 + 60, paused.endPrompt)
     }
 
+    /**
+     * A session whose "Ask to end when I stop" is [ask], recording [sport] since nine minutes ago: a minute of effort,
+     * then eight calm minutes after it, so the wearer has been still since a minute in.
+     */
+    private fun stoppedNineMinutesIn(ask: org.openstrap.app.data.settings.AskToEnd, sport: Int = 1): Pair<WorkoutSession, Long> {
+        val settings = SettingsStore.of(store)
+        runBlocking { settings.setAskToEnd(ask) }
+        val s = session(settings = settings)
+        s.askToEndSetting.await("ask to end") { it == ask }
+        val t0 = clock.now
+        val seed = (1L..60L).map { t0 + it to 170 } + (61L..600L).map { t0 + it to 70 }
+        clock.advance(Duration.ofSeconds(600))
+        s.start(sportType = sport, from = t0, seed = seed)
+        s.recording()
+        // The seed is recorded just after the state turns Recording.
+        s.recent.await("seed") { it.lastOrNull()?.first == t0 + 600 }
+        return s to t0
+    }
+
+    /** The stop question waits the sport's own time: with Most workouts at 10 minutes, nine still minutes don't ask yet. */
+    @Test
+    fun theEndQuestionWaitsTheConfiguredTime() {
+        val (s, t0) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = 10))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+        // Eleven still minutes: past ten, so it asks, ending where the effort stopped.
+        clock.advance(Duration.ofSeconds(120))
+        s.checkStopped()
+        assertEquals(t0 + 60, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** A group set to Off never asks, however long the wearer stays still. */
+    @Test
+    fun anOffGroupNeverAsks() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = null))
+        clock.advance(Duration.ofSeconds(3_600))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    @Test
+    fun theSwitchOffNeverAsks() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(on = false))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** Yoga is Off out of the box: nine still minutes of it don't ask, where a run (8 minutes) would. */
+    @Test
+    fun yogaDoesNotAskByDefault() {
+        val (s, _) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(), sport = 53)
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
+    /** A change made while the workout records applies to it at once. */
+    @Test
+    fun aChangeAppliesToTheRunningWorkout() {
+        val settings = SettingsStore.of(store)
+        val (s, t0) = stoppedNineMinutesIn(org.openstrap.app.data.settings.AskToEnd(most = null))
+        s.checkStopped()
+        assertEquals(null, (s.state.value as WorkoutState.Recording).endPrompt)
+        val now = org.openstrap.app.data.settings.AskToEnd(most = 5)
+        runBlocking { settings.setAskToEnd(now) }
+        s.askToEndSetting.await("ask to end") { it == now }
+        s.checkStopped()
+        assertEquals(t0 + 60, (s.state.value as WorkoutState.Recording).endPrompt)
+    }
+
     @Test
     fun aSaveThatFailsMidWorkoutKeepsItRecording() {
         val s = session()
@@ -992,7 +1061,7 @@ class WorkoutSessionTest {
         s.start(sportType = 1)
         s.recording()
         val n = keepRecording(present = true)!!
-        assertEquals("Keep recording your outdoor run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertEquals("Keep recording your run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
         assertEquals(KeepRecordingNotice.TEXT, n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
         assertEquals(KeepRecordingNotice.CHANNEL, n.channelId)
         // A tap brings the app forward on the live screen.
@@ -1040,7 +1109,7 @@ class WorkoutSessionTest {
     fun theSportReadsAsInASentence() {
         assertEquals("Keep recording your mountain hike", KeepRecordingNotice.title(224))
         assertEquals("Keep recording your HYROX training", KeepRecordingNotice.title(222))
-        assertEquals("Keep recording your strength training", KeepRecordingNotice.title(52))
+        assertEquals("Keep recording your strength", KeepRecordingNotice.title(52))
     }
 
     /** A preferences store of the test's own, for settings writes that fail. */

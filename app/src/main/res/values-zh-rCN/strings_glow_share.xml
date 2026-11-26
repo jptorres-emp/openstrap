@@ -11,7 +11,6 @@
     <string name="glow_share_stat_bpm_start">开始心率</string>
     <string name="glow_share_stat_bpm_end">结束心率</string>
     <string name="glow_share_stat_load">负荷</string>
-    <string name="glow_share_unit_per_km">/km</string>
     <string name="glow_share_unit_kg">kg</string>
     <plurals name="glow_share_sets">
         <item quantity="other">%d 组</item>
@@ -37,4 +36,5 @@
     <string name="glow_share_route_line">线条</string>
     <string name="glow_share_hide_ends">隐藏起点与终点</string>
     <string name="glow_share_photo_failed">无法读取这张照片</string>
+    <string name="glow_share_hide_ends_note">从路线两端各隐藏 %1$d 米</string>
 </resources>

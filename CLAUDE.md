@@ -33,6 +33,6 @@ To test widgets again:
 3. `adb shell appwidget grantbind --package org.openstrap.app --user 0`
 4. `adb shell am start -f 0x00020000 -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es widget moment`
    Extras: `widget` recovery|steps|sleep|start|moment, `mood` day|evening|night|auto, `cells` oneui|min,
-   `moment` a moment name or auto, `placed` kinds or none|auto, `strap` notpaired|low|stale|yesterday|week|syncing|none|auto,
+   `moment` a moment name or auto, `placed` kinds or none|auto, `strap` notpaired|low|stale|yesterday|week|syncing|synced|none|auto, `data` sample (the sample day),
    `pin` a kind. A render takes 15 to 20 s.
 5. When done, close it with Back (so it unbinds its widgets), then comment the activity out again.

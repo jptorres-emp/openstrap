@@ -31,7 +31,7 @@ class StartWidgetModelTest {
     }
 
     /**
-     * Runs three times (Tuesday's 5.2 km this week), walks and rides twice, a treadmill run on Friday, strength once,
+     * Runs three times (Tuesday's 5.2 km this week), walks and rides twice, yoga on Friday, strength once,
      * and the strap's own "Activity" this week, which isn't a workout.
      */
     private val history = listOf(
@@ -42,7 +42,7 @@ class StartWidgetModelTest {
         workout(12, 8, 3, 30),
         workout(15, 17, 4, 50),
         workout(9, 17, 4, 50),
-        workout(23, 19, 2, 35),
+        workout(23, 19, 60, 35),
         workout(18, 10, 52, 40, sets = 12),
         workout(22, 13, Workouts.GENERIC_ACTIVITY, 20),
     )
@@ -55,11 +55,11 @@ class StartWidgetModelTest {
     @Test fun `the usual is the sport done most, the next four by use`() {
         val m = model()
         assertEquals(1, m.usual.sportType)
-        assertEquals("Outdoor run", m.usual.name)
+        assertEquals("Run", m.usual.name)
         assertEquals("Start run", m.usual.action)
-        // Walk and cycling twice, the walk more recently; treadmill and strength once, the treadmill more recently.
-        assertEquals(listOf("Walk", "Cycling", "Treadmill", "Strength"), m.next.take(4).map { it.caption })
-        assertEquals(listOf(3, 4, 2, 52), m.next.take(4).map { it.sportType })
+        // Walk and cycling twice, the walk more recently; yoga and strength once, the yoga more recently.
+        assertEquals(listOf("Walk", "Cycling", "Yoga", "Strength"), m.next.take(4).map { it.caption })
+        assertEquals(listOf(3, 4, 60, 52), m.next.take(4).map { it.sportType })
         // Then the everyday sports, each once (Hike isn't on the strap for now: Cross training has its place).
         assertEquals("Cross-training", m.next[4].caption)
         assertEquals(m.next.size, m.next.distinctBy { it.shownType }.size)
@@ -85,20 +85,21 @@ class StartWidgetModelTest {
         assertFalse(off.gpsOn)
         // Strength has no GPS to speak of.
         val indoor = model(workouts = listOf(workout(20, 8, 52, 40), workout(21, 8, 52, 40)))
-        assertEquals("Strength training", indoor.usual.name)
+        assertEquals("Strength", indoor.usual.name)
         assertEquals("Your usual", indoor.usualLine)
         assertFalse(indoor.gpsOn)
     }
 
     @Test fun `a sport with two sides shows the side Ready opens on, once`() {
-        // Your runs, last done on the treadmill side: Ready opens on Treadmill, so that's what the widget says.
-        val m = model(sides = mapOf(1 to true))
+        // Your runs, last done on the treadmill side: Ready opens on the treadmill, and the run keeps its one name.
+        val m = model(workouts = history + workout(24, 7, 2, 35), sides = mapOf(1 to true))
         assertEquals(1, m.usual.sportType)
         assertEquals(2, m.usual.shownType)
-        assertEquals("Treadmill", m.usual.name)
+        assertEquals("Run", m.usual.name)
         assertEquals("Your usual", m.usualLine)
         assertFalse(m.gpsOn)
-        assertTrue(m.next.none { it.shownType == 2 })
+        // The treadmill run is the same sport as the usual: no second Run tile.
+        assertTrue(m.next.none { Workouts.tileType(it.shownType) == 1 })
     }
 
     @Test fun `this week counts workouts since Monday, not the strap's Activity`() {
@@ -120,11 +121,11 @@ class StartWidgetModelTest {
     }
 
     @Test fun `the usual sport's last, by its tile, with its distance, sets or length`() {
-        // The treadmill on Friday is a run too.
         assertEquals("Last run", model().lastLabel)
-        assertEquals("Yesterday, 35 min", model().lastLine)
-        val outdoors = model(workouts = history.filter { it.workout.sportType != 2 })
-        assertEquals("Tuesday, 5.2 km", outdoors.lastLine)
+        assertEquals("Tuesday, 5.2 km", model().lastLine)
+        // A treadmill on Friday is a run too.
+        val treadmill = model(workouts = history + workout(23, 19, 2, 35))
+        assertEquals("Yesterday, 35 min", treadmill.lastLine)
         val strength = model(workouts = listOf(workout(18, 10, 52, 40, sets = 12), workout(10, 10, 52, 40)))
         assertEquals("Last strength", strength.lastLabel)
         assertEquals("Sunday, 12 sets", strength.lastLine)
@@ -138,7 +139,7 @@ class StartWidgetModelTest {
     @Test fun `while recording, the sport, since when and the active time`() {
         val m = model(recording = StartRecordingInput(4, at(24, 11, 58).epochSecond, 1_500L, paused = false))
         val rec = assertNotNullAnd(m.recording)
-        assertEquals("Outdoor cycling", rec.sport.name)
+        assertEquals("Cycling", rec.sport.name)
         assertEquals("Since 11:58", rec.since)
         assertEquals("Recording", rec.status)
         assertEquals(4, rec.sport.shownType)
@@ -159,62 +160,44 @@ class StartWidgetModelTest {
         assertEquals(elapsed - 1_500_000L, StartRecording.chronometerBase(elapsed, r.atMillis + 60_000L, p))
     }
 
-    @Test fun `the recording layouts fit every cell and font, one line each, the timer whole`() {
-        val r = model(recording = StartRecordingInput(60, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
+    @Test fun `the recording layouts fit the grid at every font, one line each, the timer whole`() {
+        val r = model(recording = StartRecordingInput(60, at(24, 11, 58).epochSecond, 1_500L, paused = false, bpm = 112, zone = 0)).recording!!
         val walk = r.copy(sport = StartSport.recorded(40))
         val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
         for (s in scales) for (rec in listOf(r, walk)) {
-            for ((w, h) in smallCells) {
-                val fit = StartLayout.smallRecording(rec, w, h, s)
-                val where = "Small $w x $h at $s"
-                assertTrue("$where: timer too wide", StartLayout.timerWidth(fit.timerSp, s) <= w)
-                assertTrue("$where: name wraps", one(fit.name, WidgetText.BODY_SP, w, s) || fit.name == rec.sport.shortName)
-                assertTrue("$where: too tall ${fit.content}", fit.content <= h)
-                if (fit.tile >= StartLayout.MIN_TILE_DP) assertTrue("$where: top row", fit.tile + StartLayout.SMALL_GAP_DP + StartLayout.openWidth(s) <= w)
-            }
-            for ((w, h) in wideCells) {
-                val fit = StartLayout.wideRecording(rec, w, h, s)
-                val where = "Wide $w x $h at $s"
-                assertTrue("$where: timer too wide", StartLayout.timerWidth(fit.timerSp, s) <= w)
-                if (fit.since == StartLayout.SincePlace.Beside) {
-                    assertTrue(where, StartLayout.timerWidth(fit.timerSp, s) + StartLayout.SINCE_GAP_DP + WidgetText.width(rec.since, WidgetText.SECONDARY_SP, s) <= w)
-                }
-                assertTrue("$where: too tall ${fit.content}", fit.content + StartLayout.MIN_GAP_DP <= h)
-            }
-            for ((w, h) in largeCells) {
-                val fit = StartLayout.largeRecording(rec, m, w, h, s)
-                assertTrue("Large $w x $h at $s: too tall ${fit.content}", fit.content + 3 * StartLayout.MIN_GAP_DP <= h)
+            // The grid's content: a Small is 150 dp less 2 x 20 each way, the Wide 280 x 160, the Large 280 x 260.
+            val small = WidgetGrid.contentHeight(WidgetSizes.Small)
+            val smallW = WidgetSizes.Small.width.value - 2 * WidgetGrid.PADDING_DP
+            val fit = StartLayout.smallRecording(rec, smallW, small, s)
+            val where = "Small at $s"
+            assertTrue("$where: timer too wide", StartLayout.letterEms("00:00") * fit.timerSp * s <= smallW)
+            assertTrue("$where: name wraps", one(fit.name, WidgetText.CARD_TITLE_SP, smallW, s) || fit.name == rec.sport.shortName)
+            val rows = WidgetText.line(WidgetText.CARD_TITLE_SP, s) + WidgetText.line(WidgetText.SECONDARY_SP, s) + checkNotNull(fit.timerLine) +
+                WidgetGrid.GAP_TIGHT_DP + maxOf(WidgetText.line(WidgetText.SECONDARY_SP, s), StartLayout.chipHeight(s))
+            assertTrue("$where: the bpm row is cut, rows take $rows of $small", rows <= small + 0.01f || fit.timerSp == StartLayout.TIMER_MIN_SP)
+            for (bucket in listOf(WidgetSizes.Wide, WidgetSizes.Large)) {
+                val w = bucket.width.value - 2 * WidgetGrid.PADDING_DP
+                val h = WidgetGrid.contentHeight(bucket)
+                val wide = if (bucket == WidgetSizes.Wide) StartLayout.wideRecording(rec, w, h, s) else StartLayout.largeRecording(rec, m, w, h, s)
+                assertTrue("${bucket.width} x ${bucket.height} at $s: timer too wide", StartLayout.timerWidth(wide.timerSp, s) <= w)
+                assertTrue("${bucket.width} x ${bucket.height} at $s: too tall ${wide.content}", wide.content + (wide.gaps - 2) * StartLayout.MIN_GAP_DP <= h)
             }
         }
-        // At the minimum Small the tile stays beside Open at the fonts phones use.
-        for (s in listOf(1f, 1.08f)) assertTrue(StartLayout.smallRecording(walk, 110f, 110f, s).tile >= StartLayout.MIN_TILE_DP)
-        // The timer is the hero: as large as the spec's sizes on One UI's 4 x 2 and 4 x 3.
-        assertEquals(StartLayout.TIMER_WIDE_SP, StartLayout.wideRecording(r, 313f, 180f, 1f).timerSp, 0f)
-        assertTrue(StartLayout.largeRecording(r, m, 313f, 290f, 1.08f).timerSp >= 48f)
+        // The timer is the hero: one size a bucket at the fonts phones use. With a heart rate beside it, the timer steps down
+        // to leave it room across the bucket's narrowest 240 dp, by the font; without, it keeps the bucket's size.
+        val still = model(recording = StartRecordingInput(60, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
+        assertEquals(StartLayout.TIMER_WIDE_SP, StartLayout.wideRecording(still, 240f, WidgetGrid.contentHeight(WidgetSizes.Wide), 1f).timerSp, 0f)
+        assertTrue(StartLayout.largeRecording(still, m, 240f, WidgetGrid.contentHeight(WidgetSizes.Large), 1.08f).timerSp >= 44f)
+        assertTrue(StartLayout.wideRecording(r, 240f, WidgetGrid.contentHeight(WidgetSizes.Wide), 1.08f).timerSp >= 36f)
     }
 
-    @Test fun `the Small says Paused at every cell and the fonts phones use`() {
-        val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = true)).recording!!
-        for (s in listOf(1f, 1.08f)) for ((w, h) in smallCells + listOf(110f to 110f)) {
-            val fit = StartLayout.smallRecording(r, w, h, s)
-            assertTrue("Small $w x $h at $s", fit.since == StartLayout.SincePlace.Under || fit.name == "Paused")
-            assertTrue("Small $w x $h at $s: too tall ${fit.content}", fit.content <= h)
-        }
-    }
-
-    @Test fun `recording on One UI's cells leaves no gap over 32 dp`() {
-        val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
-        val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
-        for (s in listOf(1f, 1.08f, 1.3f)) {
-            val small = StartLayout.smallRecording(r, 140f, 180f, s)
-            assertTrue("Small at $s: ${(180f - small.content) / small.gaps}", (180f - small.content) / small.gaps <= 32f)
-            val wide = StartLayout.wideRecording(r, 313f, 180f, s)
-            assertTrue("Wide at $s: ${(180f - wide.content) / wide.gaps}", (180f - wide.content) / wide.gaps <= 32f)
-            val large = StartLayout.largeRecording(r, m, 313f, 290f, s)
-            val edge = large.edgeGap(290f)
-            val inner = (290f - large.content - 2 * edge) / (large.gaps - 2)
-            assertTrue("Large at $s: $inner", inner <= 32f)
-        }
+    @Test fun `the Small recording never cuts its heart rate row`() {
+        val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = false, bpm = 112, zone = 0)).recording!!
+        val h = WidgetGrid.contentHeight(WidgetSizes.Small)
+        val w = WidgetSizes.Small.width.value - 2 * WidgetGrid.PADDING_DP
+        val fit = StartLayout.smallRecording(r, w, h, 1f)
+        assertEquals(StartLayout.TIMER_SMALL_SP, fit.timerSp, 0f)
+        assertTrue(fit.heart)
     }
 
     private fun <T> assertNotNullAnd(v: T?): T {
@@ -222,22 +205,31 @@ class StartWidgetModelTest {
         return v!!
     }
 
-    @Test fun `captions are short names, the full one where the short one is already said`() {
-        // Indoor cycling alone reads "Cycling", a treadmill beside your outdoor runs "Treadmill". (Indoor walk isn't on
-        // the strap for now.)
+    @Test fun `captions are short names, a sport with two sides once by its one name`() {
+        // Indoor cycling reads "Cycling", and a treadmill beside your outdoor runs is the same Run, not a second tile.
+        // (Indoor walk isn't on the strap for now.)
         val m = model(workouts = listOf(workout(20, 8, 1, 30), workout(21, 8, 1, 30), workout(22, 8, 8, 30), workout(23, 8, 2, 30)))
-        assertEquals(listOf("Treadmill", "Cycling"), m.next.take(2).map { it.caption })
-        assertEquals("Indoor cycling", m.next[1].name)
+        assertEquals("Run", m.usual.caption)
+        assertEquals("Cycling", m.next[0].caption)
+        assertEquals("Cycling", m.next[0].name)
+        assertEquals(8, m.next[0].shownType)
+        assertTrue(m.next.none { Workouts.tileType(it.shownType) == 1 })
     }
 
     /* ------------------------------------------------------------------------------------------ */
     /* Fitting: nothing wraps, nothing cut, no holes                                              */
     /* ------------------------------------------------------------------------------------------ */
 
-    /** Content sizes: the buckets' minimums and One UI's cells (spec 2.1), width to height. */
-    private val smallCells = listOf(110f to 110f, 127f to 161f, 140f to 180f)
-    private val wideCells = listOf(260f to 120f, 313f to 161f, 313f to 180f)
-    private val largeCells = listOf(260f to 220f, 313f to 290f, 313f to 335f)
+    /**
+     * Content sizes, width to height: the buckets' minimum width and One UI's, at the bucket's own height. Rows are
+     * decided per size bucket, so a taller launcher cell gives the one flexible space more and the rows nothing.
+     */
+    private val smallCells = listOf(110f to 110f, 127f to 110f, 140f to 110f)
+    private val wideCells = listOf(240f to 120f, 313f to 120f)
+    private val largeCells = listOf(240f to 220f, 313f to 220f)
+
+    /** The status row above the tiles on the Wide and Large, as the widget always has it. */
+    private val TOP = WidgetGrid.TOP_ROW_DP
     private val scales = listOf(1f, 1.08f, 1.3f)
 
     private fun one(text: String, sp: Float, room: Float, s: Float) = WidgetText.width(text, sp, s) <= room
@@ -256,7 +248,7 @@ class StartWidgetModelTest {
         }
         // On One UI's 2 x 2 the usual keeps its full name and "Your usual".
         val fit = StartLayout.small(StartSport.of(1, emptyMap()), listOf(StartWidgetModel.USUAL), false, 127f, 161f, 1.08f)
-        assertEquals("Outdoor run", fit.words.name)
+        assertEquals("Run", fit.words.name)
         assertEquals("Your usual", fit.words.line)
     }
 
@@ -269,7 +261,7 @@ class StartWidgetModelTest {
             words.line?.let { assertTrue("$w at $s: line wraps", one(it, WidgetText.SECONDARY_SP, room, s)) }
         }
         // At One UI's 4 columns the whole line and its mark fit; at the minimum the mark gives way first.
-        assertEquals(StartLayout.Words("Outdoor run", "Your usual, GPS on", true), StartLayout.wide(m, 313f, 161f, 1.08f).row.words)
+        assertEquals(StartLayout.Words("Run", "Your usual, GPS on", true), StartLayout.wide(m, 313f, 161f, 1.08f).row.words)
         assertEquals("Your usual, GPS on", StartLayout.wide(m, 260f, 120f, 1.08f).row.words.line)
     }
 
@@ -303,28 +295,27 @@ class StartWidgetModelTest {
         }
     }
 
-    @Test fun `the Wide keeps the tile row, four sports on One UI, at least three at the minimum`() {
+    @Test fun `the Wide keeps the tile row at the default font, four sports on One UI, at least three at the minimum`() {
         val m = model()
-        for (s in listOf(1f, 1.08f)) {
-            assertEquals("One UI 4 x 2 at $s", 4, StartLayout.wide(m, 313f, 180f, s).tiles?.sports?.size)
-            val b = StartLayout.wide(m, 260f, 120f, s)
+        for (s in listOf(1f)) {
+            assertEquals("One UI 4 x 2 at $s", 4, StartLayout.wide(m, 313f, 120f, s, TOP).tiles?.sports?.size)
+            val b = StartLayout.wide(m, 240f, 120f, s, TOP)
             val tiles = b.tiles
-            assertNotNull("Wide 300 x 160 at $s lost its tiles", tiles)
-            // With the caption margin a 300 wide cell can't always give four captions room: a tight one gives way.
+            assertNotNull("Wide 280 x 160 at $s lost its tiles", tiles)
             assertTrue(tiles!!.sports.size >= 3)
-            assertCaptionsWhole(tiles, 260f, s, "Wide at $s")
+            assertCaptionsWhole(tiles, 240f, s, "Wide at $s")
             assertTrue(b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= 120f)
         }
     }
 
-    @Test fun `the Large holds four sports on One UI and at least three at 300 wide, captions on one line`() {
+    @Test fun `the Large holds four sports on One UI and at least three at the minimum, captions on one line`() {
         val m = model(workouts = history + listOf(workout(24, 8, 40, 30), workout(17, 8, 40, 30), workout(10, 8, 40, 30)))
         for (s in listOf(1f, 1.08f)) {
-            assertEquals("One UI 4 x 3 at $s", 4, StartLayout.large(m, 313f, 290f, s).tiles?.sports?.size)
-            val b = StartLayout.large(m, 260f, 220f, s)
-            assertNotNull("Large 300 x 260 at $s lost its tiles", b.tiles)
+            assertEquals("One UI 4 x 3 at $s", 4, StartLayout.large(m, 313f, 220f, s, TOP).tiles?.sports?.size)
+            val b = StartLayout.large(m, 240f, 220f, s, TOP)
+            assertNotNull("Large 280 x 260 at $s lost its tiles", b.tiles)
             assertTrue(b.tiles!!.sports.size >= 3)
-            assertCaptionsWhole(b.tiles, 260f, s, "Large at $s")
+            assertCaptionsWhole(b.tiles, 240f, s, "Large at $s")
             assertTrue(b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= 220f)
         }
     }
@@ -333,47 +324,55 @@ class StartWidgetModelTest {
         val long = listOf(14, 6, 8, 17, 18, 21).map { StartSport.of(it, emptyMap()) } + model().next
         val m = model().copy(next = long)
         for ((w, h) in wideCells) for (s in scales) {
-            val b = StartLayout.wide(m, w, h, s)
+            val b = StartLayout.wide(m, w, h, s, TOP)
             val t = b.tiles ?: continue
             assertCaptionsWhole(t, w, s, "Wide $w x $h at $s")
             assertTrue("Wide $w x $h at $s too tall", b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= h)
         }
         for ((w, h) in largeCells) for (s in scales) {
-            val b = StartLayout.large(m, w, h, s)
+            val b = StartLayout.large(m, w, h, s, TOP)
             val t = b.tiles ?: continue
             assertCaptionsWhole(t, w, s, "Large $w x $h at $s")
             assertTrue("Large $w x $h at $s too tall", b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= h)
         }
-        // At the largest font a short Wide still has its row, its captions the last resort to go.
-        assertNotNull(StartLayout.wide(model(), 260f, 120f, 1.3f).tiles)
-        assertTrue(StartLayout.wide(model(), 313f, 180f, 1.08f).tiles!!.captioned)
+        // The Wide's 120 dp holds the top row, the usual row and bare tiles exactly at the default font, each tile read out by
+        // name; a larger font's taller usual row leaves no room for them and they go, never cut.
+        for ((w, h) in wideCells) assertNotNull("Wide $w x $h at 1.0", StartLayout.wide(model(), w, h, 1f, TOP).tiles)
     }
 
-    @Test fun `on One UI's cells the spare height is used, no gap bigger than 32 dp`() {
+    @Test fun `each bucket has one size whatever the launcher's cell or the font`() {
         val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
-        for (s in listOf(1f, 1.08f)) {
-            // 4 x 2 at 353 x 220 and 4 x 3 at 353 x 330, less the padding.
-            val wide = StartLayout.wide(m, 313f, 180f, s)
-            val large = StartLayout.large(m, 313f, 290f, s)
-            assertEquals("Wide grows to the mockup's sizes", 48f, wide.sizes.tile, 0f)
-            assertTrue("Wide at $s: gap ${(180f - wide.content) / wide.gaps}", (180f - wide.content) / wide.gaps <= 32f)
-            assertTrue("Large at $s: gap ${(290f - large.content) / large.gaps}", (290f - large.content) / large.gaps <= 32f)
-            // 2 x 2 at 180 x 220.
-            val small = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, 140f, 180f, s)
-            val gap = (180f - StartLayout.smallHeight(small, s)) / small.gaps
-            assertTrue("Small at $s: gap $gap", gap <= 32f)
+        val sizes = StartLayout.ROW_SIZES.single()
+        for (s in listOf(1f, 1.08f, 1.3f)) {
+            for ((w, h) in wideCells) {
+                val wide = StartLayout.wide(m, w, h, s, TOP)
+                assertEquals("Wide $w at $s", sizes, wide.sizes)
+                assertTrue("Wide $w at $s: ${wide.content}", wide.content + (wide.gaps - 2) * StartLayout.MIN_GAP_DP <= h + 0.01f)
+            }
+            for ((w, h) in largeCells) {
+                val large = StartLayout.large(m, w, h, s, TOP)
+                assertEquals("Large $w at $s", sizes, large.sizes)
+                assertTrue("Large $w at $s: ${large.content}", large.content + (large.gaps - 2) * StartLayout.MIN_GAP_DP <= h + 0.01f)
+            }
         }
+        // The Small is the top row, a 40 dp tile and play, and the name: it fits its 110 dp at the largest font.
+        val small = StartLayout.GRID_SMALL
+        assertEquals(40f, small.tile, 0f)
+        assertEquals(40f, small.play, 0f)
+        val rows = TOP + small.tile + WidgetGrid.GAP_TIGHT_DP + WidgetText.line(WidgetText.BODY_SP, 1.3f)
+        assertTrue("Small rows $rows", rows <= WidgetGrid.contentHeight(WidgetSizes.Small))
     }
 
-    @Test fun `the Large's spare height goes between the blocks, half a gap above and below`() {
+    @Test fun `the Large's blocks sit on the grid, the spare height in one flexible space`() {
         val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
         for (s in listOf(1f, 1.08f)) {
-            val b = StartLayout.large(m, 313f, 290f, s)
-            val edge = b.edgeGap(290f)
-            val inner = (290f - b.content - 2 * edge) / (b.gaps - 2)
-            assertEquals("Large at $s", inner / 2, edge, 0.01f)
-            // Under the figures: the padding and half a gap, no band.
-            assertTrue("Large at $s: ${edge + WidgetSizes.PADDING_DP} dp under Last run", edge + WidgetSizes.PADDING_DP <= 40f)
+            val b = StartLayout.large(m, 313f, 220f, s, TOP)
+            // The top row, the usual row, the tiles, the hairline and the figures: every block is there.
+            assertNotNull("Large at $s: the tiles", b.tiles)
+            assertNotNull("Large at $s: the figures", b.figures)
+            // Between them the grid's gaps, the one flexible space under the top row taking what is left.
+            assertEquals(6, b.gaps)
+            assertTrue("Large at $s: ${b.content}", b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= 220f)
         }
     }
 
@@ -390,22 +389,26 @@ class StartWidgetModelTest {
         val m = model().copy(next = sports)
         val rows = mutableMapOf<String, List<String>>()
         for (s in listOf(1f, 1.08f)) {
-            rows["Wide min $s"] = StartLayout.wide(m, 260f, 120f, s).tiles!!.captions
-            rows["Wide One UI $s"] = StartLayout.wide(m, 313f, 180f, s).tiles!!.captions
-            rows["Large min $s"] = StartLayout.large(m, 260f, 220f, s).tiles!!.captions
-            rows["Large One UI $s"] = StartLayout.large(m, 313f, 290f, s).tiles!!.captions
+            StartLayout.wide(m, 240f, 120f, s, TOP).tiles?.let { rows["Wide min $s"] = it.captions }
+            StartLayout.wide(m, 313f, 120f, s, TOP).tiles?.let { rows["Wide One UI $s"] = it.captions }
+            rows["Large min $s"] = StartLayout.large(m, 240f, 220f, s, TOP).tiles!!.captions
+            rows["Large One UI $s"] = StartLayout.large(m, 313f, 220f, s, TOP).tiles!!.captions
         }
         val order = listOf("Walk", "Strength", "Hike", "Cycling", "All sports")
         rows.forEach { (where, captions) -> assertEquals(where, order, captions) }
         // Every size's row is the order's start, whatever its room.
         for ((w, h) in wideCells) for (s in scales) {
-            val t = StartLayout.wide(m, w, h, s).tiles ?: continue
+            val t = StartLayout.wide(m, w, h, s, TOP).tiles ?: continue
             assertEquals("Wide $w x $h at $s", sports.take(t.sports.size), t.sports)
         }
     }
 
-    @Test fun `the Wide at its minimum keeps its captions at font 1 and 1_08`() {
-        for (s in listOf(1f, 1.08f)) assertTrue("Wide 300 x 160 at $s", StartLayout.wide(model(), 260f, 120f, s).tiles!!.captioned)
+    @Test fun `the Wide at its minimum keeps its bare tile row at font 1, and at 1_08 loses it rather than cut anything`() {
+        assertNotNull("Wide 280 x 160 at 1.0", StartLayout.wide(model(), 240f, 120f, 1f, TOP).tiles)
+        for (s in listOf(1.08f, 1.3f)) {
+            val b = StartLayout.wide(model(), 240f, 120f, s, TOP)
+            assertTrue("Wide 280 x 160 at $s: ${b.content}", b.content + (b.gaps - 2) * StartLayout.MIN_GAP_DP <= 120f)
+        }
     }
 
     @Test fun `the figures never wrap a value`() {
@@ -414,13 +417,12 @@ class StartWidgetModelTest {
             val f = StartLayout.figures(m, w, s)
             val room = when (f.layout) {
                 StartLayout.FigureLayout.Side -> (w - StartLayout.FIGURE_GAP_DP) / 2
-                StartLayout.FigureLayout.Rows -> w - StartLayout.FIGURE_GAP_DP - WidgetText.width(m.lastLabel, WidgetText.CAPTION_SP, s)
-                StartLayout.FigureLayout.Stacked -> w
+                StartLayout.FigureLayout.Stacked, StartLayout.FigureLayout.Live -> w
             }
-            assertTrue("$w at $s: ${f.layout}", one(m.lastLine, WidgetText.BODY_SP, room, s))
+            assertTrue("$w at $s: ${f.layout}", one(m.lastLine, f.valueSp, room, s))
         }
-        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so they take a row each.
-        assertEquals(StartLayout.FigureLayout.Rows, StartLayout.figures(m, 260f, 1.08f).layout)
+        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so the values step down to Caption before one goes under the other.
+        assertEquals(WidgetText.CAPTION_SP, StartLayout.figures(m, 260f, 1.08f).valueSp, 0f)
         assertEquals(StartLayout.FigureLayout.Side, StartLayout.figures(model(), 313f, 1f).layout)
     }
 
@@ -439,26 +441,22 @@ class StartWidgetModelTest {
     @Test fun `with the strap status the Wide and the Small get a title row with the button`() {
         val m = WidgetSamples.start(now, zone, Locale.UK)
         val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
-        val top = StartLayout.statusTop(m, l, WidgetSizes.Wide, 313f, 180f, 1f)!!
+        val top = StartLayout.statusTop(l, WidgetSizes.Wide, 313f, 1f)
         assertEquals(StatusButton.SIZE_DP, top.height, 0f)
+        assertEquals(WidgetGrid.TOP_ROW_DP, top.height, 0f)
         assertNotNull(top.words)
-        val b = StartLayout.wide(m, 313f, 180f, 1f, top.height)
-        assertEquals(StartLayout.wide(m, 313f, 180f, 1f).gaps + 1, b.gaps)
+        val b = StartLayout.wide(m, 313f, 120f, 1f, top.height)
         assertNotNull(b.tiles)
-        assertNull(StartLayout.statusTop(m, null, WidgetSizes.Wide, 313f, 180f, 1f))
-        // The Small: a title row with the button, the tile with play beside it, the name over "Your usual".
-        val small = StartLayout.statusSmall(m.usual, l, 140f, 180f, 1f)
-        // "Start a workout" won't fit beside the button on a 2 x 2 even at 13 sp, so "Start".
-        assertEquals(StartLayout.SHORT_TITLE, small.title)
-        assertEquals(StartWidgetModel.TITLE, StartLayout.statusSmall(m.usual, l, 200f, 180f, 1f).title)
-        assertEquals(l, small.top.status)
-        assertNull(small.top.words)
-        assertEquals(StartWidgetModel.USUAL, small.words.line)
-        assertTrue(small.sizes.tile + StartLayout.STATUS_PLAY_GAP_DP + small.sizes.play <= 140f)
-        assertTrue(small.spread.gap(180f) <= Spread.TARGET_GAP_DP)
-        // Short of room "Your usual" goes, then the title; the tile and play stay.
-        val tight = StartLayout.statusSmall(m.usual, l, 110f, 110f, 1.3f)
-        assertNull(tight.words.line)
-        assertTrue(tight.spread.fits(110f, StartLayout.STATUS_MIN_GAP_DP))
+        // The top row is always there, as in every widget: with no status it is the title and a quiet row of the same height.
+        val quiet = StartLayout.statusTop(null, WidgetSizes.Wide, 313f, 1f)
+        assertNull(quiet.status)
+        assertNull(quiet.words)
+        assertEquals(WidgetGrid.TOP_ROW_DP, quiet.height, 0f)
+        assertEquals(StartLayout.wide(m, 313f, 120f, 1f, top.height).gaps, StartLayout.wide(m, 313f, 120f, 1f, quiet.height).gaps)
+        // The Small: the top row with the button and no words, whatever the cell.
+        val small = StartLayout.statusTop(l, WidgetSizes.Small, 110f, 1f)
+        assertEquals(l, small.status)
+        assertNull(small.words)
+        assertEquals(WidgetGrid.TOP_ROW_DP, small.height, 0f)
     }
 }

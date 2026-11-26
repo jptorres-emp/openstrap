@@ -69,6 +69,8 @@ import org.openstrap.app.ui.glow.HomeTab
 import org.openstrap.app.ui.glow.IndexTarget
 import org.openstrap.app.ui.glow.LiveHeroHooks
 import org.openstrap.app.ui.glow.LocalGlowMood
+import org.openstrap.app.ui.glow.LocalHeroLightAngle
+import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.LocalGlowPagePaused
 import org.openstrap.app.ui.glow.TodayStrap
 import org.openstrap.app.ui.glow.draw.GlowMood
@@ -202,8 +204,11 @@ internal fun TabsPager(
         userScrollEnabled = !subScreenOpen, key = { it }, beyondViewportPageCount = Tab.entries.size - 1,
     ) { page ->
         val back = if (page == tab) emptyArray() else arrayOf(LocalNavigationEventDispatcherOwner provides idleBack)
+        // Every hero on the tab, and on the details opening over it, is lit from the moment's side; Sleep from below.
+        val heroAngle = if (Tab.entries[page] == Tab.Sleep) LightAngle.Below else today.moment?.let(::heroLightAngle)
         @Suppress("SpreadOperator") // at most one local, once per page
         CompositionLocalProvider(
+            LocalHeroLightAngle provides heroAngle,
             // Remembered: a new lambda each time would be a new static local, recomposing the whole tab under it.
             LocalGlowPagePaused provides remember(pager, page, covered) { tabPaused(pager, page, covered) },
             LocalScrollToTop provides scroll.of(page),
@@ -315,7 +320,7 @@ private fun TabRoot(
             onOpenProfile = { onOpenPage(Page.Profile) },
             showCharge = showCharge, onChargeShown = onChargeConsume,
             recoveryFailure = shown.recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
-            wear = shown.wear, firstScore = shown.firstScore,
+            wear = shown.wear, firstScore = shown.firstScore, history = histories.daily,
         )
         Tab.Sleep -> GlowSleepScreen(
             day, header = { TabHeader(Tab.Sleep, header) }, contentPadding = padding,

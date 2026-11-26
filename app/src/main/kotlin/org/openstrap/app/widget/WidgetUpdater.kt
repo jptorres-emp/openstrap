@@ -99,6 +99,7 @@ class WidgetUpdater(
             profile = settings.profile,
             clockChanges = Today.changes(app),
             bluetoothOff = strap.connection.map { it == ConnectionState.BluetoothOff },
+            liveHeartRate = strap.liveHeartRate,
             now = { System.currentTimeMillis() / 1000 },
         )
         scope.watchWidgetTriggers(triggers, ::changed, ::stepsChanged)

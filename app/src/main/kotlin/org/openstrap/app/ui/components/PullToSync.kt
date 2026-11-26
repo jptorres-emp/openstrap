@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.components
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import android.widget.Toast
@@ -32,7 +33,9 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -53,6 +56,7 @@ import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.dashboard.DATA_ON_STRAP
 import org.openstrap.app.ui.theme.AppIcons
 import kotlin.math.roundToInt
+import org.openstrap.app.ui.theme.Ink
 
 /** How far the pull has gone (1 = far enough to sync) and whether a sync is running. */
 class PullSyncState(val fraction: () -> Float, val syncing: () -> Boolean)
@@ -131,8 +135,11 @@ fun PullSyncReveal() {
     val pull = LocalPullSync.current ?: return
     val ready by remember { derivedStateOf { pull.fraction() >= 1f } }
     val syncing = pull.syncing()
-    val spin = rememberInfiniteTransition(label = "sync spin")
-    val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Restart), label = "turn")
+    // Only while syncing: an infinite transition runs a frame every vsync for as long as it is composed, read or not.
+    val turn: State<Float> = if (syncing) {
+        rememberInfiniteTransition(label = "sync spin")
+            .animateFloat(0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Restart), label = "turn")
+    } else NO_TURN
     Box(
         Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
             // Height follows the pull, read here so dragging only relayouts.
@@ -148,10 +155,10 @@ fun PullSyncReveal() {
         ) {
             Icon(
                 AppIcons.Refresh04, null,
-                Modifier.size(18.dp).graphicsLayer { rotationZ = if (syncing) turn else pull.fraction() * 180f },
+                Modifier.size(18.dp).graphicsLayer { rotationZ = if (syncing) turn.value else pull.fraction() * 180f },
                 tint = if (ready || syncing) Color.White else HintInk,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Space.S8))
             val label = stringResource(
                 when {
                     syncing -> R.string.day_pull_syncing
@@ -172,8 +179,11 @@ fun PullSyncReveal() {
 }
 
 private val REVEAL = 48.dp
+
+/** The arrows at rest, when nothing syncs. */
+private val NO_TURN: State<Float> = mutableFloatStateOf(0f)
 /** The arrows and the line until a pull is far enough to sync: quiet, then white once letting go syncs. */
-private val HintInk = Color.White.copy(alpha = 0.6f)
+private val HintInk = Ink.Secondary
 /** Each half of the label's crossfade: out, then in. */
 internal const val LABEL_FADE_MS = 120
 private const val START_GRACE_MS = 3_000L

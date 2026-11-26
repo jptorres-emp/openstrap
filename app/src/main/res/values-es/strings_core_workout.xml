@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_workout_zone_easy">Suave</string>
+    <string name="core_workout_zone_aerobic">Aeróbico</string>
+    <string name="core_workout_zone_tempo">Moderado</string>
+    <string name="core_workout_zone_threshold">Duro</string>
+    <string name="core_workout_zone_max">Máximo</string>
+    <string name="core_workout_zone_easy_in_sentence">suave</string>
+    <string name="core_workout_zone_aerobic_in_sentence">aeróbico</string>
+    <string name="core_workout_zone_tempo_in_sentence">moderado</string>
+    <string name="core_workout_zone_threshold_in_sentence">duro</string>
+    <string name="core_workout_zone_max_in_sentence">máximo</string>
+    <string name="core_workout_zone_number">Zona %1$d</string>
+    <string name="core_workout_zone_line">Zona %1$d, %2$s</string>
+    <string name="core_workout_zone_time_under">Menos de un minuto en esta zona</string>
+    <string name="core_workout_zone_time">%1$d min en esta zoma</string>
+    <string name="core_workout_paused">Pausado</string>
+    <string name="core_workout_strap_gone">Esperando la banda</string>
+    <string name="core_workout_waiting_hr">Esperando la frecuencia cardíaca</string>
+    <string name="core_workout_strap_gone_note">La banda no está conectada. El registro continúa y los minutos perdidos se completarán desde la banda después de sincronizar.</string>
+    <string name="core_workout_split">km %1$d en %2$s</string>
+    <string name="core_workout_split_mile">Milla %1$d en %2$s</string>
+    <string name="core_workout_split_avg">%1$s, %2$d lpm</string>
+    <string name="core_workout_just_now">hace un momento</string>
+    <string name="core_workout_min_ago">Hace %1$d minutos</string>
+    <string name="core_workout_location_off">La ubicación está desactivada</string>
+    <string name="core_workout_location_off_note">Actívala para ver la distancia y el mapa, o comienza sin ella.</string>
+    <string name="core_workout_route_on">Activado, guardado en este teléfono para el mapa</string>
+    <string name="core_workout_route_off">Desactivado, solo se guardan los totales</string>
+    <string name="core_workout_start_sport">Iniciar %1$s</string>
+    <string name="core_workout_start_workout">Iniciar entrenamiento</string>
+    <string name="core_workout_open_sport">Volver a %1$s</string>
+    <string name="core_workout_open_workout">Volver al entrenamiento</string>
+    <string name="core_workout_set_of">Serie %1$d de %2$d</string>
+    <string name="core_workout_set">Serie %1$d</string>
+    <string name="core_workout_rest_rule">El descanso termina cuando se acaba el tiempo.</string>
+    <string name="core_workout_rest_rule_below">El descanso termina cuando se acaba el tiempo, o cuando tu frecuencia cardíaca se mantiene por debajo de %1$d lpm.</string>
+    <string name="core_workout_set_weight">%1$d × %2$s kg</string>
+    <plurals name="core_workout_set_reps">
+        <item quantity="one">%1$d repetición</item>
+        <item quantity="many">%1$d repeticiones</item>
+        <item quantity="other">%1$d repeticiones</item>
+    </plurals>
+    <string name="core_workout_set_peak">pico %1$d</string>
+    <string name="core_workout_list">%1$s, %2$s</string>
+    <string name="core_workout_no_zone_paused">Sin zona mientras está en pausa</string>
+    <string name="core_workout_no_zone">Aún sin zona</string>
+    <string name="core_workout_progress">%1$s de %2$s</string>
+    <string name="core_workout_gps_finding">Buscando GPS</string>
+    <string name="core_workout_gps">GPS ±%1$d m</string>
+</resources>

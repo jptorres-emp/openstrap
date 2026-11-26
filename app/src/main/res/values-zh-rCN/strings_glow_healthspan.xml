@@ -28,9 +28,9 @@
     <string name="glow_healthspan_regularity">%1$d，常态：%2$s</string>
     <string name="glow_healthspan_resting_hr">睡眠心率 %1$d bpm，常态：约 %2$s</string>
     <string name="glow_healthspan_time_asleep">每晚 %1$s，低于 %2$s 才计入</string>
-    <string name="glow_healthspan_profile_birth_year">在个人资料中添加你的出生年份，即可查看习惯年龄。</string>
-    <string name="glow_healthspan_profile_sex">在个人资料中添加你的性别，即可查看习惯年龄。</string>
-    <string name="glow_healthspan_profile_both">在个人资料中添加你的出生年份和性别，即可查看习惯年龄。</string>
+    <string name="glow_healthspan_profile_birth_year">需要出生年份</string>
+    <string name="glow_healthspan_profile_sex">需要性别</string>
+    <string name="glow_healthspan_profile_both">需要出生年份和性别</string>
     <string name="glow_healthspan_title">习惯年龄</string>
     <string name="glow_healthspan_about">关于习惯年龄</string>
     <string name="glow_healthspan_years">岁</string>
@@ -42,7 +42,6 @@
     <string name="glow_healthspan_updated_weekly">每周更新，于周日</string>
     <string name="glow_healthspan_pace_title">衰老速率</string>
     <string name="glow_healthspan_pace_note">%1$s，%2$s</string>
-    <string name="glow_healthspan_last_30_days">近 30 天</string>
     <string name="glow_healthspan_pace_needs">需要 30 天充足的数据以及此前 3 个月的基线，以区分真实的趋势变化与日常波动。</string>
     <string name="glow_healthspan_pace_beat">你近 30 天的表现优于过去 6 个月的习惯水平。若继续保持，估算年龄将会下降。</string>
     <string name="glow_healthspan_pace_behind">你近 30 天的表现落后于过去 6 个月的习惯水平。若长期如此，估算年龄将会上升。</string>
@@ -55,4 +54,5 @@
     <string name="glow_healthspan_scale_younger">年轻 −1½ 岁</string>
     <string name="glow_healthspan_scale_older">年长 +1½ 岁</string>
     <string name="glow_healthspan_fitness_capped">体能习惯已达上限：静息心率、步数和 VO2 max 累计影响最多不超过 ±3 岁。</string>
+    <string name="glow_healthspan_years_line">%1$s, %2$s</string>
 </resources>

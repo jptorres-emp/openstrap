@@ -5,7 +5,7 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Workout notification, where the zone line goes while End waits for a second tap. "Yes, end" is the button's label. -->
-    <string name="core_notif_end_question">End the workout? Tap Yes, end to save it.</string>
+    <string name="core_notif_end_question">End the workout?</string>
     <!-- Workout notification, the bpm slot while the workout is paused. One short word. -->
     <string name="core_notif_paused">Paused</string>
     <!-- Workout notification, the bpm slot before the first heart reading. One short word. -->

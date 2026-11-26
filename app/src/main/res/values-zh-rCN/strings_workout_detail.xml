@@ -20,9 +20,13 @@
     <string name="workout_detail_sentence_sport_zone">%1$s，主要在 %2$d 区。</string>
     <string name="workout_detail_fact_distance">距离</string>
     <string name="workout_detail_fact_km">公里</string>
+    <string name="workout_detail_fact_mi">英里</string>
     <string name="workout_detail_fact_m">米</string>
+    <string name="workout_detail_fact_ft">英尺</string>
     <string name="workout_detail_fact_km_from_steps">公里，根据步数估算</string>
+    <string name="workout_detail_fact_mi_from_steps">英里，根据步数估算</string>
     <string name="workout_detail_fact_m_from_steps">米，根据步数估算</string>
+    <string name="workout_detail_fact_ft_from_steps">英尺，根据步数估算</string>
     <string name="workout_detail_fact_paused">已暂停</string>
     <string name="workout_detail_fact_paused_note">不计入运动时长</string>
     <string name="workout_detail_fact_steps">步数</string>

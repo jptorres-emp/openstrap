@@ -1,6 +1,39 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.SportIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -15,6 +48,8 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.Score
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.ui.dashboard.LatestReading
@@ -155,6 +190,25 @@ fun metricIndex(
                     strings, Metric.Steps, R.string.glow_metrics_steps, MetricColors.steps, state.steps.toFloat(),
                     R.string.glow_metrics_for_the_day,
                 ),
+                // Heart points is the 7 day total its Activity card shows; Active kcal is the day's estimate and opens Calories.
+                row(
+                    Score.HeartPoints.title(strings), MetricColors.heart, state.pai?.total?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.HeartPoints)),
+                ),
+                row(
+                    strings.get(R.string.glow_metrics_active_kcal), MetricColors.calories,
+                    rec?.calories?.activeKcal?.let { Units.count(Math.round(it)) },
+                    strings.get(R.string.glow_metrics_for_the_day_estimated), IndexTarget.Open(Detail.OfScore(Score.Calories)),
+                ),
+                row(
+                    Score.Load.title(strings), MetricColors.load, rec?.load?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.Load)),
+                ),
+            ),
+        ),
+        IndexGroup(
+            strings.get(R.string.glow_metrics_workouts),
+            listOf(
                 row(
                     strings.get(R.string.glow_metrics_workouts), MetricColors.heart, week.toString(),
                     strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.AllWorkouts),
@@ -244,9 +298,10 @@ private fun signalGroups(state: DayUiState, now: Long, strings: Strings): List<I
 )
 
 /**
- * The index as a sheet over the tab (spec 3.2), from the grid button in the header: one grouped list per section.
- * [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
+ * The index as a sheet over the tab (spec 3.2), from the grid button in the header: a search field, then one grouped
+ * list per section. [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
  */
+@Suppress("ModifierMissing", "ComposeModifierMissing")
 @Composable
 fun AllMetricsSheet(
     groups: List<IndexGroup>,
@@ -254,11 +309,23 @@ fun AllMetricsSheet(
     onDismiss: () -> Unit,
     onOpen: (IndexTarget) -> Unit,
 ) {
-    PageSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), side = 16.dp) {
-        groups.forEach { group ->
-            ListPanel(title = group.title) {
+    var query by rememberSaveable { mutableStateOf("") }
+    // Back clears what's typed before it closes the sheet (this handler is the innermost, so it is asked first).
+    BackHandler(enabled = query.isNotEmpty()) { query = "" }
+    val shown = remember(groups, query) { filterIndex(groups, query) }
+    HaloSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), variant = HaloSheetVariant.Grouped) {
+        MetricSearchField(query, { query = it })
+        if (shown.isEmpty()) Text(
+            stringResource(R.string.glow_metrics_no_match, query.trim()), color = Ink.Secondary,
+            style = GlowType.secondary, modifier = Modifier.padding(start = Space.S4, top = Space.S8),
+        )
+        shown.forEach { group ->
+            DetailPanel(title = group.title, muted = true) {
                 group.rows.forEachIndexed { i, r ->
-                    ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0, icon = r.target.rowIcon())
+                    MetricRow(
+                        r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0,
+                        icon = r.target.rowIcon(),
+                    )
                 }
             }
         }

@@ -28,8 +28,8 @@ class WorkoutRulesTest {
 
     @Test fun `indoor and outdoor are one sport in the picker`() {
         val indoorKinds = Workouts.SIDES.map { it.indoor }.filter { it !in Workouts.SIDES.map { s -> s.outdoor } }
-        // Open water and indoor walk aren't on the strap for now, so Swim and Walk have one kind.
-        assertEquals(listOf(2, 8 /* , 6, 40 */), indoorKinds)
+        // Open water isn't on the strap for now, so Swim has one kind. Indoor walk is told Walk on the strap.
+        assertEquals(listOf(2, 8, 40 /* , 6 */), indoorKinds)
         indoorKinds.forEach { assertFalse("$it has a tile", it in Workouts.EVERYDAY || it in Workouts.MORE) }
         // Run, Cycling, Swim and Walk each have one tile, and it starts the sport's key (Swim the pool for now).
         listOf(1, 4, 6, 3).forEach { assertTrue(it in Workouts.EVERYDAY) }
@@ -55,7 +55,8 @@ class WorkoutRulesTest {
             (95..104) + listOf(109) + (111..120) + listOf(122, 130) + (143..156) + (158..168) + listOf(170, 171) + (173..177) +
             (185..189) + listOf(191, 214, 216, 217, 222) + (226..228)
         val offered = Workouts.EVERYDAY + Workouts.MORE + Workouts.SIDES.flatMap { listOf(it.outdoor, it.indoor) }
-        offered.forEach { assertTrue("${Workouts.sportName(it)} ($it) isn't on the strap", it in onStrap) }
+        // What the strap is sent: an indoor side it doesn't list goes as its outdoor sport (Indoor walk as Walk).
+        offered.forEach { assertTrue("${Workouts.sportName(it)} ($it) isn't on the strap", Workouts.strapType(it) in onStrap) }
         // Soccer, Padel and Pickleball start as the strap's ids.
         assertTrue(191 in Workouts.MORE && 216 in Workouts.MORE && 227 in Workouts.MORE)
         assertEquals(Workouts.sportName(18), Workouts.sportName(191))
@@ -66,14 +67,14 @@ class WorkoutRulesTest {
         assertEquals(1 to 2, sides(1))
         assertEquals(1 to 2, sides(2))
         assertEquals(4 to 8, sides(4))
-        // Not on the strap for now (Workouts.NOT_ON_STRAP): open water and indoor walk.
+        // An indoor walk is saved as Indoor walk (40), and the strap is told Walk.
+        assertEquals(3 to 40, sides(3))
+        assertEquals(3 to 40, sides(40))
+        assertEquals(3, Workouts.strapType(40))
+        // Not on the strap for now (Workouts.NOT_ON_STRAP): open water.
         // assertEquals(7 to 6, sides(6))
-        // An indoor walk is the strap's own Indoor walk, so its name says so.
-        // assertEquals(3 to 40, sides(3))
-        // assertEquals(3 to 40, sides(40))
         assertNull(Workouts.sidesOf(6))
-        assertNull(Workouts.sidesOf(3))
-        assertEquals("Indoor walk", Workouts.sportName(40))
+        assertEquals("Indoor walk", Workouts.exactName(40))
         assertNull(Workouts.sidesOf(15))
         assertNull(Workouts.sidesOf(52))
     }
@@ -84,11 +85,11 @@ class WorkoutRulesTest {
         assertEquals(true, Workouts.indoorSide(1, mapOf(1 to true)))
         // Treadmill found by name is the indoor side, whatever you chose before.
         assertEquals(true, Workouts.indoorSide(2, mapOf(1 to false)))
-        // Most swims are in a pool. Not on the strap for now: open water and indoor walk.
+        // Most swims are in a pool. Not on the strap for now: open water.
         // assertEquals(true, Workouts.indoorSide(7, none))
         // assertEquals(false, Workouts.indoorSide(7, mapOf(7 to false)))
-        // assertEquals(true, Workouts.indoorSide(3, mapOf(3 to true)))
-        assertNull(Workouts.indoorSide(3, mapOf(3 to true)))
+        assertEquals(false, Workouts.indoorSide(3, none))
+        assertEquals(true, Workouts.indoorSide(3, mapOf(3 to true)))
         assertNull(Workouts.indoorSide(52, mapOf(1 to true)))
     }
 
@@ -97,10 +98,10 @@ class WorkoutRulesTest {
         assertFalse(Workouts.gpsOffered(1, indoor = true))
         assertFalse(Workouts.gpsOffered(2, indoor = true))
         assertTrue(Workouts.gpsOffered(3, indoor = false))
-        // Walk has no indoor side for now, and open water isn't on the strap.
-        // assertFalse(Workouts.gpsOffered(3, indoor = true))
+        // Walk has an indoor side, so its tile has no location mark. Open water isn't on the strap.
+        assertFalse(Workouts.gpsOffered(3, indoor = true))
         // assertTrue(Workouts.gpsOffered(7, indoor = false))
-        assertTrue(3 in Workouts.OUTDOOR_ONLY)
+        assertFalse(3 in Workouts.OUTDOOR_ONLY)
         assertFalse(Workouts.gpsOffered(6, indoor = true))
         // A sport done only outdoors has GPS and the location mark; an indoor one has neither.
         assertTrue(Workouts.gpsOffered(15, indoor = null))

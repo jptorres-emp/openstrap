@@ -2,6 +2,7 @@ package org.openstrap.app.widget
 
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.theme.TypeScale
 
 /**
  * The three sizes every widget has (widgets spec 2.1), so a stack that gives all its widgets one size fits each of
@@ -38,7 +39,7 @@ object WidgetSizes {
     /** Cells a new widget takes (`targetCellWidth`, `targetCellHeight`): a Small. */
     const val TARGET_CELLS = 2
 
-    /** Every card's corner and padding (spec 2.4), dp. */
+    /** Every card's corner and padding (spec 2.4), dp. The padding clears the cards' squircle at its widest corner. */
     const val CORNER_DP = 28f
     const val PADDING_DP = 20f
 
@@ -100,16 +101,40 @@ object WidgetSizes {
 }
 
 /**
+ * The widget grid (release polish P5): one padding, one top row, and only these gaps, in every widget and size. A card
+ * has exactly one flexible spacer ([org.openstrap.app.widget.Flex]), so spare height lands in one place and never
+ * changes a gap. What shows is decided per size bucket, at the bucket's own height, not at the launcher's cell.
+ */
+object WidgetGrid {
+    /** Every card's inset all round. */
+    const val PADDING_DP = WidgetSizes.PADDING_DP
+
+    /** The top row: the title and the status button, whatever the strap status. */
+    const val TOP_ROW_DP = 32f
+
+    /** The only gaps: inside a figure, between lines, between blocks. */
+    const val GAP_TIGHT_DP = 4f
+    const val GAP_DP = 8f
+    const val GAP_WIDE_DP = 12f
+
+    /** The content's height in a [bucket] cell, inside the padding: the height every fit sum uses, so rows stay put. */
+    fun contentHeight(bucket: DpSize): Float = bucket.height.value - 2 * PADDING_DP
+}
+
+/**
  * Rough text sums for fitting a layout at its smallest cell (spec 2.1) in the system sans, which scales with the
  * system font: widths and line heights in dp, erring large so a layout that fits here fits on the phone.
  */
 object WidgetText {
-    /** The v2 type roles' sizes, sp (spec 6.2). */
-    const val TITLE_SP = 17f
-    const val HERO_SP = 20f
-    const val BODY_SP = 15f
-    const val SECONDARY_SP = 13f
-    const val CAPTION_SP = 11f
+    /** The type tokens' sizes the widgets use, sp ([TypeScale], board HaloTypeScale). */
+    const val TITLE_SP = TypeScale.HERO_TITLE_SP
+    const val HERO_SP = TypeScale.SENTENCE_SP
+    const val CARD_TITLE_SP = TypeScale.CARD_TITLE_SP
+    const val BODY_SP = TypeScale.BODY_SP
+    const val BUTTON_SP = TypeScale.BUTTON_MINI_SP
+    const val SECONDARY_SP = TypeScale.SECONDARY_SP
+    const val NOTE_SP = TypeScale.NOTE_SMALL_SP
+    const val CAPTION_SP = TypeScale.CAPTION_SP
 
     /** About half an em a character. */
     const val CHAR_EM = 0.52f

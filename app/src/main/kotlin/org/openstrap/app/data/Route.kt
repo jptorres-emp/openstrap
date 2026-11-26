@@ -1,5 +1,6 @@
 package org.openstrap.app.data
 
+import org.openstrap.app.data.settings.UnitSetting
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.pow
@@ -314,32 +315,70 @@ object Route {
     /** Whether the stretch from [a] to [b] overlaps a pause; one that only ends or begins at a pause's edge counts. */
     private fun paused(a: Point, b: Point, pauses: List<LongRange>) = pauses.any { it.first < b.t && it.last > a.t }
 
-    /** One kilometre (or the last part of one): when it ended, its time and metres. */
+    /** One kilometre or mile (or the last part of one): when it ended, its time and metres. */
     data class Split(val index: Int, val endT: Long, val seconds: Long, val meters: Double) {
-        /** Seconds per kilometre. */
+        /** Seconds per kilometre, whatever the split's length: paces are passed around in km and written by Pace. */
         val pace: Double get() = if (meters > 0) seconds / (meters / 1000) else 0.0
     }
 
-    /** Per-kilometre splits along [points]; the last one may be partial. Paused time doesn't count. */
-    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Split> {
+    /**
+     * Splits along [points], one a [unit] of metres long, a kilometre or a mile as the profile chooses; the last one
+     * may be partial. Paused time doesn't count.
+     */
+    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), unit: Double = UnitSetting.system.splitMeters): List<Split> =
+        legs(points, pauses, unit).map { it.split }
+
+    /** One kilometre's [split] with the smoothed track [points] it covers, from the previous leg's last point. */
+    data class Leg(val split: Split, val points: List<Point>)
+
+    /** The [unit]s of [splits], each with its stretch of the smoothed track; paused stretches are left out. */
+    fun legs(points: List<Point>, pauses: List<LongRange> = emptyList(), unit: Double = UnitSetting.system.splitMeters): List<Leg> {
         val clean = track(points)
-        val out = mutableListOf<Split>()
-        var startT = clean.firstOrNull()?.t ?: return out
+        val out = mutableListOf<Leg>()
+        val current = mutableListOf(clean.firstOrNull() ?: return out)
         var meters = 0.0
         var seconds = 0L
         clean.zipWithNext().forEach { (a, b) ->
             if (paused(a, b, pauses)) return@forEach
             meters += meters(a, b)
             seconds += b.t - a.t
-            if (meters >= km) {
-                out += Split(out.size, b.t, seconds, meters)
+            current += b
+            if (meters >= unit) {
+                out += Leg(Split(out.size, b.t, seconds, meters), current.toList())
+                current.clear()
+                current += b
                 meters = 0.0
                 seconds = 0
-                startT = b.t
             }
         }
-        if (meters > 0) out += Split(out.size, clean.last().t, seconds, meters)
+        if (meters > 0) out += Leg(Split(out.size, clean.last().t, seconds, meters), current)
         return out
+    }
+
+    /**
+     * [legs] moved onto [line], a line drawn in place of the track whose points carry the track's times (the route
+     * along the roads, [org.openstrap.app.maps.RouteSnapper]): each leg takes the stretch of [line] between its first
+     * and last times, its ends placed where [line] was at those times. So the km markers and a picked kilometre sit on
+     * the line that is drawn, while the splits stay the track's.
+     */
+    fun legsOnLine(line: List<Point>, legs: List<Leg>): List<Leg> {
+        if (line.size < 2) return legs
+        return legs.map { leg ->
+            val from = leg.points.first().t
+            val to = leg.points.last().t
+            val inside = line.filter { it.t > from && it.t < to }
+            leg.copy(points = listOf(positionAt(line, from)) + inside + positionAt(line, to))
+        }
+    }
+
+    /** Where [line] (ascending times, two points or more) was at [t]: between the points either side, else its nearer end. */
+    internal fun positionAt(line: List<Point>, t: Long): Point {
+        val i = line.indexOfFirst { it.t >= t }
+        if (i <= 0) return if (i == 0) line.first() else line.last()
+        val a = line[i - 1]
+        val b = line[i]
+        val f = if (b.t > a.t) (t - a.t).toDouble() / (b.t - a.t) else 0.0
+        return a.copy(t = t, lat = a.lat + (b.lat - a.lat) * f, lon = a.lon + (b.lon - a.lon) * f)
     }
 
     /** A rise counts toward the climb only once it is this many metres above the last low: GPS height is noisy. */
@@ -385,8 +424,14 @@ object Route {
      * The route cut into stretches of one zone each, for drawing it in zone colours: each fix takes the zone of the
      * nearest heart rate within [MAX_HR_GAP_S] (time, bpm, ascending), else none (−1, drawn grey).
      */
-    fun byZone(points: List<Point>, hr: List<Pair<Long, Int>>, maxHr: Int, zones: HeartZones): List<Pair<List<Point>, Int>> {
-        val clean = track(points)
+    fun byZone(points: List<Point>, hr: List<Pair<Long, Int>>, maxHr: Int, zones: HeartZones): List<Pair<List<Point>, Int>> =
+        lineByZone(track(points), hr, maxHr, zones)
+
+    /**
+     * [byZone] for a line that is already the one to draw, as it is: the route along the roads
+     * ([org.openstrap.app.maps.RouteSnapper]), whose points carry the track's times.
+     */
+    fun lineByZone(clean: List<Point>, hr: List<Pair<Long, Int>>, maxHr: Int, zones: HeartZones): List<Pair<List<Point>, Int>> {
         if (clean.size < 2) return emptyList()
         val times = hr.map { it.first }
         fun zoneAt(t: Long): Int {
@@ -408,5 +453,5 @@ object Route {
         return out.filter { it.first.size >= 2 }
     }
 
-    private const val MAX_HR_GAP_S = 30L
+    const val MAX_HR_GAP_S = 30L
 }

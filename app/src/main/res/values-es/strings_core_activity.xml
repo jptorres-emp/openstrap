@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="core_activity_pace_more_now">Más de lo habitual a estas horas</string>
+    <string name="core_activity_pace_about_now">Más o menos lo habitual a estas horas</string>
+    <string name="core_activity_pace_fewer_now">Menos de lo habitual a estas horas</string>
+    <string name="core_activity_pace_more_day">Más que en un día normal</string>
+    <string name="core_activity_pace_about_day">Más o menos como en un día normal</string>
+    <string name="core_activity_pace_fewer_day">Menos que en un día normal</string>
+    <string name="core_activity_goal_met">Meta cumplida</string>
+    <string name="core_activity_goal_share">%1$d%% de tu objetivo</string>
+    <string name="core_activity_line_more_now">%1$s, por delante de tu habitual</string>
+    <string name="core_activity_line_about_now">%1$s, cerca de tu habitual</string>
+    <string name="core_activity_line_fewer_now">%1$s, por detrás de tu habitual</string>
+    <string name="core_activity_line_more_day">%1$s, más que un día normal</string>
+    <string name="core_activity_line_about_day">%1$s, como un día normal</string>
+    <string name="core_activity_line_fewer_day">%1$s, menos que un día normal</string>
+    <string name="core_activity_hour_label">pasos, %1$s a %2$s</string>
+    <string name="core_activity_points_at_aim">En tu objetivo</string>
+    <string name="core_activity_points_week_met">Manteniéndolo en %1$d o más, semana tras semana, es lo que cuenta.</string>
+    <string name="core_activity_points_week_to_go">%1$d para llegar a %2$d.</string>
+    <plurals name="core_activity_points_drop_off">
+        <item quantity="one">Mañana se descarta %1$d punto del %2$s.</item>
+        <item quantity="many">Mañana se descartan %1$d puntos del %2$s.</item>
+        <item quantity="other">Mañana se descartan %1$d puntos del %2$s.</item>
+    </plurals>
+    <string name="core_activity_points_earned">puntos ganados, %1$s</string>
+    <string name="core_activity_points_month_under" tools:ignore="PluralsCandidate">Por debajo de %1$d todos los días de los últimos 30, entre %2$d y %3$d.</string>
+    <string name="core_activity_points_month_all">En %1$d o más cada día, en total en los últimos 30.</string>
+    <plurals name="core_activity_points_month_some">
+        <item quantity="one">Con %1$d o más en %2$d de %3$d día de los últimos 30.</item>
+        <item quantity="many">Con %1$d o más en %2$d de %3$d días de los últimos 30.</item>
+        <item quantity="other">Con %1$d o más en %2$d de %3$d días de los últimos 30.</item>
+    </plurals>
+    <string name="core_activity_active_goal_met">Meta cumplida</string>
+    <string name="core_activity_active_week_at">Justo en el %1$d para llegar al objetivo.</string>
+    <string name="core_activity_active_week_past" tools:ignore="PluralsCandidate">%1$d por encima de los %2$d a los que apuntar.</string>
+    <string name="core_activity_active_week_to_go">Faltan %1$d para llegar a %2$d.</string>
+    <plurals name="core_activity_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="core_activity_active_none_today">Ningún minuto activo hasta ahora hoy.</string>
+    <string name="core_activity_active_none_day">Ningún minuto activo ese día.</string>
+    <string name="core_activity_active_brisk_today">En lo que va de día, %1$s de movimientos enérgicos.</string>
+    <string name="core_activity_active_brisk_day">Ese día, %1$s de movimiento enérgico.</string>
+    <string name="core_activity_active_hard_today">En lo que va de día, %1$s de esfuerzo duro.</string>
+    <string name="core_activity_active_hard_day">Ese día, %1$s de esfuerzo duro.</string>
+    <string name="core_activity_active_both_today">En lo que va de día, %1$s a paso ligero y %2$s intensos.</string>
+    <string name="core_activity_active_both_day">Ese día, %1$s a paso ligero y %2$s intensos.</string>
+    <string name="core_activity_usual_band">Tu promedio, %1$d a %2$d</string>
+    <string name="core_activity_load_long_run_today">Tu carrera de hoy fue un %1$d%% más larga que tu más larga del mes anterior. Los corredores que alargan una carrera más de un 10%% de una vez tienen más probabilidad de lesionarse, así que aumenta poco a poco.</string>
+    <string name="core_activity_load_long_run_day">Tu carrera de ese día fue un %1$d%% más larga que tu más larga del mes anterior. Los corredores que alargan una carrera más de un 10%% de una vez tienen más probabilidad de lesionarse, así que aumenta poco a poco.</string>
+    <string name="core_activity_load_learning">Tus valores habituales aparecerán tras una semana de uso.</string>
+    <string name="core_activity_load_harder_today">Hasta ahora hoy, al menos tan intenso como el %1$d%% de tus días de los últimos 3 meses.</string>
+    <string name="core_activity_load_harder_day">Ese día, al menos tan intenso como el %1$d%% de tus días de los últimos 3 meses.</string>
+    <string name="core_activity_load_easier_today">Hasta ahora hoy, más suave que el %1$d%% de tus días de los últimos 3 meses.</string>
+    <string name="core_activity_load_easier_day">Ese día, más suave que el %1$d%% de tus días de los últimos 3 meses.</string>
+    <string name="core_activity_balance_building">Tus últimos 7 días están muy por encima de tu promedio, así que estás progresando.</string>
+    <string name="core_activity_balance_easing">Tus últimos 7 días están muy por debajo de tu promedio, así que estás bajando el ritmo.</string>
+    <string name="core_activity_balance_steady">Tus últimos 7 días están cerca de tu promedio, una buena racha constante.</string>
+    <string name="core_activity_span_none_week">Ningún día por encima de tu promedio en los últimos 7 días.</string>
+    <string name="core_activity_span_none_month">Ningún día por encima de tu promedio en los últimos 30 días.</string>
+    <string name="core_activity_span_one_week">Un día por encima de tu promedio en los últimos 7 días.</string>
+    <string name="core_activity_span_one_month">Un día por encima de tu promedio en los últimos 30 días.</string>
+    <plurals name="core_activity_span_days_week">
+        <item quantity="one">%1$d día por encima de tu habitual en los últimos 7 días.</item>
+        <item quantity="many">%1$d días por encima de tu habitual en los últimos 7 días.</item>
+        <item quantity="other">%1$d días por encima de tu habitual en los últimos 7 días.</item>
+    </plurals>
+    <plurals name="core_activity_span_days_month">
+        <item quantity="one">%1$d día por encima de tu habitual en los últimos 30 días.</item>
+        <item quantity="many">%1$d días por encima de tu habitual en los últimos 30 días.</item>
+        <item quantity="other">%1$d días por encima de tu habitual en los últimos 30 días.</item>
+    </plurals>
+    <string name="core_activity_strap_range">Rango productivo de la banda, %1$d a %2$d</string>
+    <string name="core_activity_vo2_workout">De tu entrenamiento más reciente con una lectura válida.</string>
+    <string name="core_activity_vo2_profile">Estimado a partir de tu perfil y frecuencia cardíaca en reposo, actualizado semanalmente.</string>
+    <string name="core_activity_ended">%1$s a las %2$s</string>
+    <string name="core_activity_recover">Contado desde tu %1$s, que terminó %2$s.</string>
+    <string name="core_activity_calories_at_rest">Tu cuerpo usa unas %1$s kcal al día en reposo, antes de cualquier movimiento.</string>
+    <string name="core_activity_distance_from_steps">km, de tus pasos</string>
+    <string name="core_activity_distance_from_steps_mi">mi, de tus pasos</string>
+    <string name="core_activity_distance_from_strap">km, de la banda</string>
+    <string name="core_activity_distance_from_strap_mi">mi, de la banda</string>
+    <string name="core_activity_distance_steps_today">Más de %1$s pasos hasta ahora hoy.</string>
+    <string name="core_activity_distance_steps_day">Más de %1$s pasos ese día.</string>
+</resources>

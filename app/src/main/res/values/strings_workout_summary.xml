@@ -80,10 +80,10 @@
     <string name="workout_summary_trim_hint">Drag the handles to where the workout really started and ended. Nothing recorded is deleted.</string>
     <!-- A whole kilometre on the splits list, by its number. Short, about 8 characters. -->
     <string name="workout_summary_split_km">Km <xliff:g id="number" example="3">%1$d</xliff:g></string>
+    <!-- A whole mile on the splits list, by its number. Short, about 8 characters. -->
+    <string name="workout_summary_split_mile">Mile <xliff:g id="number" example="3">%1$d</xliff:g></string>
     <!-- The part kilometre at the end of the splits list. The distance is "430 m". -->
     <string name="workout_summary_split_last">Last <xliff:g id="distance" example="430 m">%1$s</xliff:g></string>
-    <!-- A short distance in metres. -->
-    <string name="workout_summary_meters"><xliff:g id="meters" example="0">%1$d</xliff:g> m</string>
 
     <!-- When the workout was, at the top of its summary: this morning (4 to 12). The time follows the phone's 12 or 24 hour clock. -->
     <string name="workout_summary_when_morning">This morning, <xliff:g id="time" example="07:12">%1$s</xliff:g></string>
@@ -97,6 +97,8 @@
     <string name="workout_summary_when_day"><xliff:g id="day" example="Tuesday">%1$s</xliff:g>, <xliff:g id="time" example="10:00">%2$s</xliff:g></string>
 
     <!-- A strength set on the summary: reps and the weight in kilograms. Short, about 12 characters. -->
+    <!-- A set whose log card was skipped, in the list of sets, where the logged ones read "10 × 60 kg". -->
+    <string name="workout_summary_set_skipped">Skipped</string>
     <string name="workout_summary_set_reps_kg"><xliff:g id="reps" example="10">%1$d</xliff:g> × <xliff:g id="kg" example="60">%2$s</xliff:g> kg</string>
     <!-- A strength set with reps and no weight. Short. -->
     <plurals name="workout_summary_set_reps">

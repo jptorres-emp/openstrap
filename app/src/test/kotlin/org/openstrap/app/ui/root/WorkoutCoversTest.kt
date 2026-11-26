@@ -18,7 +18,8 @@ import org.junit.runner.RunWith
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.testing.ComposeRules
 import org.openstrap.app.testing.appWorkout
-import org.openstrap.app.ui.glow.GlowCard
+import org.openstrap.app.ui.glow.CardTone
+import org.openstrap.app.ui.glow.HaloCard
 import org.openstrap.app.ui.glow.LocalGlowPagePaused
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.draw.GlowStyle
@@ -57,7 +58,7 @@ class WorkoutCoversTest {
             val covered = rememberWorkoutCovers(state, minimized, nav)
             val pager = rememberPagerState { 1 }
             CompositionLocalProvider(LocalGlowPagePaused provides remember(pager, covered) { tabPaused(pager, 0, covered) }) {
-                GlowCard(style, Modifier.size(200.dp)) {}
+                HaloCard(Modifier.size(200.dp), tone = CardTone.lit(style)) {}
             }
         }
         var changes = 0

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="day_info_scale_normal_below">Abaixo do teu normal</string>
-    <string name="day_info_scale_normal_usual">Habitual</string>
+    <string name="day_info_scale_normal_usual">O teu normal</string>
     <string name="day_info_scale_normal_above">Acima do teu normal</string>
     <string name="day_info_scale_charge_low">A acabar</string>
     <string name="day_info_scale_charge_some">Ainda alguma</string>

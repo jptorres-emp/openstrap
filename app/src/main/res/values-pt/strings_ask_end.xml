@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ask_end_page_title">Treinos</string>
+    <string name="ask_end_section">Perguntar se quero terminar quando paro</string>
+    <string name="ask_end_switch">Perguntar se quero terminar quando paro</string>
+    <string name="ask_end_switch_note">Vibra quando deixas de te mexer, nunca termina um treino sozinho</string>
+    <string name="ask_end_most">A maioria dos treinos</string>
+    <string name="ask_end_most_note">Corridas, bicicleta, caminhadas, força, HIIT</string>
+    <string name="ask_end_games">Jogos e desportos</string>
+    <string name="ask_end_games_note">Padel, ténis, futebol</string>
+    <string name="ask_end_mind_body">Ioga e Pilates</string>
+    <string name="ask_end_mind_body_note">Os longos momentos parados fazem parte</string>
+    <string name="ask_end_footnote">A strap vibra uma vez e a app pergunta. Se continuares, volta a perguntar ao fim do mesmo tempo.</string>
+    <string name="ask_end_after">Ao fim de %1$d min</string>
+    <string name="ask_end_off">Desligado</string>
+    <string name="ask_end_during">Durante um treino</string>
+    <string name="ask_end_zones_max">Máx %1$d bpm</string>
+    <string name="ask_end_sheet_note">Uma vibração ao fim de %1$d min sem te mexeres. Desligado está no fim da lista.</string>
+    <string name="ask_end_sheet_note_off">Sem vibração nem pergunta para estes. Escolhe um tempo para voltar a ligar.</string>
+    <string name="ask_end_wheel">Minutos sem te mexeres</string>
+    <string name="ask_end_you_line">Perguntar se quero terminar ao fim de %1$d min</string>
+    <string name="ask_end_you_line_some">Perguntar se quero terminar em alguns desportos</string>
+    <string name="ask_end_you_line_off">Perguntar se quero terminar está desligado</string>
+</resources>

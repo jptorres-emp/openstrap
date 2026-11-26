@@ -21,7 +21,7 @@
     <string name="day_notifications_blocked_text">O unstrap mostra o teu treino e o estado da strap numa notificação. O Android não volta a perguntar, por isso ativa-as nas definições do unstrap, em Notificações.</string>
     <string name="day_pull_sync_failed">Não foi possível sincronizar. %1$s</string>
     <string name="day_pull_not_connected">A strap não está ligada.</string>
-    <string name="day_pull_syncing">A sincronizar a strap…</string>
+    <string name="day_pull_syncing">A sincronizar a strap</string>
     <string name="day_pull_release">Solta para sincronizar a strap</string>
     <string name="day_pull_pull">Puxa para sincronizar a strap</string>
 </resources>

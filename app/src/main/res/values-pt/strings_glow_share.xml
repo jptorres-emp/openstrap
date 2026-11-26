@@ -11,7 +11,6 @@
     <string name="glow_share_stat_bpm_start">bpm no início</string>
     <string name="glow_share_stat_bpm_end">bpm no fim</string>
     <string name="glow_share_stat_load">Carga</string>
-    <string name="glow_share_unit_per_km">/km</string>
     <string name="glow_share_unit_kg">kg</string>
     <plurals name="glow_share_sets">
         <item quantity="one">%d série</item>
@@ -43,4 +42,5 @@
     <string name="glow_share_route_off">Sem</string>
     <string name="glow_share_route_line">Linha</string>
     <string name="glow_share_hide_ends">Esconder início e fim</string>
+    <string name="glow_share_hide_ends_note">Corta %1$d m em cada ponta da linha</string>
 </resources>

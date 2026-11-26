@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="workout_glance_unit_km">km</string>
     <string name="workout_glance_unit_bpm">bpm</string>
     <string name="workout_glance_unit_in_set">nesta série</string>
     <string name="workout_glance_unit_left">restante</string>
@@ -11,11 +10,13 @@
     <string name="workout_glance_unit_s_left">s restantes</string>
     <string name="workout_glance_unit_s_rest">s descanso</string>
     <string name="workout_glance_figure_pace">Ritmo /km</string>
-    <string name="workout_glance_figure_bpm_zone">bpm, zona %1$d</string>
+    <string name="workout_glance_figure_pace_mi">Ritmo /mi</string>
     <string name="workout_glance_figure_bpm">bpm</string>
     <string name="workout_glance_figure_active_kcal">kcal ativas</string>
     <string name="workout_glance_figure_km">km</string>
+    <string name="workout_glance_figure_mi">mi</string>
     <string name="workout_glance_figure_km_from_steps">km por passos</string>
+    <string name="workout_glance_figure_mi_from_steps">mi pelos passos</string>
     <string name="workout_glance_figure_average_bpm">bpm méd.</string>
     <string name="workout_glance_figure_effort">Esforço</string>
     <string name="workout_glance_effort_of_5">%1$d de 5</string>
@@ -48,9 +49,9 @@
     <string name="workout_glance_set_done">Série feita</string>
     <string name="workout_glance_rest_left">%1$s de descanso restante</string>
     <string name="workout_glance_set_next_lower">a seguir série %1$d</string>
-    <string name="workout_glance_rest_bpm_sentence">%1$d bpm.</string>
-    <string name="workout_glance_rest_bpm_down_sentence">%1$d bpm, desceu %2$d.</string>
-    <string name="workout_glance_rest_ends_sooner">Acaba antes quando ficares abaixo de %1$d bpm.</string>
+    <string name="workout_glance_rest_bpm_sentence">%1$d bpm</string>
+    <string name="workout_glance_rest_bpm_down_sentence">%1$d bpm, desceu %2$d</string>
+    <string name="workout_glance_rest_ends_sooner">acaba antes abaixo de %1$d bpm</string>
     <string name="workout_glance_add_rest_30">+30 s</string>
     <string name="workout_glance_ready_for_set_1">Pronto para a série 1</string>
     <string name="workout_glance_rest_over_of">Descanso terminado, a seguir série %1$d de %2$d</string>
@@ -81,9 +82,11 @@
         <item quantity="many">Todas as %1$d rondas feitas</item>
         <item quantity="other">Todas as %1$d rondas feitas</item>
     </plurals>
-    <string name="workout_glance_fastest_was">O mais rápido até agora foi o km %1$d.</string>
-    <string name="workout_glance_fastest_this">O teu mais rápido até agora.</string>
-    <string name="workout_glance_split_average">Média %1$d bpm.</string>
+    <string name="workout_glance_join">%1$s, %2$s</string>
+    <string name="workout_glance_fastest_was">o mais rápido até agora foi o km %1$d</string>
+    <string name="workout_glance_fastest_was_mile">o mais rápido até agora foi a milha %1$d</string>
+    <string name="workout_glance_fastest_this">o teu mais rápido até agora</string>
+    <string name="workout_glance_split_average">Média %1$d bpm</string>
     <string name="workout_glance_target">Alvo %1$s</string>
     <string name="workout_glance_goal">Objetivo %1$s</string>
     <string name="workout_glance_reached">Atingido</string>
@@ -93,5 +96,4 @@
     <string name="workout_glance_under_a_minute">Falta menos de um minuto</string>
     <string name="workout_glance_kcal_to_go">Faltam %1$d kcal</string>
     <string name="workout_glance_to_go">Faltam %1$s</string>
-    <string name="workout_glance_meters">%1$d m</string>
 </resources>

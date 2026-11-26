@@ -2,9 +2,10 @@
 <resources>
     <string name="system_widget_status_not_paired">Emparelha a strap</string>
     <string name="system_widget_status_not_paired_short">Emparelhar</string>
+    <string name="system_widget_status_not_paired_shortest">Emparelhar</string>
     <string name="system_widget_status_low_battery">Strap a %1$d%%</string>
     <string name="system_widget_status_percent">%1$d%%</string>
-    <string name="system_widget_status_syncing">A sincronizar…</string>
+    <string name="system_widget_status_syncing">A sincronizar</string>
     <string name="system_widget_status_not_synced">Não sincronizada</string>
     <string name="system_widget_status_bluetooth_off">Bluetooth desligado</string>
     <string name="system_widget_status_bluetooth_off_short">BT desligado</string>
@@ -32,9 +33,10 @@
     <string name="system_widget_recovery_this_morning">Esta manhã</string>
     <string name="system_widget_recovery_yesterday">Ontem</string>
     <string name="system_widget_recovery_no_reading">Sem leitura</string>
-    <string name="system_widget_recovery_resting_hr">Repouso</string>
+    <string name="system_widget_recovery_resting_hr">Frequência cardíaca em repouso</string>
+    <string name="system_widget_recovery_resting_hr_short">FC em repouso</string>
     <string name="system_widget_recovery_hrv">VFC</string>
-    <string name="system_widget_recovery_sleep">Sono</string>
+    <string name="system_widget_recovery_sleep">Pontuação do sono</string>
     <string name="system_widget_recovery_figure">%1$s %2$s</string>
     <string name="system_widget_score_word">%1$s, %2$s</string>
     <string name="system_widget_recovery_week_description">Recuperação de cada dia dos últimos sete dias</string>
@@ -66,6 +68,8 @@
     </plurals>
     <string name="system_widget_recording">A gravar</string>
     <string name="system_widget_paused">Em pausa</string>
+    <string name="system_widget_rest">Descanso</string>
+    <string name="system_widget_still_going">Continuas?</string>
     <string name="system_widget_moment_energy_left">Energia restante</string>
     <string name="system_widget_moment_left">restante</string>
     <string name="system_widget_moment_energy_at_waking">Energia ao acordar %1$d</string>

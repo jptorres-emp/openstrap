@@ -20,9 +20,13 @@
     <string name="workout_detail_sentence_sport_zone">%1$s, sobretudo na zona %2$d.</string>
     <string name="workout_detail_fact_distance">Distância</string>
     <string name="workout_detail_fact_km">Quilómetros</string>
+    <string name="workout_detail_fact_mi">Milhas</string>
     <string name="workout_detail_fact_m">Metros</string>
+    <string name="workout_detail_fact_ft">Pés</string>
     <string name="workout_detail_fact_km_from_steps">Quilómetros, estimados pelos teus passos</string>
+    <string name="workout_detail_fact_mi_from_steps">Milhas, estimadas pelos teus passos</string>
     <string name="workout_detail_fact_m_from_steps">Metros, estimados pelos teus passos</string>
+    <string name="workout_detail_fact_ft_from_steps">Pés, estimados pelos teus passos</string>
     <string name="workout_detail_fact_paused">Em pausa</string>
     <string name="workout_detail_fact_paused_note">Não conta para o tempo</string>
     <string name="workout_detail_fact_steps">Passos</string>

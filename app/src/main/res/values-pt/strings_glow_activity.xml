@@ -15,11 +15,11 @@
     <string name="glow_activity_vo2max_from_workouts">Dos teus treinos</string>
     <string name="glow_activity_vo2max_band">%1$s para a tua idade</string>
     <string name="glow_activity_vo2max_estimated">Estimado pelo teu perfil</string>
-    <string name="glow_activity_vo2max_after_workout">Depois de um treino que a strap avalie</string>
+    <string name="glow_activity_vo2max_after_workout">Depois de um treino</string>
     <string name="glow_activity_time_to_recover">Tempo de recuperação</string>
     <string name="glow_activity_no_recent_workout">Sem treino recente</string>
     <string name="glow_activity_calories">Calorias</string>
-    <string name="glow_activity_add_profile_to_see">Junta idade, peso e altura para ver</string>
+    <string name="glow_activity_add_profile_to_see">Precisa de idade, peso e altura</string>
     <string name="glow_activity_distance">Distância</string>
     <string name="glow_activity_workouts">Treinos</string>
     <plurals name="glow_activity_this_day">
@@ -28,7 +28,7 @@
         <item quantity="other">%d neste dia</item>
     </plurals>
     <string name="glow_activity_no_workouts">Ainda sem treinos</string>
-    <string name="glow_activity_no_workouts_note">Os treinos que gravares aparecem aqui</string>
+    <string name="glow_activity_no_workouts_note">Os treinos gravados aparecem aqui</string>
     <string name="glow_activity_add_workout">Juntar um treino que não gravaste</string>
     <string name="glow_activity_all_workouts">Todos os treinos</string>
     <string name="glow_activity_suggestion">Parece um treino</string>
@@ -62,9 +62,9 @@
         <item quantity="many">Ainda sem Carga nos últimos %d dias.</item>
         <item quantity="other">Ainda sem Carga nos últimos %d dias.</item>
     </plurals>
-    <string name="glow_activity_from_workouts">Dos treinos</string>
+    <string name="glow_activity_from_workouts">Treinos</string>
     <string name="glow_activity_moving_about">A mexer-te</string>
-    <string name="glow_activity_strain">Vs. habitual</string>
+    <string name="glow_activity_strain">vs. habitual</string>
     <string name="glow_activity_this_week">Esta semana</string>
     <string name="glow_activity_your_usual">O teu habitual</string>
     <string name="glow_activity_your_usual_line">Média diária, últimas 6 semanas</string>
@@ -72,28 +72,18 @@
     <string name="glow_activity_last_7_days_line">Média diária</string>
     <string name="glow_activity_strap_weekly_load">A Carga semanal da strap</string>
     <string name="glow_activity_from_the_strap">Da strap</string>
-    <string name="glow_activity_load_you_are_here">Estás aqui. O teu habitual é %1$d por dia.</string>
+    <string name="glow_activity_load_you_are_here">Estás aqui, o teu habitual é %1$d por dia.</string>
     <string name="glow_activity_vo2max_unit">ml/kg/min</string>
     <string name="glow_activity_no_estimate">Sem estimativa</string>
     <string name="glow_activity_where_it_comes_from">De onde vem</string>
     <string name="glow_activity_day_time">%1$s, %2$s</string>
     <string name="glow_activity_from_your_profile">Do teu perfil</string>
     <string name="glow_activity_estimated_weekly">Estimado todas as semanas</string>
-    <string name="glow_activity_vo2max_you_are_here">Estás aqui: %1$s para a tua idade.</string>
-    <string name="glow_activity_recover_after_workout">Depois de um treino que a strap avalie</string>
+    <string name="glow_activity_vo2max_you_are_here">Estás aqui, %1$s para a tua idade.</string>
+    <string name="glow_activity_recover_after_workout">Depois de um treino</string>
     <string name="glow_activity_recovered">Recuperado</string>
     <string name="glow_activity_recovered_after">Após a sessão de %1$s, %2$s</string>
     <string name="glow_activity_recover_ready">Pronto</string>
-    <plurals name="glow_activity_blocks_of">
-        <item quantity="one">%1$d de %2$d minutos</item>
-        <item quantity="many">%1$d de %2$d minutos</item>
-        <item quantity="other">%1$d de %2$d minutos</item>
-    </plurals>
-    <plurals name="glow_activity_block_is">
-        <item quantity="one">Um bloco é %1$d minuto</item>
-        <item quantity="many">Um bloco são %1$d minutos</item>
-        <item quantity="other">Um bloco são %1$d minutos</item>
-    </plurals>
     <plurals name="glow_activity_hours_to_go" tools:ignore="ImpliedQuantity">
         <item quantity="one">hora em falta</item>
         <item quantity="many">horas em falta</item>
@@ -107,7 +97,7 @@
     <string name="glow_activity_no_full_days">Ainda sem dias completos</string>
     <string name="glow_activity_total_kcal">kcal totais</string>
     <string name="glow_activity_at_rest">Em repouso</string>
-    <string name="glow_activity_activity_level">Nível de atividade</string>
+    <string name="glow_activity_activity_level">Atividade</string>
     <string name="glow_activity_goal_label">Objetivo</string>
     <string name="glow_activity_where_it_came_from">De onde veio</string>
     <string name="glow_activity_no_calories">Ainda sem calorias neste período.</string>
@@ -122,6 +112,7 @@
     <string name="glow_activity_your_week">A tua semana</string>
     <string name="glow_activity_no_steps">Sem passos</string>
     <string name="glow_activity_steps_on">passos, %1$s</string>
-    <string name="glow_activity_asleep_a_night">Sono por noite</string>
+    <string name="glow_activity_asleep_a_night">Sono médio</string>
     <string name="glow_activity_day_by_day">Dia a dia</string>
+    <string name="glow_activity_active_min_short">Min ativos</string>
 </resources>

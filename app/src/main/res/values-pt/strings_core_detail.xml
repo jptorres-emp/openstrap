@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="core_detail_status_above">Acima do teu normal</string>
     <string name="core_detail_status_below">Abaixo do teu normal</string>
-    <string name="core_detail_status_usual">Habitual</string>
+    <string name="core_detail_status_usual">O teu normal</string>
     <string name="core_detail_band_label">O teu normal, de %1$s a %2$s</string>
     <plurals name="core_detail_learning_nights">
-        <item quantity="one">A aprender o teu normal, %1$d de %2$d noite</item>
-        <item quantity="many">A aprender o teu normal, %1$d de %2$d noites</item>
-        <item quantity="other">A aprender o teu normal, %1$d de %2$d noites</item>
+        <item quantity="one">A aprender, %1$d de %2$d noite</item>
+        <item quantity="many">A aprender, %1$d de %2$d noites</item>
+        <item quantity="other">A aprender, %1$d de %2$d noites</item>
     </plurals>
     <plurals name="core_detail_learning_days">
-        <item quantity="one">A aprender o teu normal, %1$d de %2$d dia</item>
-        <item quantity="many">A aprender o teu normal, %1$d de %2$d dias</item>
-        <item quantity="other">A aprender o teu normal, %1$d de %2$d dias</item>
+        <item quantity="one">A aprender, %1$d de %2$d dia</item>
+        <item quantity="many">A aprender, %1$d de %2$d dias</item>
+        <item quantity="other">A aprender, %1$d de %2$d dias</item>
     </plurals>
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="one">A aprender o teu normal, %1$d de %2$d noite.</item>
-        <item quantity="many">A aprender o teu normal, %1$d de %2$d noites.</item>
-        <item quantity="other">A aprender o teu normal, %1$d de %2$d noites.</item>
+        <item quantity="one">Ainda a aprender o teu normal, %1$d de %2$d noite.</item>
+        <item quantity="many">Ainda a aprender o teu normal, %1$d de %2$d noites.</item>
+        <item quantity="other">Ainda a aprender o teu normal, %1$d de %2$d noites.</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="one">A aprender o teu normal, %1$d de %2$d dia.</item>
-        <item quantity="many">A aprender o teu normal, %1$d de %2$d dias.</item>
-        <item quantity="other">A aprender o teu normal, %1$d de %2$d dias.</item>
+        <item quantity="one">Ainda a aprender o teu normal, %1$d de %2$d dia.</item>
+        <item quantity="many">Ainda a aprender o teu normal, %1$d de %2$d dias.</item>
+        <item quantity="other">Ainda a aprender o teu normal, %1$d de %2$d dias.</item>
     </plurals>
     <string name="core_detail_number_0">0</string>
     <string name="core_detail_number_1">1</string>
@@ -46,8 +46,11 @@
     </plurals>
     <string name="core_detail_label_bpm_now">bpm agora</string>
     <string name="core_detail_label_bpm_latest">bpm, última leitura</string>
-    <string name="core_detail_label_bpm_resting">bpm em repouso</string>
-    <string name="core_detail_label_bpm_resting_estimated">bpm em repouso, estimado</string>
+    <string name="core_detail_label_bpm_resting">bpm, noite passada</string>
+    <string name="core_detail_label_bpm_resting_that_night">bpm, nessa noite</string>
+    <string name="core_detail_label_bpm_resting_estimated">bpm, noite passada, estimado</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">bpm, nessa noite, estimado</string>
+    <string name="core_detail_label_bpm_up_to">bpm, até às %1$s</string>
     <string name="core_detail_label_steps_today">passos até agora hoje</string>
     <string name="core_detail_label_steps">passos</string>
     <string name="core_detail_label_breathing">resp/min durante o sono</string>
@@ -87,10 +90,10 @@
     <string name="core_detail_day_so_far_past_below">Nesse dia, abaixo do teu normal.</string>
     <string name="core_detail_day_so_far_past_within">Nesse dia, dentro do teu normal.</string>
     <string name="core_detail_none_during_sleep">Medido durante o sono</string>
-    <string name="core_detail_none_last_night">Para a noite passada</string>
-    <string name="core_detail_none_that_night">Para essa noite</string>
+    <string name="core_detail_none_last_night">Noite passada</string>
+    <string name="core_detail_none_that_night">Nessa noite</string>
     <string name="core_detail_none_so_far_today">Hoje até agora</string>
-    <string name="core_detail_none_that_day">Para esse dia</string>
+    <string name="core_detail_none_that_day">Nesse dia</string>
     <string name="core_detail_none_week">Nos últimos 7 dias</string>
     <string name="core_detail_none_month">Nos últimos 30 dias</string>
     <string name="core_detail_none_year">Nos últimos 12 meses</string>
@@ -126,8 +129,18 @@
         <item quantity="many">Dentro do teu normal em %1$d de %2$d dias dos últimos 30 dias.</item>
         <item quantity="other">Dentro do teu normal em %1$d de %2$d dias dos últimos 30 dias.</item>
     </plurals>
-    <string name="core_detail_year_unit">Nos últimos 12 meses, as médias semanais foram de %1$s a %2$s %3$s.</string>
-    <string name="core_detail_year">Nos últimos 12 meses, as médias semanais foram de %1$s a %2$s.</string>
+    <string name="core_detail_year_unit">As médias semanais foram de %1$s a %2$s %3$s %4$s.</string>
+    <string name="core_detail_year">As médias semanais foram de %1$s a %2$s %3$s.</string>
+    <plurals name="core_detail_year_span_weeks" tools:ignore="ImpliedQuantity">
+        <item quantity="one">na última semana</item>
+        <item quantity="many">nas últimas %1$d semanas</item>
+        <item quantity="other">nas últimas %1$d semanas</item>
+    </plurals>
+    <plurals name="core_detail_year_span_months" tools:ignore="ImpliedQuantity">
+        <item quantity="one">no último mês</item>
+        <item quantity="many">nos últimos %1$d meses</item>
+        <item quantity="other">nos últimos %1$d meses</item>
+    </plurals>
     <string name="core_detail_score_week_one">Uma pontuação nos últimos 7 dias, até agora.</string>
     <string name="core_detail_score_week">Média de %1$d nos últimos 7 dias, de %2$d a %3$d.</string>
     <string name="core_detail_charge_started">Começou o dia em %1$d e terminou-o em %2$d.</string>
@@ -142,6 +155,6 @@
         <item quantity="other">%1$d de %2$d noites</item>
     </plurals>
     <string name="core_detail_recovery_no_score">Sem pontuação</string>
-    <string name="core_detail_recovery_no_heart_data">Dados cardíacos insuficientes nessa noite</string>
-    <string name="core_detail_recovery_scored_mornings">Pontuada todas as manhãs a partir da noite anterior</string>
+    <string name="core_detail_recovery_no_heart_data">Dados cardíacos insuficientes</string>
+    <string name="core_detail_recovery_scored_mornings">Calculada todas as manhãs</string>
 </resources>

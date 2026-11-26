@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="you_backup_status_off">Desligada. Um zip por dia numa pasta à tua escolha</string>
-    <string name="you_backup_status_failed">A última cópia falhou. %1$s</string>
-    <string name="you_backup_status_waiting">Todos os dias enquanto o telemóvel carrega. Ainda sem cópia</string>
+    <string name="you_backup_status_off">Desligada, um zip por dia numa pasta à tua escolha</string>
+    <string name="you_backup_status_waiting">Ainda sem cópia, corre enquanto carrega</string>
     <string name="you_backup_last">Última cópia %1$s</string>
     <string name="you_backup_summary_failed">A última cópia falhou</string>
-    <string name="you_backup_summary_waiting">Ligada. Ainda sem cópia</string>
+    <string name="you_backup_summary_waiting">Ligada, ainda sem cópia</string>
     <string name="you_backup_failure_folder_gone">A pasta já não está disponível.</string>
     <string name="you_backup_failure_permission">O unstrap já não consegue chegar à pasta. Escolhe-a de novo.</string>
     <string name="you_backup_failure_no_space">Não há espaço suficiente.</string>
@@ -34,37 +33,35 @@
     <string name="you_backup_outcome_recording">Está a gravar um treino. A cópia é feita depois de terminar.</string>
     <string name="you_backup_outcome_off">A cópia automática está desligada.</string>
     <string name="you_backup_outcome_failed">Não foi possível fazer a cópia. %1$s</string>
-    <string name="you_backup_saved_copy">Cópia guardada.</string>
+    <string name="you_backup_saved_copy">O unstrap guardou uma cópia.</string>
     <string name="you_backup_folder_refused">O unstrap não consegue continuar a escrever nessa pasta. Escolhe outra.</string>
     <string name="you_backup_title">Cópia de segurança</string>
     <string name="you_backup_automatic">Cópia automática</string>
     <string name="you_backup_folder">Pasta das cópias</string>
     <string name="you_backup_now">Fazer cópia agora</string>
-    <string name="you_backup_now_running">A fazer a cópia…</string>
-    <string name="you_backup_now_note">Guarda o zip de hoje nessa pasta</string>
-    <string name="you_backup_restore_note">Qualquer zip do unstrap. Preenche o que falta neste telemóvel</string>
+    <string name="you_backup_now_running">A fazer a cópia</string>
+    <string name="you_backup_now_note">Guarda um zip em %2$s todos os dias e mantém os últimos %1$d.</string>
+    <string name="you_backup_off_note">Ao ligar, escolhes uma pasta. O unstrap guarda lá um zip todos os dias e mantém os últimos %1$d.</string>
+    <string name="you_backup_restore_note">Serve qualquer zip do unstrap. Preenche o que falta neste telemóvel.</string>
     <string name="you_backup_save_copy">Guardar uma cópia</string>
-    <string name="you_backup_save_copy_note">Um zip onde escolheres. O unstrap nunca o apaga</string>
+    <string name="you_backup_save_copy_note">Um zip guardado onde escolheres. O unstrap nunca o apaga.</string>
     <string name="you_deleted_sleep_title">Sono apagado</string>
-    <string name="you_hc_line_stopped_permissions">Parado. As autorizações do Health Connect foram desligadas</string>
-    <string name="you_hc_line_stopped_install">Parado. Instala o Health Connect para o voltar a ligar</string>
-    <string name="you_hc_line_stopped_unavailable">Parado. O Health Connect não está disponível neste telemóvel</string>
-    <string name="you_hc_line_off">Desligado. Copia os dados novos depois de cada sincronização da strap</string>
-    <string name="you_hc_line_on">Ligado. Copia os dados novos depois de cada sincronização da strap</string>
-    <string name="you_hc_line_last">Ligado. Última cópia %1$s</string>
-    <string name="you_hc_summary_stopped_permissions">Parado. As autorizações foram desligadas</string>
-    <string name="you_hc_summary_stopped_install">Parado. Instala o Health Connect</string>
-    <string name="you_hc_summary_stopped_unavailable">Parado. Não disponível neste telemóvel</string>
+    <string name="you_hc_line_stopped_permissions">Parado, autorizações desligadas</string>
+    <string name="you_hc_line_stopped_install">Parado, instala o Health Connect</string>
+    <string name="you_hc_line_stopped_unavailable">Parado, não disponível neste telemóvel</string>
+    <string name="you_hc_line_off">Desligado, copia depois de cada sincronização</string>
+    <string name="you_hc_line_on">Ligado, copia depois de cada sincronização</string>
+    <string name="you_hc_line_last">Ligado, última cópia %1$s</string>
+    <string name="you_hc_summary_stopped_permissions">Parado, autorizações desligadas</string>
+    <string name="you_hc_summary_stopped_install">Parado, instala o Health Connect</string>
+    <string name="you_hc_summary_stopped_unavailable">Parado, não disponível neste telemóvel</string>
     <string name="you_hc_title">Health Connect</string>
     <string name="you_hc_auto">Cópia automática para o Health Connect</string>
-    <string name="you_hc_any_time">A qualquer momento</string>
     <string name="you_hc_copy_now">Copiar agora</string>
-    <string name="you_hc_copy_now_note">Os últimos 30 dias, para o Health Connect</string>
-    <string name="you_hc_restore_note">Recupera o que o unstrap lá guardou</string>
     <string name="you_hc_open">Abrir o Health Connect</string>
     <string name="you_hc_open_note">Autorizações e dados</string>
     <string name="you_hc_calories_note">Calorias, frequência respiratória e VO2 máx ficam de fora até as permitires.</string>
-    <string name="you_hc_calories_offer">Pedir de novo</string>
+    <string name="you_hc_calories_offer">Permitir calorias, frequência respiratória e VO2 máx</string>
     <string name="you_hc_install">Instalar o Health Connect</string>
     <string name="you_hc_install_note">Neste telemóvel o Health Connect é uma app da Play Store. Instala-a para copiares lá os teus dados.</string>
     <string name="you_hc_store_failed">Não foi possível abrir a Play Store.</string>
@@ -75,14 +72,14 @@
         <item quantity="other">Recuperados %1$s registos do Health Connect.</item>
     </plurals>
     <plurals name="you_hc_wrote">
-        <item quantity="one">Copiado %1$d registo para o Health Connect (últimos 30 dias).</item>
-        <item quantity="many">Copiados %1$d registos para o Health Connect (últimos 30 dias).</item>
-        <item quantity="other">Copiados %1$d registos para o Health Connect (últimos 30 dias).</item>
+        <item quantity="one">Copiado %1$,d registo dos últimos 30 dias para o Health Connect.</item>
+        <item quantity="many">Copiados %1$,d registos dos últimos 30 dias para o Health Connect.</item>
+        <item quantity="other">Copiados %1$,d registos dos últimos 30 dias para o Health Connect.</item>
     </plurals>
     <plurals name="you_hc_auto_wrote">
-        <item quantity="one">A cópia automática está ligada. Copiado %1$d registo para o Health Connect (últimos 30 dias).</item>
-        <item quantity="many">A cópia automática está ligada. Copiados %1$d registos para o Health Connect (últimos 30 dias).</item>
-        <item quantity="other">A cópia automática está ligada. Copiados %1$d registos para o Health Connect (últimos 30 dias).</item>
+        <item quantity="one">A cópia automática está ligada. Copiado %1$,d registo dos últimos 30 dias.</item>
+        <item quantity="many">A cópia automática está ligada. Copiados %1$,d registos dos últimos 30 dias.</item>
+        <item quantity="other">A cópia automática está ligada. Copiados %1$,d registos dos últimos 30 dias.</item>
     </plurals>
     <string name="you_hc_restore_failed">Não foi possível recuperar do Health Connect</string>
     <string name="you_hc_write_failed">Não foi possível copiar para o Health Connect</string>
@@ -98,4 +95,11 @@
     <string name="you_error_hc">%1$s. %2$s</string>
     <string name="you_error_hc_permission">O unstrap já não tem autorização. Permite-a no Health Connect.</string>
     <string name="you_error_hc_no_answer">O Health Connect não respondeu. Tenta de novo.</string>
+    <string name="you_backup_banner_failed">A última cópia falhou</string>
+    <string name="you_hc_actions_note">Copiar agora envia os últimos 30 dias. Recuperar traz de volta o que o unstrap lá guardou.</string>
+    <string name="you_backup_failed_folder_gone">A pasta já não está disponível</string>
+    <string name="you_backup_failed_permission">Sem acesso à pasta, escolhe-a de novo</string>
+    <string name="you_backup_failed_no_space">Sem espaço suficiente neste telemóvel</string>
+    <string name="you_backup_failed_cant_write">Não foi possível escrever na pasta</string>
+    <string name="you_backup_failed_other">Tenta de novo, ou espera por amanhã</string>
 </resources>

@@ -7,9 +7,9 @@
     <string name="day_sleep_night_label_year_nights">%1$s, noites dos últimos 12 meses</string>
     <string name="day_sleep_night_label_year_days">%1$s, últimos 12 meses, dia e noite</string>
     <string name="day_sleep_no_sleep">Sem sono</string>
-    <string name="day_sleep_none_last_night">Nada registado na noite passada</string>
-    <string name="day_sleep_none_that_night">Nada registado nessa noite</string>
-    <string name="day_sleep_no_reading">Sem leitura</string>
+    <string name="day_sleep_none_last_night">Sem sono registado</string>
+    <string name="day_sleep_none_that_night">Sem sono registado</string>
+    <string name="day_sleep_no_reading">Ainda sem leitura</string>
     <string name="day_sleep_not_measured_last_night">Não medido na noite passada</string>
     <string name="day_sleep_not_measured_that_night">Não medido nessa noite</string>
     <string name="day_sleep_heart_lowest_last_night">Mínimo de %1$d bpm às %2$s na noite passada, %3$d em média a dormir.</string>
@@ -22,8 +22,8 @@
     <string name="day_sleep_score_label_that_night">essa noite</string>
     <string name="day_sleep_score_label_adjusted">%1$s, ajustada</string>
     <string name="day_sleep_no_score">Sem pontuação</string>
-    <string name="day_sleep_no_score_last_night">A strap não pontuou a noite passada</string>
-    <string name="day_sleep_no_score_that_night">A strap não pontuou essa noite</string>
+    <string name="day_sleep_no_score_last_night">Sem pontuação da strap</string>
+    <string name="day_sleep_no_score_that_night">Sem pontuação da strap</string>
     <string name="day_sleep_headline_sentence">%1$s.</string>
     <string name="day_sleep_factor_time_asleep">Tempo a dormir</string>
     <string name="day_sleep_factor_staying_asleep">Manter o sono</string>
@@ -102,7 +102,7 @@
         <item quantity="other">%1$d para recuperar</item>
     </plurals>
     <string name="day_sleep_vital_no_sleep">Sem sono registado</string>
-    <string name="day_sleep_vital_no_reading">Sem leitura</string>
+    <string name="day_sleep_vital_no_reading">Ainda sem leitura</string>
     <plurals name="day_sleep_vital_learning">
         <item quantity="one">A aprender, %1$d de %2$d noite</item>
         <item quantity="many">A aprender, %1$d de %2$d noites</item>

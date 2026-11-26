@@ -2,12 +2,15 @@
 <resources>
     <string name="glow_recovery_title">Recuperação</string>
     <string name="glow_recovery_about">Sobre a Recuperação</string>
-    <string name="glow_recovery_scored_each_morning">A Recuperação é pontuada todas as manhãs a partir do sono da noite.</string>
+    <string name="glow_recovery_scored_each_morning">A Recuperação aparece quando o sono da noite passada sincronizar.</string>
     <string name="glow_recovery_yesterday">Ontem</string>
     <string name="glow_recovery_what_drove">O que a influenciou</string>
+    <string name="glow_recovery_driver_hrv">%1$d ms, o teu normal %2$d</string>
+    <string name="glow_recovery_driver_resting">%1$d bpm, o teu normal %2$d</string>
+    <string name="glow_recovery_driver_resting_alone">%1$d bpm</string>
     <string name="glow_recovery_drivers_all">Todos os %1$d</string>
     <string name="glow_recovery_waiting_night">À espera de uma noite</string>
-    <string name="glow_recovery_drivers_waiting">O que influenciou a Recuperação aparece aqui todas as manhãs</string>
+    <string name="glow_recovery_drivers_waiting">Aparece aqui todas as manhãs</string>
     <string name="glow_recovery_energy">Energia</string>
     <string name="glow_recovery_now">Agora</string>
     <string name="glow_recovery_charge_at_start">%1$d no início</string>
@@ -20,13 +23,12 @@
     <string name="glow_recovery_blood_oxygen">Oxigénio no sangue</string>
     <string name="glow_recovery_stress">Stress</string>
     <string name="glow_recovery_body_signals">Sinais do corpo</string>
-    <string name="glow_recovery_against_normal">Face ao teu normal</string>
     <string name="glow_recovery_week_average">Média dos últimos 7 dias</string>
     <string name="glow_recovery_no_scores">Sem pontuações</string>
     <string name="glow_recovery_in_last_7_days">Nos últimos 7 dias</string>
     <string name="glow_recovery_this_morning">esta manhã</string>
     <string name="glow_recovery_that_morning">nessa manhã</string>
-    <string name="glow_recovery_strap_estimate">A estimativa da strap</string>
+    <string name="glow_recovery_strap_estimate">Estimativa da strap</string>
     <string name="glow_recovery_none_week">Ainda sem pontuações de Recuperação nos últimos 7 dias.</string>
     <string name="glow_recovery_waiting">À espera</string>
     <string name="glow_recovery_after_first_night">Depois da primeira noite</string>
@@ -36,10 +38,10 @@
     <string name="glow_recovery_end_of_day">no fim do dia</string>
     <string name="glow_recovery_at_start">No início</string>
     <string name="glow_recovery_at_waking">Ao acordar</string>
-    <string name="glow_recovery_highest">Máximo</string>
-    <string name="glow_recovery_lowest">Mínimo</string>
-    <string name="glow_recovery_where_it_went">Para onde foi</string>
+    <string name="glow_recovery_highest">Máxima</string>
+    <string name="glow_recovery_lowest">Mínima</string>
     <string name="glow_recovery_last_night">A noite passada</string>
     <string name="glow_recovery_no_sleep">Sem sono registado</string>
     <string name="glow_recovery_asleep">A dormir</string>
+    <string name="glow_recovery_temp_change">%1$s face ao teu normal</string>
 </resources>

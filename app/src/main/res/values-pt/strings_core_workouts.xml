@@ -17,13 +17,13 @@
     <string name="core_workouts_sport_tennis">Ténis</string>
     <string name="core_workouts_sport_soccer">Futebol</string>
     <string name="core_workouts_sport_jump_rope">Saltar à corda</string>
-    <string name="core_workouts_sport_rowing_machine">Remo indoor</string>
+    <string name="core_workouts_sport_rowing_machine">Remo</string>
     <string name="core_workouts_sport_indoor_fitness">Fitness indoor</string>
     <string name="core_workouts_sport_indoor_walk">Caminhada indoor</string>
     <string name="core_workouts_sport_hiit">HIIT</string>
     <string name="core_workouts_sport_core_training">Treino de core</string>
     <string name="core_workouts_sport_mixed_aerobic">Aeróbico misto</string>
-    <string name="core_workouts_sport_strength_training">Treino de força</string>
+    <string name="core_workouts_sport_strength_training">Força</string>
     <string name="core_workouts_sport_stretching">Alongamentos</string>
     <string name="core_workouts_sport_flexibility">Flexibilidade</string>
     <string name="core_workouts_sport_step_training">Step</string>

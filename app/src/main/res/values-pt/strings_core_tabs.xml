@@ -35,14 +35,14 @@
     <string name="core_tab_no_sleep_score">Sem sono registado na noite passada, por isso hoje não há pontuação.</string>
     <string name="core_tab_deleted_sleep_score">Apagaste o sono da noite passada, por isso hoje não há pontuação.</string>
     <string name="core_tab_contributor_helping">A ajudar</string>
-    <string name="core_tab_contributor_usual">Habitual</string>
+    <string name="core_tab_contributor_usual">O teu normal</string>
     <string name="core_tab_contributor_little">A travar um pouco</string>
     <string name="core_tab_contributor_holding">A travar</string>
     <string name="core_tab_charge_sleep_rest">Sono e descanso calmo</string>
     <string name="core_tab_charge_movement">Movimento</string>
     <string name="core_tab_charge_stress">Stress</string>
     <string name="core_tab_charge_awake">Estar acordado</string>
-    <string name="core_tab_charge_recharged">Encheu</string>
+    <string name="core_tab_charge_recharged">Recarregou</string>
     <string name="core_tab_charge_drained">Gastou</string>
     <string name="core_tab_charge_first_night">A Energia começa depois da primeira noite. É o sono que a enche.</string>
     <string name="core_tab_charge_waiting">A Energia aparece quando a strap tiver algumas horas de frequência cardíaca.</string>
@@ -72,28 +72,32 @@
     <string name="core_tab_regularity_needs">Precisa de cerca de 5 dias de uso</string>
     <string name="core_tab_regularity_steady">Horas de deitar estáveis esta semana</string>
     <string name="core_tab_regularity_moved">Horas de deitar variaram esta semana</string>
-    <string name="core_tab_usual_times">Normalmente a dormir às %1$s, a pé às %2$s.</string>
+    <string name="core_tab_usual_times">Normalmente a dormir às %1$s, a pé às %2$s</string>
     <plurals name="core_tab_breathing_learning">
-        <item quantity="one">A aprender o teu habitual, %1$d de %2$d noite</item>
-        <item quantity="many">A aprender o teu habitual, %1$d de %2$d noites</item>
-        <item quantity="other">A aprender o teu habitual, %1$d de %2$d noites</item>
-    </plurals>
-    <string name="core_tab_breathing_usual">O teu habitual é %1$s por hora</string>
-    <plurals name="core_tab_breathing_short_learning">
         <item quantity="one">A aprender, %1$d de %2$d noite</item>
         <item quantity="many">A aprender, %1$d de %2$d noites</item>
         <item quantity="other">A aprender, %1$d de %2$d noites</item>
     </plurals>
-    <string name="core_tab_breathing_short_usual">Habitual %1$s, estimativa inicial</string>
-    <string name="core_tab_load_usual">O teu habitual é %1$d</string>
+    <string name="core_tab_breathing_usual">O teu habitual, %1$s por hora</string>
+    <plurals name="core_tab_breathing_short_learning">
+        <item quantity="one">A aprender, %1$d de %2$d</item>
+        <item quantity="many">A aprender, %1$d de %2$d</item>
+        <item quantity="other">A aprender, %1$d de %2$d</item>
+    </plurals>
+    <string name="core_tab_breathing_short_usual">O teu normal %1$s</string>
+    <string name="core_tab_load_usual">O teu habitual, %1$d por dia</string>
     <string name="core_tab_load_learning">A aprender o teu habitual</string>
     <string name="core_tab_balance_building">A subir</string>
     <string name="core_tab_balance_easing">A abrandar</string>
     <string name="core_tab_balance_steady">Estável</string>
-    <string name="core_tab_active_reached">Últimos 7 dias, objetivo de %1$d cumprido</string>
-    <string name="core_tab_active_goal">Últimos 7 dias, objetivo %1$d</string>
-    <string name="core_tab_points_reached">Últimos 7 dias, em %1$d ou mais</string>
-    <string name="core_tab_points_aim">Últimos 7 dias, objetivo %1$d</string>
+    <string name="core_tab_active_reached">Cumprido esta semana</string>
+    <string name="core_tab_active_goal">Objetivo %1$d por semana</string>
+    <plurals name="core_tab_points_reached" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Cumprido esta semana</item>
+        <item quantity="many">Cumprido esta semana</item>
+        <item quantity="other">Cumprido esta semana</item>
+    </plurals>
+    <string name="core_tab_points_aim">Objetivo %1$d por semana</string>
     <string name="core_tab_calories_today">kcal estimadas até agora hoje</string>
     <string name="core_tab_calories_partial">kcal estimadas, parte do dia com a strap</string>
     <string name="core_tab_calories">kcal estimadas</string>
@@ -108,9 +112,9 @@
     </plurals>
     <string name="core_tab_nap_at">Às %1$s</string>
     <plurals name="core_tab_naps_first_at">
-        <item quantity="one">%1$d sesta, a primeira às %2$s</item>
-        <item quantity="many">%1$d sestas, a primeira às %2$s</item>
-        <item quantity="other">%1$d sestas, a primeira às %2$s</item>
+        <item quantity="one">%1$d sesta, às %2$s</item>
+        <item quantity="many">%1$d sestas, a partir das %2$s</item>
+        <item quantity="other">%1$d sestas, a partir das %2$s</item>
     </plurals>
     <string name="core_tab_last_7_days">Últimos 7 dias</string>
     <string name="core_tab_auto_detected">Automático</string>
@@ -125,7 +129,7 @@
     <string name="core_tab_habit_age_updated">Atualizada a %1$s</string>
     <string name="core_tab_first_estimate">Primeira estimativa a %1$s</string>
     <string name="core_tab_age_for_now">A tua idade, por agora</string>
-    <string name="core_tab_age_for_now_waiting">A tua idade, por agora. %1$s</string>
+    <string name="core_tab_age_for_now_waiting">%1$s</string>
     <string name="core_tab_habit_age_likely">Provavelmente de %1$d a %2$d</string>
     <plurals name="core_tab_habit_age_younger">
         <item quantity="one">%d ano a menos do que na semana passada</item>

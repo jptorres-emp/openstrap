@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="ready_goal">Objetivo</string>
+    <string name="ready_goal_type">Tipo de objetivo</string>
+    <string name="ready_goal_type_change">Tipo de objetivo, %1$s. Alterar</string>
+    <string name="ready_tab_open">Aberto</string>
+    <string name="ready_tab_free">Livre</string>
+    <string name="ready_tab_timed">Cronometrado</string>
+    <string name="ready_tab_periods">Períodos</string>
+    <string name="ready_hero_pace_about">Cerca de %1$d min ao teu ritmo</string>
+    <string name="ready_hero_zone_keep">Mantém %1$d a %2$d bpm</string>
+    <string name="ready_hero_zone_keep_up">Mantém acima de %1$d bpm</string>
+    <plurals name="ready_hero_heart_zones" tools:ignore="ImpliedQuantity">
+        <item quantity="one">zona cardíaca</item>
+        <item quantity="many">zonas cardíacas</item>
+        <item quantity="other">zonas cardíacas</item>
+    </plurals>
+    <plurals name="ready_hero_reps_of">
+        <item quantity="one">repetição de %1$s</item>
+        <item quantity="many">repetições de %1$s</item>
+        <item quantity="other">repetições de %1$s</item>
+    </plurals>
+    <string name="ready_hero_reps_about">Cerca de %1$d min com descansos</string>
+    <plurals name="ready_hero_sets" tools:ignore="ImpliedQuantity">
+        <item quantity="one">série</item>
+        <item quantity="many">séries</item>
+        <item quantity="other">séries</item>
+    </plurals>
+    <plurals name="ready_hero_rounds" tools:ignore="ImpliedQuantity">
+        <item quantity="one">ronda</item>
+        <item quantity="many">rondas</item>
+        <item quantity="other">rondas</item>
+    </plurals>
+    <plurals name="ready_hero_periods" tools:ignore="ImpliedQuantity">
+        <item quantity="one">período</item>
+        <item quantity="many">períodos</item>
+        <item quantity="other">períodos</item>
+    </plurals>
+    <string name="ready_hero_in_all">%1$s no total</string>
+    <string name="ready_hero_every_in_all">%1$s no total, o descanso é o que sobra</string>
+    <string name="ready_hero_periods_about">Cerca de %1$d min com intervalos</string>
+    <string name="ready_last_no_goal">Sem objetivo, última sessão %1$s</string>
+    <string name="ready_last_no_plan">Sem plano, última sessão %1$s</string>
+    <string name="ready_last_time_line">Da última vez, %1$s</string>
+    <string name="ready_last_pace_line">%1$s a %2$s por km</string>
+    <string name="ready_last_pace_line_mi">%1$s a %2$s por milha</string>
+    <string name="ready_no_goal">Sem objetivo</string>
+    <string name="ready_no_plan">Sem plano</string>
+    <string name="ready_rest_between_sets">Descanso entre séries</string>
+    <string name="ready_work">Trabalho</string>
+    <string name="ready_rest">Descanso</string>
+    <string name="ready_round_every">Cada ronda começa a cada</string>
+    <string name="ready_each_rep">Cada repetição</string>
+    <string name="ready_each_period">Cada período</string>
+    <string name="ready_break">Intervalo</string>
+    <string name="ready_less">%1$s, menos</string>
+    <string name="ready_more">%1$s, mais</string>
+    <string name="ready_outdoor">Ao ar livre</string>
+    <string name="ready_outdoor_gps_ready">GPS para a distância e o mapa, com precisão de %1$d m</string>
+    <string name="ready_outdoor_gps_close">GPS para a distância e o mapa, com precisão de %1$d m por agora</string>
+    <string name="ready_outdoor_gps_finding">GPS para a distância e o mapa, a localizar-te</string>
+    <string name="ready_outdoor_off_steps">Distância pelos teus passos</string>
+    <string name="ready_outdoor_off">Sem distância em interior</string>
+    <string name="ready_location_off">A localização está desligada.</string>
+    <string name="ready_location_turn_on">Ligar</string>
+    <string name="ready_your_zones">As tuas zonas</string>
+    <string name="ready_save_intervals">Guardar intervalos</string>
+    <string name="ready_saved_intervals">Guardados</string>
+    <string name="ready_save_note">Encontra-os quando começas um treino. Guardam-se até dez.</string>
+    <string name="ready_name_hint">Nome, como Intervalos de terça</string>
+    <string name="ready_type_goal">Escrever o objetivo</string>
+</resources>

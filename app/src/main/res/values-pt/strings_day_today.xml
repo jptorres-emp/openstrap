@@ -22,7 +22,8 @@
     <string name="day_card_activity">Passos</string>
     <string name="day_card_recovery">Recuperação</string>
     <string name="day_card_charge">Energia</string>
-    <string name="day_card_load">Carga e tempo de recuperação</string>
+    <string name="day_card_recover">Para recuperar</string>
+    <string name="day_card_load">Carga</string>
     <string name="day_card_workout">O treino</string>
     <string name="day_card_week">A tua semana</string>
     <string name="day_card_habit_age">Idade dos hábitos</string>
@@ -32,7 +33,7 @@
     <string name="day_pair_found">Encontrei uma strap por perto. Escolhe-a para emparelhar.</string>
     <string name="day_pair_connecting">A ligar à tua strap. Mantém-na perto.</string>
     <string name="day_pair_connected">Ligada. A primeira sincronização começa agora.</string>
-    <string name="day_pair_failed">Ainda não foi possível ligar. Mantém a strap no carregador, perto do telemóvel.</string>
+    <string name="day_pair_failed">Não foi possível ligar. Se a app Zepp estiver aberta, pode estar a prender a strap. Fecha-a nas definições de apps do telemóvel e volta a emparelhar.</string>
     <string name="day_pair_key_rejected">A strap recusou emparelhar. Abre a página da Strap para emparelhar de novo.</string>
     <string name="day_first_score">Primeira pontuação</string>
     <string name="day_partial_day">Dia parcial</string>
@@ -50,14 +51,16 @@
     <string name="day_stuck_not_synced_title">Não sincronizado</string>
     <string name="day_stuck_data_since">Os teus dados desde as %1$s ainda estão na strap.</string>
     <string name="day_last_tried">Última tentativa às %1$s</string>
-    <string name="day_recovery_failed">Não foi possível calcular a pontuação de hoje.</string>
+    <string name="day_recovery_failed">Não foi possível calcular a Recuperação de hoje.</string>
     <string name="day_charge_failed">Não foi possível calcular a Energia de hoje.</string>
     <string name="day_failed_short">Não foi possível calcular</string>
     <string name="day_try_again">Tentar de novo</string>
     <string name="day_waiting_last_night">À espera da noite passada</string>
     <string name="day_data_on_strap">Os teus dados ainda estão na strap.</string>
-    <string name="day_chip_not_paired">Não emparelhada</string>
+    <string name="day_chip_not_paired">Sem strap</string>
     <string name="day_chip_not_paired_description">Nenhuma strap emparelhada</string>
+    <string name="day_chip_connecting">A ligar</string>
+    <string name="day_chip_connected">Ligada</string>
     <string name="day_chip_connecting_description">A ligar à strap</string>
     <string name="day_chip_last_seen_description">Strap vista pela última vez %1$s</string>
     <string name="day_chip_not_connected">Não ligada</string>

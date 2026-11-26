@@ -36,13 +36,14 @@
     <string name="workout_summary_trim_recorded">Gravado: %1$s.</string>
     <string name="workout_summary_trim_hint">Arrasta as pegas para onde o treino realmente começou e acabou. Nada do que foi gravado é apagado.</string>
     <string name="workout_summary_split_km">Km %1$d</string>
+    <string name="workout_summary_split_mile">Milha %1$d</string>
     <string name="workout_summary_split_last">Últimos %1$s</string>
-    <string name="workout_summary_meters">%1$d m</string>
     <string name="workout_summary_when_morning">Esta manhã, %1$s</string>
     <string name="workout_summary_when_evening">Ao fim do dia, %1$s</string>
     <string name="workout_summary_when_today">Hoje, %1$s</string>
     <string name="workout_summary_when_yesterday">Ontem, %1$s</string>
     <string name="workout_summary_when_day">%1$s, %2$s</string>
+    <string name="workout_summary_set_skipped">Saltada</string>
     <string name="workout_summary_set_reps_kg">%1$d × %2$s kg</string>
     <plurals name="workout_summary_set_reps">
         <item quantity="one">%1$d rep</item>

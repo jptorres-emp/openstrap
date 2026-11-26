@@ -19,10 +19,10 @@
     <string name="core_badge_first_5k">Primeira corrida de 5 km</string>
     <string name="core_badge_first_10k">Primeira corrida de 10 km</string>
     <string name="core_badge_first_indoor">Primeiro treino indoor</string>
-    <string name="core_badge_first_log">Primeira sessão de força registada</string>
+    <string name="core_badge_first_log">Primeira série registada</string>
     <string name="core_badge_first_tabata">Primeiro Tabata</string>
     <string name="core_badge_first_reps">Primeiros intervalos de corrida</string>
-    <string name="core_badge_first_mind">Primeira sessão de ioga ou calma</string>
+    <string name="core_badge_first_mind">Primeira sessão de calma</string>
     <string name="core_badge_first_game">Primeiro jogo</string>
     <string name="core_badge_art_run">Corr</string>
     <string name="core_badge_art_indoor">In</string>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="core_notif_end_question">Terminar o treino? Toca em Sim, terminar para o guardar.</string>
+    <string name="core_notif_end_question">Terminar o treino?</string>
     <string name="core_notif_paused">Em pausa</string>
     <string name="core_notif_waiting">À espera</string>
     <string name="core_notif_bpm">%1$d bpm</string>

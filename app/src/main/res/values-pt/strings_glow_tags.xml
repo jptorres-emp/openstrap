@@ -10,10 +10,10 @@
         <item quantity="other">%d dias seguidos</item>
     </plurals>
     <string name="glow_tag_goal_met">Objetivo cumprido</string>
-    <string name="glow_tag_above_normal">Acima do normal</string>
-    <string name="glow_tag_below_normal">Abaixo do normal</string>
-    <string name="glow_tag_above_usual">Acima do habitual</string>
-    <string name="glow_tag_below_usual">Abaixo do habitual</string>
+    <string name="glow_tag_above_normal">Acima do teu normal</string>
+    <string name="glow_tag_below_normal">Abaixo do teu normal</string>
+    <string name="glow_tag_above_usual">Acima do teu normal</string>
+    <string name="glow_tag_below_usual">Abaixo do teu normal</string>
     <string name="glow_tag_short">Curto</string>
     <string name="glow_tag_long">Longo</string>
     <string name="glow_tag_later">Mais tarde</string>

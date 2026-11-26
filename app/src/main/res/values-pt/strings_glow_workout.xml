@@ -2,17 +2,20 @@
 <resources>
     <string name="glow_workout_deleted">Este treino foi apagado.</string>
     <string name="glow_workout_untitled">Treino</string>
-    <string name="glow_workout_loading">A carregar…</string>
+    <string name="glow_workout_loading">A carregar</string>
     <string name="glow_workout_day_times">%1$s, %2$s</string>
     <string name="glow_workout_zone_under">abaixo de %1$d bpm</string>
     <string name="glow_workout_zone_range">%1$s bpm</string>
-    <string name="glow_workout_suggestion_title">Parece que treinaste</string>
-    <string name="glow_workout_suggestion_text">%1$s, %2$s, sobretudo na zona %3$d, %4$d bpm em média. Não foi gravado.</string>
+    <string name="glow_workout_suggestion_title">Parece um treino</string>
+    <string name="glow_workout_suggestion_text">%1$s, %2$s, sobretudo na zona %3$d, %4$d bpm em média</string>
     <string name="glow_workout_suggestion_save">Guardar como treino</string>
     <string name="glow_workout_suggestion_dismiss">Não é treino</string>
     <string name="glow_workout_add_title">Juntar um treino</string>
-    <string name="glow_workout_add_choose_sport">Escolher o desporto</string>
     <string name="glow_workout_add_no_heart">A strap ainda não enviou a frequência cardíaca deste dia. Sincroniza e tenta de novo.</string>
+    <string name="glow_workout_add_sport">Desporto</string>
+    <string name="glow_workout_add_day">Dia</string>
+    <string name="glow_workout_add_range_length">%1$d min</string>
+    <string name="glow_workout_add_range_note">%1$d min, média %2$d bpm</string>
     <string name="glow_workout_add_when">Quando foi?</string>
     <string name="glow_workout_add_hint">Arrasta as pegas para onde o treino começou e acabou. A frequência cardíaca vem dos registos por minuto da strap.</string>
     <string name="glow_workout_delete">Apagar este treino</string>
@@ -30,15 +33,14 @@
     <string name="glow_workout_heart_by_zone">Cores por zona</string>
     <string name="glow_workout_heart_at">Às %1$s</string>
     <string name="glow_workout_heart_at_after">Às %1$s, depois do fim</string>
-    <string name="glow_workout_unit_bpm_average">bpm de média</string>
-    <string name="glow_workout_heart_max_lowest">Máximo %1$d, mínimo %2$d bpm</string>
-    <string name="glow_workout_heart_max">Máximo %1$d bpm</string>
-    <string name="glow_workout_heart_lowest">Mínimo %1$d bpm</string>
+    <string name="glow_workout_unit_bpm_average">bpm médio</string>
+    <string name="glow_workout_heart_max_lowest">Máxima %1$d, mínima %2$d bpm</string>
+    <string name="glow_workout_heart_max">Máxima %1$d bpm</string>
+    <string name="glow_workout_heart_lowest">Mínima %1$d bpm</string>
     <string name="glow_workout_heart_none">A strap ainda não enviou a frequência cardíaca deste treino.</string>
     <string name="glow_workout_heart_drop_after">Descida depois das %1$s</string>
-    <string name="glow_workout_heart_dimmed">Esbatido: %1$s veio do histórico da strap.</string>
+    <string name="glow_workout_heart_dimmed">O troço das %1$s está esbatido. Veio do histórico da strap.</string>
     <string name="glow_workout_in_your_day">No teu dia</string>
-    <string name="glow_workout_facts_title">O treino</string>
     <string name="glow_workout_list_title">Treinos</string>
     <plurals name="glow_workout_list_recorded">
         <item quantity="one">%d gravado</item>
@@ -46,8 +48,8 @@
         <item quantity="other">%d gravados</item>
     </plurals>
     <string name="glow_workout_list_empty">Ainda sem treinos</string>
-    <string name="glow_workout_list_empty_text">Os treinos que começas no unstrap aparecem aqui, e os da própria strap depois de sincronizar.</string>
+    <string name="glow_workout_list_empty_text">Os treinos que gravas aparecem aqui, e os da strap depois de sincronizar.</string>
     <string name="glow_workout_capsule_pause">Pausa</string>
     <string name="glow_workout_capsule_next">A seguir</string>
-    <string name="glow_workout_capsule_lines">%1$s. %2$s</string>
+    <string name="glow_workout_capsule_lines">%1$s, %2$s</string>
 </resources>

@@ -8,9 +8,9 @@
     <string name="core_activity_pace_fewer_day">Menos do que num dia habitual</string>
     <string name="core_activity_goal_met">Objetivo cumprido</string>
     <string name="core_activity_goal_share">%1$d%% do teu objetivo</string>
-    <string name="core_activity_line_more_now">%1$s, mais do que o habitual a esta hora</string>
-    <string name="core_activity_line_about_now">%1$s, perto do habitual a esta hora</string>
-    <string name="core_activity_line_fewer_now">%1$s, menos do que o habitual a esta hora</string>
+    <string name="core_activity_line_more_now">%1$s, acima do teu habitual</string>
+    <string name="core_activity_line_about_now">%1$s, perto do teu habitual</string>
+    <string name="core_activity_line_fewer_now">%1$s, abaixo do teu habitual</string>
     <string name="core_activity_line_more_day">%1$s, mais do que num dia habitual</string>
     <string name="core_activity_line_about_day">%1$s, perto de um dia habitual</string>
     <string name="core_activity_line_fewer_day">%1$s, menos do que num dia habitual</string>
@@ -80,7 +80,9 @@
     <string name="core_activity_recover">Contado a partir da tua sessão de %1$s, que terminou %2$s.</string>
     <string name="core_activity_calories_at_rest">O teu corpo gasta cerca de %1$s kcal por dia em repouso, antes de qualquer movimento.</string>
     <string name="core_activity_distance_from_steps">km, pelos teus passos</string>
+    <string name="core_activity_distance_from_steps_mi">mi, pelos teus passos</string>
     <string name="core_activity_distance_from_strap">km, medidos pela strap</string>
+    <string name="core_activity_distance_from_strap_mi">mi, medidas pela strap</string>
     <string name="core_activity_distance_steps_today">Em %1$s passos até agora hoje.</string>
     <string name="core_activity_distance_steps_day">Em %1$s passos nesse dia.</string>
 </resources>

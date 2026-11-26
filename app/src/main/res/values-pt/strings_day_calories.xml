@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="day_calories_row_line">Ativas, objetivo %1$s. Total %2$s</string>
-    <string name="day_calories_row_line_met">Ativas, objetivo cumprido. Total %1$s</string>
+    <string name="day_calories_row_line">Ativas de %1$s, %2$s no total</string>
+    <string name="day_calories_row_line_met">Objetivo de ativas cumprido, %1$s no total</string>
     <string name="day_calories_day_label_today">kcal ativas até agora hoje</string>
     <string name="day_calories_day_label">kcal ativas</string>
     <string name="day_calories_to_goal">Faltam %1$s para o teu objetivo de %2$s</string>

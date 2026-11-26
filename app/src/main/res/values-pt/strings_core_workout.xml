@@ -10,7 +10,7 @@
     <string name="core_workout_zone_tempo_in_sentence">ritmo</string>
     <string name="core_workout_zone_threshold_in_sentence">limiar</string>
     <string name="core_workout_zone_max_in_sentence">máx</string>
-    <string name="core_workout_zone_number">Zona %1$d,</string>
+    <string name="core_workout_zone_number">Zona %1$d</string>
     <string name="core_workout_zone_line">Zona %1$d, %2$s</string>
     <string name="core_workout_zone_time_under">Menos de um minuto nesta zona</string>
     <string name="core_workout_zone_time">%1$d min nesta zona</string>
@@ -19,13 +19,14 @@
     <string name="core_workout_waiting_hr">À espera da frequência cardíaca</string>
     <string name="core_workout_strap_gone_note">A strap não está ligada. A gravação continua e os minutos em falta são preenchidos pela strap depois de sincronizar.</string>
     <string name="core_workout_split">Km %1$d em %2$s</string>
+    <string name="core_workout_split_mile">Milha %1$d em %2$s</string>
     <string name="core_workout_split_avg">%1$s, %2$d bpm</string>
     <string name="core_workout_just_now">agora mesmo</string>
     <string name="core_workout_min_ago">há %1$d min</string>
     <string name="core_workout_location_off">A localização está desligada</string>
     <string name="core_workout_location_off_note">Liga-a para teres distância e mapa, ou começa sem ela.</string>
-    <string name="core_workout_route_on">Ligado. Guardado neste telemóvel para o mapa.</string>
-    <string name="core_workout_route_off">Desligado. Só se guardam os totais.</string>
+    <string name="core_workout_route_on">Ligado, guardado neste telemóvel para o mapa</string>
+    <string name="core_workout_route_off">Desligado, só se guardam os totais</string>
     <string name="core_workout_start_sport">Começar %1$s</string>
     <string name="core_workout_start_workout">Começar treino</string>
     <string name="core_workout_open_sport">Voltar: %1$s</string>

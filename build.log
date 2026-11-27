@@ -1,0 +1,196 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Calculating task graph as no cached configuration is available for tasks: :protocol:test :app:testDebugUnitTest
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :app:generateDebugBuildConfig FROM-CACHE
+> Task :protocol:processTestResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:extractDebugSupportedLocales
+> Task :protocol:compileKotlin FROM-CACHE
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :protocol:jar
+> Task :app:generateDebugLocaleConfig FROM-CACHE
+> Task :protocol:compileTestKotlin FROM-CACHE
+> Task :protocol:compileTestJava NO-SOURCE
+> Task :protocol:testClasses
+> Task :protocol:test FROM-CACHE
+> Task :app:processDebugNavigationResources
+> Task :app:compileDebugNavigationResources FROM-CACHE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:checkDebugAarMetadata
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest FROM-CACHE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app:mergeDebugAssets
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+
+> Task :app:mergeDebugUnitTestManifest
+/home/runner/work/openstrap/openstrap/app/src/debug/AndroidManifest.xml Warning:
+	meta-data#androidx.work.WorkManagerInitializer was tagged at AndroidManifest.xml:0 to remove other declarations but no other declaration present
+
+> Task :app:processDebugUnitTestManifest
+> Task :app:packageDebugResources
+> Task :app:parseDebugLocalResources
+> Task :app:generateDebugRFile
+> Task :app:mergeDebugResources
+> Task :app:processDebugResources
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/data/ForkMirrored.kt:45:24 Condition is always 'false'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/StrapManager.kt:365:38 Redundant call of conversion method.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/WorkoutSession.kt:954:22 Condition is always 'false'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/device/UpdatesPage.kt:100:41 Condition is always 'true'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowRecoveryScreen.kt:473:21 Condition is always 'true'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/RouteLine.kt:62:95 Expression is unused.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/WorkoutMap.kt:215:17 'fun setPadding(p0: Int, p1: Int, p2: Int, p3: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/widget/WidgetTriggers.kt:123:14 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compressDebugJavaRes FROM-CACHE
+> Task :app:compileDebugJavaWithJavac
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/ForkReportsTest.kt:33:37 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ForkReports.Figures'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/ForkReportsTest.kt:35:37 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ForkReports.Figures'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/PictureNormalsTest.kt:42:61 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WorkoutNotifierTest.kt:76:68 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WorkoutNotifierTest.kt:76:90 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WorkoutNotifierTest.kt:78:105 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WorkoutNotifierTest.kt:78:127 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/health/RecordStoreTest.kt:135:13 Type argument for type parameter 'T' used as type of vararg parameter 'elements' is inferred as invisible in this scope type 'IntervalRecord'.
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:compressDebugUnitTestJavaRes FROM-CACHE
+> Task :app:extractDebugUnitTestJavaRes
+> Task :app:generateDebugUnitTestConfig
+> Task :app:testDebugUnitTest
+> Task :app:finalizeTestRoborazziDebug SKIPPED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1795767209688.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 4m 45s
+41 actionable tasks: 27 executed, 14 from cache
+Configuration cache entry stored.
+Calculating task graph as no cached configuration is available for tasks: :app:assembleRelease
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :protocol:compileKotlin UP-TO-DATE
+> Task :app:generateReleaseBuildConfig FROM-CACHE
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :protocol:jar UP-TO-DATE
+> Task :app:extractReleaseSupportedLocales
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:generateReleaseLocaleConfig FROM-CACHE
+> Task :app:processReleaseNavigationResources
+> Task :app:javaPreCompileRelease FROM-CACHE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:checkReleaseAarMetadata
+> Task :app:compileReleaseNavigationResources FROM-CACHE
+> Task :app:mergeReleaseArtProfile
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease FROM-CACHE
+> Task :app:mergeReleaseNativeLibs
+> Task :app:processReleaseMainManifest FROM-CACHE
+> Task :app:processReleaseManifest FROM-CACHE
+> Task :app:processReleaseManifestForPackage FROM-CACHE
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseStartupProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets FROM-CACHE
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libmaplibre.so. Run with --info option to learn more.
+
+> Task :app:extractReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:packageReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:parseReleaseLocalResources
+> Task :app:generateReleaseRFile
+> Task :app:sdkReleaseDependencyData
+> Task :app:mergeReleaseResources
+> Task :app:processReleaseResources
+> Task :app:kspReleaseKotlin
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/data/ForkMirrored.kt:45:24 Condition is always 'false'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/StrapManager.kt:365:38 Redundant call of conversion method.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/WorkoutSession.kt:954:22 Condition is always 'false'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/device/UpdatesPage.kt:100:41 Condition is always 'true'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowRecoveryScreen.kt:473:21 Condition is always 'true'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/RouteLine.kt:62:95 Expression is unused.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/WorkoutMap.kt:215:17 'fun setPadding(p0: Int, p1: Int, p2: Int, p3: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/widget/WidgetTriggers.kt:123:14 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compressReleaseJavaRes FROM-CACHE
+> Task :app:mergeReleaseJavaResource
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:mergeReleaseGeneratedProguardFiles
+
+> Task :app:generateReleaseLintVitalReportModel
+Warning: Lint will treat :protocol as an external dependency and not analyze it.
+ * Recommended Action: Apply the 'com.android.lint' plugin to java library project :protocol. to enable lint to analyze those sources.
+
+
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:produceReleaseComposeMapping
+> Task :app:reportReleaseComposeMappingErrors
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:minifyReleaseWithR8
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:mergeReleaseComposeMapping
+> Task :app:compileReleaseArtProfile
+
+> Task :app:lintVitalReportRelease
+Lint found no errors or warnings
+
+342 errors/warnings were listed in the baseline file (/home/runner/work/openstrap/openstrap/app/lint-baseline.xml) but not found in the project; perhaps they have been fixed?
+
+Note: The baseline was created using a different target/variant than it was checked against.
+Creation variant: lint
+Current variant: lintVitalRelease
+
+> Task :app:lintVitalRelease
+> Task :app:packageRelease
+> Task :app:assembleRelease
+> Task :app:createReleaseApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1795767492586.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 4m
+57 actionable tasks: 44 executed, 11 from cache, 2 up-to-date
+Configuration cache entry stored.
